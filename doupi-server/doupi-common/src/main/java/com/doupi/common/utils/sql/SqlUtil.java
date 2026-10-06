@@ -1,4 +1,4 @@
-package com.doupi.common.utils.sql;
+﻿package com.doupi.common.utils.sql;
 
 import com.doupi.common.exception.UtilException;
 import com.doupi.common.utils.StringUtils;
@@ -6,7 +6,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * sql操作工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SqlUtil
 {

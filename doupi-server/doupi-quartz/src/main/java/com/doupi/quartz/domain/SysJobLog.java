@@ -1,4 +1,4 @@
-package com.doupi.quartz.domain;
+﻿package com.doupi.quartz.domain;
 
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -10,7 +10,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 定时任务调度日志表 sys_job_log
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysJobLog extends BaseEntity
 {

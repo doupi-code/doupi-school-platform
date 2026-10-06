@@ -1,4 +1,4 @@
-package com.doupi.generator.domain;
+﻿package com.doupi.generator.domain;
 
 import java.util.List;
 import jakarta.validation.Valid;
@@ -11,7 +11,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 业务表 gen_table
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class GenTable extends BaseEntity
 {

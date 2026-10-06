@@ -1,4 +1,4 @@
-package com.doupi.common.utils.spring;
+﻿package com.doupi.common.utils.spring;
 
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.AopContext;
@@ -14,7 +14,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * spring工具类 方便在非spring管理环境中获取bean
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public final class SpringUtils implements BeanFactoryPostProcessor, ApplicationContextAware 

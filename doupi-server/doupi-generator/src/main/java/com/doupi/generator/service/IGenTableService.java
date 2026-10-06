@@ -1,4 +1,4 @@
-package com.doupi.generator.service;
+﻿package com.doupi.generator.service;
 
 import java.util.List;
 import java.util.Map;
@@ -7,7 +7,7 @@ import com.doupi.generator.domain.GenTable;
 /**
  * 业务 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface IGenTableService
 {

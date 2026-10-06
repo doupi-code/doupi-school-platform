@@ -1,4 +1,4 @@
-package com.doupi.common.annotation;
+﻿package com.doupi.common.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 /**
  * 数据权限过滤注解
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

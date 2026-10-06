@@ -1,4 +1,4 @@
-package com.doupi.common.utils.ip;
+﻿package com.doupi.common.utils.ip;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,7 @@ import com.doupi.common.utils.http.HttpUtils;
 /**
  * 获取地址类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class AddressUtils
 {

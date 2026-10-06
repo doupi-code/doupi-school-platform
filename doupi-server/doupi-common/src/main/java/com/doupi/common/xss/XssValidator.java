@@ -1,4 +1,4 @@
-package com.doupi.common.xss;
+﻿package com.doupi.common.xss;
 
 import com.doupi.common.utils.StringUtils;
 import jakarta.validation.ConstraintValidator;
@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 /**
  * 自定义xss校验注解实现
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class XssValidator implements ConstraintValidator<Xss, String>
 {

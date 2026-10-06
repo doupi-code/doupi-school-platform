@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.entity;
+﻿package com.doupi.common.core.domain.entity;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -12,7 +12,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 字典数据表 sys_dict_data
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysDictData extends BaseEntity
 {

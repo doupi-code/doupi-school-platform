@@ -1,9 +1,9 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 /**
  * 脱敏工具类
  *
- * @author ruoyi
+ * @author doupi
  */
 public class DesensitizedUtil
 {

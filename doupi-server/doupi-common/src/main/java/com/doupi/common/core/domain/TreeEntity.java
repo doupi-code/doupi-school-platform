@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain;
+﻿package com.doupi.common.core.domain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Tree基类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class TreeEntity extends BaseEntity
 {

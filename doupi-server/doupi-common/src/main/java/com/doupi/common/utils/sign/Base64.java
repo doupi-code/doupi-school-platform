@@ -1,9 +1,9 @@
-package com.doupi.common.utils.sign;
+﻿package com.doupi.common.utils.sign;
 
 /**
  * Base64工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public final class Base64
 {

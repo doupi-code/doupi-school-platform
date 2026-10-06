@@ -1,4 +1,4 @@
-package com.doupi.quartz.task;
+﻿package com.doupi.quartz.task;
 
 import org.springframework.stereotype.Component;
 import com.doupi.common.utils.StringUtils;
@@ -6,7 +6,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 定时任务调度测试
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component("ryTask")
 public class RyTask

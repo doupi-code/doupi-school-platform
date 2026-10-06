@@ -1,4 +1,4 @@
-package com.doupi.framework.interceptor.impl;
+﻿package com.doupi.framework.interceptor.impl;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +20,7 @@ import com.doupi.framework.interceptor.RepeatSubmitInterceptor;
  * 判断请求url和数据是否和上一次相同，
  * 如果和上次相同，则是重复提交表单。 有效时间为10秒内。
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class SameUrlDataInterceptor extends RepeatSubmitInterceptor

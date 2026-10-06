@@ -1,4 +1,4 @@
-package com.doupi.framework.web.exception;
+﻿package com.doupi.framework.web.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ import com.doupi.common.utils.html.EscapeUtil;
 /**
  * 全局异常处理器
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler

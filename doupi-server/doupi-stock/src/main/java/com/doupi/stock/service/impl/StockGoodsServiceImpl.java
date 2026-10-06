@@ -1,4 +1,4 @@
-package com.doupi.stock.service.impl;
+﻿package com.doupi.stock.service.impl;
 
 import java.util.List;
 import com.doupi.common.utils.DateUtils;
@@ -12,7 +12,7 @@ import com.doupi.stock.service.IStockGoodsService;
 /**
  * 物品档案Service业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @Service

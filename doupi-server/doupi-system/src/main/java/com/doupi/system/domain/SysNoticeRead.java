@@ -1,4 +1,4 @@
-package com.doupi.system.domain;
+﻿package com.doupi.system.domain;
 
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -7,7 +7,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 /**
  * 公告已读记录表 sys_notice_read
  *
- * @author ruoyi
+ * @author doupi
  */
 public class SysNoticeRead
 {

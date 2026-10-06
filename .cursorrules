@@ -1,4 +1,4 @@
-# 豆皮校园管理平台 — 全端架构与防硬编码开发准则 (.cursorrules)
+﻿# 豆皮校园管理平台 — 全端架构与防硬编码开发准则 (.cursorrules)
 
 # 1. 语言与沟通
 - 全程使用简体中文进行交流、代码注释和文档编写。
@@ -7,14 +7,14 @@
 - 服务端 (doupi-server): Java 17 + Spring Boot 3.x/4.x + MyBatis 3.5.x + Redis + Druid + SpringDoc
 - 管理端 (doupi-web-admin-react): React 19 + TypeScript (Strict) + Vite 8+ + Ant Design 5 + ProComponents + TailwindCSS 4
 - 门户端 (doupi-web-client-react): React 19 + TypeScript + Vite 8+ + TailwindCSS 4 + CMS 动态驱动
-- 移动端 (ruoyi-app): uni-app (Vue 3 / UTS / UVue) + Vite
+- 移动端 (doupi-app): uni-app (Vue 3 / UTS / UVue) + Vite
 - 原生小程序 (doupi-app): 微信小程序原生框架 (WXML / WXSS / JS)
 
 # 3. 防硬编码最高铁律（违者必重做）
 - 【实体零默认值与纯净 Getter】：Java Domain / Entity / Query DTO 类中绝对禁止在字段声明时赋予默认初值（如 private String status = "1"; 严厉禁止！），并且绝对禁止在 getter 方法中编写三元兜底值（如 return printSide != null ? printSide : "1"; 严厉禁止！）。因为 MyBatis 动态 SQL `<if test="fieldName != null">` 通过 OGNL 反射调用 getter，非 null 兜底值会强行拼接无意图的过滤条件（幽灵过滤重大 Bug）。所有业务默认值必须在数据库 DEFAULT 或业务 Service 层显式处理。
 - 【严禁业务魔数】：纸张单价、标准包张数、提成费率、预警阈值等严禁在 Java 或 TSX/JS 中写死数值（如 0.06、500.0 等）。必须存入 sys_config 表，通过 selectConfigByKey 动态获取。
 - 【严禁写死字典选项】：前端 Select / Radio / Checkbox 严禁写死 `<Option value="高一">高一</Option>` 或 `<Option value="A4">`，必须通过系统字典 sys_dict_data 接口动态驱动。
-- 【严禁写死环境地址与本地路径】：严禁写死 http://localhost:8080、http://vue.ruoyi.vip 或 Windows 绝对物理路径 D:/...，所有环境与路径必须使用 .env 与环境变量注入。
+- 【严禁写死环境地址与本地路径】：严禁写死 http://localhost:8080、http://vue.Doupi.vip 或 Windows 绝对物理路径 D:/...，所有环境与路径必须使用 .env 与环境变量注入。
 
 # 4. 代码质量与可维护性
 - 前端 TSX 单文件行数尽量控制在 500 行以内，复杂表单和弹窗必须拆分子组件。

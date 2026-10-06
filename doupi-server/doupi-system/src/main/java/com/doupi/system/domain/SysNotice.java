@@ -1,4 +1,4 @@
-package com.doupi.system.domain;
+﻿package com.doupi.system.domain;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -11,7 +11,7 @@ import com.doupi.common.xss.Xss;
 /**
  * 通知公告表 sys_notice
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysNotice extends BaseEntity
 {

@@ -1,11 +1,11 @@
-package com.doupi.common.exception.file;
+﻿package com.doupi.common.exception.file;
 
 import java.util.Arrays;
 
 /**
  * 文件上传无效扩展名异常类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class InvalidExtensionException extends FileUploadException
 {

@@ -1,4 +1,4 @@
-package com.doupi.edu.service.impl;
+﻿package com.doupi.edu.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ import com.doupi.system.service.ISysConfigService;
 /**
  * 印刷登记Service业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @Service

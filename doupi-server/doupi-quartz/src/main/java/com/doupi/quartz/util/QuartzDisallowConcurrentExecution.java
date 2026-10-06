@@ -1,4 +1,4 @@
-package com.doupi.quartz.util;
+﻿package com.doupi.quartz.util;
 
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
@@ -7,7 +7,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 定时任务处理（禁止并发执行）
  * 
- * @author ruoyi
+ * @author doupi
  *
  */
 @DisallowConcurrentExecution

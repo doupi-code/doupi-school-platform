@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.entity;
+﻿package com.doupi.common.core.domain.entity;
 
 import java.util.Date;
 import java.util.List;
@@ -17,7 +17,7 @@ import com.doupi.common.xss.Xss;
 /**
  * 用户对象 sys_user
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysUser extends BaseEntity
 {

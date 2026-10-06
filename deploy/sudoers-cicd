@@ -1,0 +1,3 @@
+# CI/CD 最小权限规则配置
+# 仅允许部署账户 cicd 执行重启特定系统服务及重载 Nginx
+cicd ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart doupi-server, /usr/bin/systemctl restart doupi-server-test, /usr/bin/systemctl reload nginx, /usr/sbin/nginx -t, /usr/bin/rm -rf /var/www/*, /usr/bin/mv /tmp/* /var/www/*, /usr/bin/chown -R ubuntu\:ubuntu /var/www/*

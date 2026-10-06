@@ -1,4 +1,4 @@
-package com.doupi.system.mapper;
+﻿package com.doupi.system.mapper;
 
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -7,7 +7,7 @@ import com.doupi.common.core.domain.entity.SysDictData;
 /**
  * 字典表 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface SysDictDataMapper
 {

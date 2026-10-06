@@ -1,4 +1,4 @@
-package com.doupi.stock.service.impl;
+﻿package com.doupi.stock.service.impl;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import com.doupi.stock.service.IStockOutService;
 /**
  * 出库单Service业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @Service

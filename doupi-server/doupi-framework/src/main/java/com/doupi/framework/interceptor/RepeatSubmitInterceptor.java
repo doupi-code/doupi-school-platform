@@ -1,4 +1,4 @@
-package com.doupi.framework.interceptor;
+﻿package com.doupi.framework.interceptor;
 
 import java.lang.reflect.Method;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +14,7 @@ import com.doupi.common.utils.ServletUtils;
 /**
  * 防止重复提交拦截器
  *
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public abstract class RepeatSubmitInterceptor implements HandlerInterceptor

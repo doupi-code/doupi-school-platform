@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.entity;
+﻿package com.doupi.common.core.domain.entity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 菜单权限表 sys_menu
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysMenu extends BaseEntity
 {

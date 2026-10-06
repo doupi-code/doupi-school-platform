@@ -1,4 +1,4 @@
-package com.doupi.common.utils.file;
+﻿package com.doupi.common.utils.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import com.doupi.common.utils.uuid.Seq;
 /**
  * 文件上传工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class FileUploadUtils
 {

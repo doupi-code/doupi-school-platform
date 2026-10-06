@@ -1,4 +1,4 @@
-package com.doupi.common.utils.html;
+﻿package com.doupi.common.utils.html;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 /**
  * HTML过滤器，用于去除XSS漏洞隐患。
  *
- * @author ruoyi
+ * @author doupi
  */
 public final class HTMLFilter
 {

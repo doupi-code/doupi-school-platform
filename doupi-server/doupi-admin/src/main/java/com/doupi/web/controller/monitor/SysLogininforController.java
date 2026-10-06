@@ -1,4 +1,4 @@
-package com.doupi.web.controller.monitor;
+﻿package com.doupi.web.controller.monitor;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,7 +23,7 @@ import com.doupi.system.service.ISysLogininforService;
 /**
  * 系统访问记录
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/monitor/logininfor")

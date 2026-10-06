@@ -1,4 +1,4 @@
-package com.doupi.edu.domain;
+﻿package com.doupi.edu.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -10,7 +10,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 印刷登记对象 edu_print_record
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public class EduPrintRecord extends BaseEntity

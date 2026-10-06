@@ -1,4 +1,4 @@
-package com.doupi.stock.domain;
+﻿package com.doupi.stock.domain;
 
 import java.math.BigDecimal;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -9,7 +9,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 入库单明细对象 edu_stock_in_item
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public class StockInItem extends BaseEntity

@@ -1,4 +1,4 @@
-package com.doupi.common.annotation;
+﻿package com.doupi.common.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -12,7 +12,7 @@ import com.doupi.common.utils.poi.ExcelHandlerAdapter;
 /**
  * 自定义导出Excel数据注解
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)

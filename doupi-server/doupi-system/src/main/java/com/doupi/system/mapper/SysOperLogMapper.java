@@ -1,4 +1,4 @@
-package com.doupi.system.mapper;
+﻿package com.doupi.system.mapper;
 
 import java.util.List;
 import com.doupi.system.domain.SysOperLog;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysOperLog;
 /**
  * 操作日志 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface SysOperLogMapper
 {

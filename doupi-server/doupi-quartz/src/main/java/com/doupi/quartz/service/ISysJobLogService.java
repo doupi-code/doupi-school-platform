@@ -1,4 +1,4 @@
-package com.doupi.quartz.service;
+﻿package com.doupi.quartz.service;
 
 import java.util.List;
 import com.doupi.quartz.domain.SysJobLog;
@@ -6,7 +6,7 @@ import com.doupi.quartz.domain.SysJobLog;
 /**
  * 定时任务调度日志信息信息 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysJobLogService
 {

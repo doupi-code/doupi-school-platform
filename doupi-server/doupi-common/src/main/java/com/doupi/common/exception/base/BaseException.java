@@ -1,4 +1,4 @@
-package com.doupi.common.exception.base;
+﻿package com.doupi.common.exception.base;
 
 import com.doupi.common.utils.MessageUtils;
 import com.doupi.common.utils.StringUtils;
@@ -6,7 +6,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 基础异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class BaseException extends RuntimeException
 {

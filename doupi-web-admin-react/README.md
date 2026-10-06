@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# 豆皮综合管理后台 (doupi-web-admin-react)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> 汉外华襄复读学校后台管理端，基于 **React 19 + TypeScript + Vite 8 + Ant Design / ProComponents** 现代前端工程。
 
-Currently, two official plugins are available:
+## 1. 核心特性
+- **基准子路径适配**：支持子目录 `/admin` 原生发布，与 Nginx 规则无缝贴合。
+- **动态菜单与权限鉴权**：根据后端用户角色动态拉取菜单树，支持按钮级鉴权指令。
+- **现代化组件封装**：采用 ProTable / ProForm 高级组件，标准化查询、分页与表单交互。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 2. 快速上手
+```bash
+# 安装依赖
+npm install
 
-## React Compiler
+# 本地启动开发环境 (默认监听 5174 端口，自动代理 API)
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# 生产环境编译构建
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 3. 部署架构
+- **生产环境**：由 Nginx 在 `/admin` 路径托管 `/var/www/doupi-web-admin/dist`。
+- **测试环境**：由 Nginx 在 `8081` 独立端口托管 `/var/www/doupi-web-admin-test/dist`。
+- **CI/CD**：由 GitHub Actions 流水线 `.github/workflows/deploy-admin.yml` 自动编译并分发。

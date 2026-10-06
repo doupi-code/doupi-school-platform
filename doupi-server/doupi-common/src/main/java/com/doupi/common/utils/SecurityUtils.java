@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,7 +16,7 @@ import com.doupi.common.exception.ServiceException;
 /**
  * 安全服务工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SecurityUtils
 {

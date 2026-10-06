@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ import com.doupi.system.service.ISysUserService;
 /**
  * 注册校验方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class SysRegisterService

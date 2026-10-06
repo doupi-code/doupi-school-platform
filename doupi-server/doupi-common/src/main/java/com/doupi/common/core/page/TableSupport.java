@@ -1,4 +1,4 @@
-package com.doupi.common.core.page;
+﻿package com.doupi.common.core.page;
 
 import com.doupi.common.core.text.Convert;
 import com.doupi.common.utils.ServletUtils;
@@ -6,7 +6,7 @@ import com.doupi.common.utils.ServletUtils;
 /**
  * 表格数据处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class TableSupport
 {

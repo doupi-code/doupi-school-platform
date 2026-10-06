@@ -1,4 +1,4 @@
-package com.doupi.framework.web.domain.server;
+﻿package com.doupi.framework.web.domain.server;
 
 import java.lang.management.ManagementFactory;
 import com.doupi.common.utils.Arith;
@@ -7,7 +7,7 @@ import com.doupi.common.utils.DateUtils;
 /**
  * JVM相关信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Jvm
 {

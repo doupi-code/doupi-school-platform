@@ -1,4 +1,4 @@
-package com.doupi.system.mapper;
+﻿package com.doupi.system.mapper;
 
 import java.util.List;
 import com.doupi.system.domain.SysLogininfor;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysLogininfor;
 /**
  * 系统访问日志情况信息 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface SysLogininforMapper
 {

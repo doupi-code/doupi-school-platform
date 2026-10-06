@@ -1,32 +1,27 @@
-# React + TypeScript + Vite
+# 豆皮学校门户官网 (doupi-web-client-react)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> 武汉汉外华襄复读学校官方门户前台网站，基于 **React 19 + TypeScript + Vite 8 + Tailwind CSS** 构建。
 
-Currently, two official plugins are available:
+## 1. 核心栏目架构
+- **首页**：全幅学校宣发、办学理念、班型介绍、名师风采橱窗、高考喜报与访校弹窗预约。
+- **关于华襄**：学校概览、办学特色、管理模式、环境设施全景。
+- **高三学年**：复读冲刺计划、分层教学、全封闭作息日程表。
+- **名师天团**：名师风采展，动态穿透后端 CMS 接口 `/api/public/v1/cms/teachers`。
+- **校园生活**：精炼紧凑的四分之一屏 Hero 视觉规范（~25vh），成长日常与心理关怀。
+- **招生录取 & 高考资讯**：招生简章、在线预约登记、高考最新考情。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 2. 快速上手
+```bash
+# 安装依赖
+npm install
 
-## React Compiler
+# 本地启动开发环境 (默认监听 5173 端口)
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# 生产环境编译构建
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 3. 部署与动态降级
+- 静态页面产物部署于 `/var/www/doupi-web-client/dist`，由 Nginx 在 80 端口根路径 `/` 托管。
+- 动态接口自带本地离线容错降级，弱网或接口异常时平滑展示兜底基准数据，确保对外门户 100% 稳定运行。

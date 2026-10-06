@@ -1,4 +1,4 @@
-package com.doupi.stock.service;
+﻿package com.doupi.stock.service;
 
 import java.util.List;
 import com.doupi.stock.domain.StockSupplier;
@@ -6,7 +6,7 @@ import com.doupi.stock.domain.StockSupplier;
 /**
  * 供应商Service接口
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public interface IStockSupplierService 

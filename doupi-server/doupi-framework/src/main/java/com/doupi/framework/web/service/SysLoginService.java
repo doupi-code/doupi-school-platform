@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ import com.doupi.system.service.ISysUserService;
 /**
  * 登录校验方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class SysLoginService

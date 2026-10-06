@@ -1,4 +1,4 @@
-package com.doupi.quartz.util;
+﻿package com.doupi.quartz.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -11,7 +11,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 任务执行工具
  *
- * @author ruoyi
+ * @author doupi
  */
 public class JobInvokeUtil
 {

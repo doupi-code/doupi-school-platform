@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain;
+﻿package com.doupi.common.core.domain;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -8,7 +8,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 操作消息提醒
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class AjaxResult extends HashMap<String, Object>
 {

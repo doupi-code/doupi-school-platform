@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.model;
+﻿package com.doupi.common.core.domain.model;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -14,7 +14,7 @@ import com.doupi.common.core.domain.entity.SysUser;
 /**
  * 登录用户身份权限
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class LoginUser implements UserDetails
 {

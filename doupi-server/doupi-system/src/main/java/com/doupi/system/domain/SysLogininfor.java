@@ -1,4 +1,4 @@
-package com.doupi.system.domain;
+﻿package com.doupi.system.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -9,7 +9,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 系统访问记录表 sys_logininfor
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysLogininfor extends BaseEntity
 {

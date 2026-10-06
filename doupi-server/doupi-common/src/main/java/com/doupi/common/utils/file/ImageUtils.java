@@ -1,4 +1,4 @@
-package com.doupi.common.utils.file;
+﻿package com.doupi.common.utils.file;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -16,7 +16,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 图片处理工具类
  *
- * @author ruoyi
+ * @author doupi
  */
 public class ImageUtils
 {

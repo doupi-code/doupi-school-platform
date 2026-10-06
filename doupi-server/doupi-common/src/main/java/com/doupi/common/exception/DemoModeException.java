@@ -1,9 +1,9 @@
-package com.doupi.common.exception;
+﻿package com.doupi.common.exception;
 
 /**
  * 演示模式异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class DemoModeException extends RuntimeException
 {

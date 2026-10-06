@@ -1,4 +1,4 @@
-package com.doupi.generator.domain;
+﻿package com.doupi.generator.domain;
 
 import jakarta.validation.constraints.NotBlank;
 import com.doupi.common.core.domain.BaseEntity;
@@ -7,7 +7,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 代码生成业务字段表 gen_table_column
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class GenTableColumn extends BaseEntity
 {

@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # 豆皮校园管理平台 — 全端防硬编码自动化检测脚本
 # ==============================================================================
 
@@ -88,10 +88,10 @@ if ($optionViolations.Count -gt 0) {
 # 4. 检查移动端外部演示网关写死
 Write-Host "`n[4/4] 检查移动端与小程序环境网关地址..." -ForegroundColor Yellow
 $urlViolations = @()
-$appFiles = Get-ChildItem -Path "$rootPath\ruoyi-app\config", "$rootPath\doupi-app" -Recurse -Include *.js
+$appFiles = Get-ChildItem -Path "$rootPath\doupi-app\config", "$rootPath\doupi-app" -Recurse -Include *.js
 
 foreach ($f in $appFiles) {
-    $matches = Select-String -Path $f.FullName -Pattern "vue\.ruoyi\.vip"
+    $matches = Select-String -Path $f.FullName -Pattern "vue\.Doupi\.vip"
     foreach ($m in $matches) {
         $urlViolations += [PSCustomObject]@{
             File = $f.FullName.Replace("$rootPath\", "")

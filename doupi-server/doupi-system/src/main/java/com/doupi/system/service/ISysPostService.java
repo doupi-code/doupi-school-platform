@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import com.doupi.system.domain.SysPost;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysPost;
 /**
  * 岗位信息 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysPostService
 {

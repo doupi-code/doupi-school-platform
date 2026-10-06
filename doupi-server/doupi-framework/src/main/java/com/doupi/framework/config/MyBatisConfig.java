@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * Mybatis支持*匹配扫描包
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class MyBatisConfig

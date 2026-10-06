@@ -1,4 +1,4 @@
-package com.doupi.common.annotation;
+﻿package com.doupi.common.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -11,7 +11,7 @@ import com.doupi.common.enums.OperatorType;
 /**
  * 自定义操作日志记录注解
  * 
- * @author ruoyi
+ * @author doupi
  *
  */
 @Target({ ElementType.PARAMETER, ElementType.METHOD })

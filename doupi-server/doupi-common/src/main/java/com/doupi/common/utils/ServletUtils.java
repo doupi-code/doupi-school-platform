@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -20,7 +20,7 @@ import com.doupi.common.core.text.Convert;
 /**
  * 客户端工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class ServletUtils
 {

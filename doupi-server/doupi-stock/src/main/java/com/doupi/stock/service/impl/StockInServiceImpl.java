@@ -1,4 +1,4 @@
-package com.doupi.stock.service.impl;
+﻿package com.doupi.stock.service.impl;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,7 +20,7 @@ import com.doupi.stock.service.IStockInService;
 /**
  * 入库单Service业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @Service

@@ -1,4 +1,4 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 import java.util.function.Function;
 import com.doupi.common.utils.DesensitizedUtil;
@@ -6,7 +6,7 @@ import com.doupi.common.utils.DesensitizedUtil;
 /**
  * 脱敏类型
  *
- * @author ruoyi
+ * @author doupi
  */
 public enum DesensitizedType
 {

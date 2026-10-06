@@ -1,4 +1,4 @@
-package com.doupi.web.controller.common;
+﻿package com.doupi.web.controller.common;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -23,7 +23,7 @@ import com.doupi.system.service.ISysConfigService;
 /**
  * 验证码操作处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 public class CaptchaController

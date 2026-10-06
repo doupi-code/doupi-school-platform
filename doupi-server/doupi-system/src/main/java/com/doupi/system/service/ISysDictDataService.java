@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import com.doupi.common.core.domain.entity.SysDictData;
@@ -6,7 +6,7 @@ import com.doupi.common.core.domain.entity.SysDictData;
 /**
  * 字典 业务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysDictDataService
 {

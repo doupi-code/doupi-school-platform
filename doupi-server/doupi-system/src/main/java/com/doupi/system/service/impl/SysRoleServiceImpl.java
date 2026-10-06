@@ -1,4 +1,4 @@
-package com.doupi.system.service.impl;
+﻿package com.doupi.system.service.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ import com.doupi.system.service.ISysRoleService;
 /**
  * 角色 业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysRoleServiceImpl implements ISysRoleService

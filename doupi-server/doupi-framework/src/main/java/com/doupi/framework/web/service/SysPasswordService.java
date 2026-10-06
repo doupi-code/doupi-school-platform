@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +16,7 @@ import com.doupi.framework.security.context.AuthenticationContextHolder;
 /**
  * 登录密码方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class SysPasswordService

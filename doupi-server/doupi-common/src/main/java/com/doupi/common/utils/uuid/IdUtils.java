@@ -1,9 +1,9 @@
-package com.doupi.common.utils.uuid;
+﻿package com.doupi.common.utils.uuid;
 
 /**
  * ID生成器工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class IdUtils
 {

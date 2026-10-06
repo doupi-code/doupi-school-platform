@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import com.doupi.common.utils.Threads;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -12,7 +12,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * 线程池配置
  *
- * @author ruoyi
+ * @author doupi
  **/
 @Configuration
 public class ThreadPoolConfig

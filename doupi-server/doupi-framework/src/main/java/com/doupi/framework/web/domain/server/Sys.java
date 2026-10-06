@@ -1,9 +1,9 @@
-package com.doupi.framework.web.domain.server;
+﻿package com.doupi.framework.web.domain.server;
 
 /**
  * 系统相关信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Sys
 {

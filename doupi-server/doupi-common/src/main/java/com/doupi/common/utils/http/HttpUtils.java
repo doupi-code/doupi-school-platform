@@ -1,4 +1,4 @@
-package com.doupi.common.utils.http;
+﻿package com.doupi.common.utils.http;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,7 +26,7 @@ import org.springframework.http.MediaType;
 /**
  * 通用http发送方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class HttpUtils
 {

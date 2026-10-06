@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 线程相关工具类.
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Threads
 {

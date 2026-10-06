@@ -1,4 +1,4 @@
-package com.doupi.framework.aspectj;
+﻿package com.doupi.framework.aspectj;
 
 import java.util.Objects;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -18,7 +18,7 @@ import com.doupi.framework.datasource.DynamicDataSourceContextHolder;
 /**
  * 多数据源处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Aspect
 @Order(1)

@@ -1,4 +1,4 @@
-package com.doupi.quartz.util;
+﻿package com.doupi.quartz.util;
 
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
@@ -21,7 +21,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 定时任务工具类
  * 
- * @author ruoyi
+ * @author doupi
  *
  */
 public class ScheduleUtils

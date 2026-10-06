@@ -1,4 +1,4 @@
-package com.doupi.system.domain;
+﻿package com.doupi.system.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -6,7 +6,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 /**
  * 用户和角色关联 sys_user_role
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysUserRole
 {

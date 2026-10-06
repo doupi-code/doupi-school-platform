@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -6,7 +6,7 @@ import java.math.RoundingMode;
 /**
  * 精确的浮点数运算
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Arith
 {

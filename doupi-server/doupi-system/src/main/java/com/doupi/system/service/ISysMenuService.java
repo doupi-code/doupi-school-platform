@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import java.util.Set;
@@ -9,7 +9,7 @@ import com.doupi.system.domain.vo.RouterVo;
 /**
  * 菜单 业务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysMenuService
 {

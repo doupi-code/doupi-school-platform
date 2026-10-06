@@ -1,4 +1,4 @@
-package com.doupi.common.utils.poi;
+﻿package com.doupi.common.utils.poi;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -89,7 +89,7 @@ import com.doupi.common.utils.reflect.ReflectUtils;
 /**
  * Excel相关处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class ExcelUtil<T>
 {

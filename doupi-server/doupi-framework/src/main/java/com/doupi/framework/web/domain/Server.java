@@ -1,4 +1,4 @@
-package com.doupi.framework.web.domain;
+﻿package com.doupi.framework.web.domain;
 
 import java.net.UnknownHostException;
 import java.util.LinkedList;
@@ -24,7 +24,7 @@ import oshi.util.Util;
 /**
  * 服务器相关信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Server
 {

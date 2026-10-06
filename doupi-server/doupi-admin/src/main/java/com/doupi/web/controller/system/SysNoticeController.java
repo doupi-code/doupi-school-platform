@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ import com.doupi.system.service.ISysNoticeService;
 /**
  * 公告 信息操作处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/system/notice")

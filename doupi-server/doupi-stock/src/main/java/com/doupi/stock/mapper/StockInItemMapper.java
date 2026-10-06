@@ -1,4 +1,4 @@
-package com.doupi.stock.mapper;
+﻿package com.doupi.stock.mapper;
 
 import java.util.List;
 import com.doupi.stock.domain.StockInItem;
@@ -6,7 +6,7 @@ import com.doupi.stock.domain.StockInItem;
 /**
  * 入库单明细Mapper接口
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public interface StockInItemMapper 

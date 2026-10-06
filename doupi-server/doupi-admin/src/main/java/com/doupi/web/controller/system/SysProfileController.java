@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import com.doupi.system.service.ISysUserService;
 /**
  * 个人信息 业务处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/system/user/profile")

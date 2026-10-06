@@ -94,7 +94,7 @@ const BasicLayout: React.FC = () => {
     for (const route of routes) {
       if (route.hidden) continue;
 
-      // 若依单页路由规范化：当 parentId=0 且是一级单页面菜单（如数字化大屏），后端会包装一层 path: "/" 且无 title，内部包含唯一 child
+      // 系统单页路由规范化：当 parentId=0 且是一级单页面菜单（如数字化大屏），后端会包装一层 path: "/" 且无 title，内部包含唯一 child
       if (
         (route.path === '/' || !route.path) &&
         route.children &&

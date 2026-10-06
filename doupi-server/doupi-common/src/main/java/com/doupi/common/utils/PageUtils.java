@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import com.github.pagehelper.PageHelper;
 import com.doupi.common.core.page.PageDomain;
@@ -8,7 +8,7 @@ import com.doupi.common.utils.sql.SqlUtil;
 /**
  * 分页工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class PageUtils extends PageHelper
 {

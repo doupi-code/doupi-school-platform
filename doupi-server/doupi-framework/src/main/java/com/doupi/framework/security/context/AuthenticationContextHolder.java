@@ -1,11 +1,11 @@
-package com.doupi.framework.security.context;
+﻿package com.doupi.framework.security.context;
 
 import org.springframework.security.core.Authentication;
 
 /**
  * 身份验证信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class AuthenticationContextHolder
 {

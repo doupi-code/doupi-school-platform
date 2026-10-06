@@ -1,4 +1,4 @@
-package com.doupi.system.mapper;
+﻿package com.doupi.system.mapper;
 
 import java.util.List;
 import com.doupi.system.domain.SysPost;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysPost;
 /**
  * 岗位信息 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface SysPostMapper
 {

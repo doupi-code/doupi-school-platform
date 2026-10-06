@@ -1,4 +1,4 @@
-package com.doupi.framework.security.context;
+﻿package com.doupi.framework.security.context;
 
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -7,7 +7,7 @@ import com.doupi.common.core.text.Convert;
 /**
  * 权限信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class PermissionContextHolder
 {

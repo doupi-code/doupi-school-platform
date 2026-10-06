@@ -1,4 +1,4 @@
-package com.doupi.quartz.mapper;
+﻿package com.doupi.quartz.mapper;
 
 import java.util.List;
 import com.doupi.quartz.domain.SysJob;
@@ -6,7 +6,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 调度任务信息 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface SysJobMapper
 {

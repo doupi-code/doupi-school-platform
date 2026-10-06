@@ -1,4 +1,4 @@
-package com.doupi.framework.security.handle;
+﻿package com.doupi.framework.security.handle;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -16,7 +16,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 认证失败处理类 返回未授权
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint, Serializable

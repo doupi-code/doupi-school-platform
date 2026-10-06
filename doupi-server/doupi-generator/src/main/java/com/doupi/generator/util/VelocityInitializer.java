@@ -1,4 +1,4 @@
-package com.doupi.generator.util;
+﻿package com.doupi.generator.util;
 
 import java.util.Properties;
 import org.apache.velocity.app.Velocity;
@@ -7,7 +7,7 @@ import com.doupi.common.constant.Constants;
 /**
  * VelocityEngine工厂
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class VelocityInitializer
 {

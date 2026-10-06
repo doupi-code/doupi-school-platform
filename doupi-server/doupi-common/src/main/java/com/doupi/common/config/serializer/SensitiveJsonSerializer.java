@@ -1,4 +1,4 @@
-package com.doupi.common.config.serializer;
+﻿package com.doupi.common.config.serializer;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -16,7 +16,7 @@ import com.doupi.common.utils.SecurityUtils;
 /**
  * 数据脱敏序列化过滤
  *
- * @author ruoyi
+ * @author doupi
  */
 public class SensitiveJsonSerializer extends JsonSerializer<String> implements ContextualSerializer
 {

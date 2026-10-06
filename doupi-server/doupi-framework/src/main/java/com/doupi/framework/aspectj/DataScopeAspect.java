@@ -1,4 +1,4 @@
-package com.doupi.framework.aspectj;
+﻿package com.doupi.framework.aspectj;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ import com.doupi.framework.security.context.PermissionContextHolder;
 /**
  * 数据过滤处理
  *
- * @author ruoyi
+ * @author doupi
  */
 @Aspect
 @Component

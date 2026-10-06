@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +14,7 @@ import com.doupi.system.service.ISysConfigService;
 /**
  * 注册验证
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 public class SysRegisterController extends BaseController

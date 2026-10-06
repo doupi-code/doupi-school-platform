@@ -1,4 +1,4 @@
-package com.doupi.web.controller.common;
+﻿package com.doupi.web.controller.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ import com.doupi.framework.config.ServerConfig;
 /**
  * 通用请求处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/common")

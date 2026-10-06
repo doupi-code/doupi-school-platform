@@ -1,4 +1,4 @@
-package com.doupi.generator.service;
+﻿package com.doupi.generator.service;
 
 import java.util.List;
 import com.doupi.generator.domain.GenTableColumn;
@@ -6,7 +6,7 @@ import com.doupi.generator.domain.GenTableColumn;
 /**
  * 业务字段 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface IGenTableColumnService
 {

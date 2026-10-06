@@ -1,9 +1,9 @@
-package com.doupi.common.utils.file;
+﻿package com.doupi.common.utils.file;
 
 /**
  * 媒体类型工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class MimeTypeUtils
 {

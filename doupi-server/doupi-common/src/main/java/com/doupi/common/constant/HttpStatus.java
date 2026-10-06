@@ -1,9 +1,9 @@
-package com.doupi.common.constant;
+﻿package com.doupi.common.constant;
 
 /**
  * 返回状态码
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class HttpStatus
 {

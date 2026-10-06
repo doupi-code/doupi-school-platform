@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import java.util.Set;
 import org.springframework.stereotype.Service;
@@ -11,9 +11,9 @@ import com.doupi.common.utils.StringUtils;
 import com.doupi.framework.security.context.PermissionContextHolder;
 
 /**
- * RuoYi首创 自定义权限实现，ss取自SpringSecurity首字母
+ * doupi首创 自定义权限实现，ss取自SpringSecurity首字母
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service("ss")
 public class PermissionService

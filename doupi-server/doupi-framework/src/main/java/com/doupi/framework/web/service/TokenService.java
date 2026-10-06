@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +26,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 /**
  * token验证处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class TokenService

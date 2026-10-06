@@ -1,9 +1,9 @@
-package com.doupi.common.exception;
+﻿package com.doupi.common.exception;
 
 /**
  * 工具类异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class UtilException extends RuntimeException
 {

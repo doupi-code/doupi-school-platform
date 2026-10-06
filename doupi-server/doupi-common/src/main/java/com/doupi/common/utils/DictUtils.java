@@ -1,4 +1,4 @@
-package com.doupi.common.utils;
+﻿package com.doupi.common.utils;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,7 +13,7 @@ import com.doupi.common.utils.spring.SpringUtils;
 /**
  * 字典工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class DictUtils
 {

@@ -1,4 +1,4 @@
-package com.doupi.framework.manager.factory;
+﻿package com.doupi.framework.manager.factory;
 
 import java.util.TimerTask;
 import org.slf4j.Logger;
@@ -19,7 +19,7 @@ import com.doupi.system.service.ISysOperLogService;
 /**
  * 异步工厂（产生任务用）
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class AsyncFactory
 {

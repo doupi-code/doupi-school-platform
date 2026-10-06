@@ -1,9 +1,9 @@
-package com.doupi.common.exception;
+﻿package com.doupi.common.exception;
 
 /**
  * 业务异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public final class ServiceException extends RuntimeException
 {

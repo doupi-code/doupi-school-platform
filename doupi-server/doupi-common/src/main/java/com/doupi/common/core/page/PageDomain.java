@@ -1,11 +1,11 @@
-package com.doupi.common.core.page;
+﻿package com.doupi.common.core.page;
 
 import com.doupi.common.utils.StringUtils;
 
 /**
  * 分页数据
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class PageDomain
 {

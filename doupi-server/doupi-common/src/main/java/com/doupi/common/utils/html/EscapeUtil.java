@@ -1,11 +1,11 @@
-package com.doupi.common.utils.html;
+﻿package com.doupi.common.utils.html;
 
 import com.doupi.common.utils.StringUtils;
 
 /**
  * 转义和反转义工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class EscapeUtil
 {

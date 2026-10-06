@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.entity;
+﻿package com.doupi.common.core.domain.entity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 部门表 sys_dept
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysDept extends BaseEntity
 {

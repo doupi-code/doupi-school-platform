@@ -1,4 +1,4 @@
-package com.doupi.stock.domain;
+﻿package com.doupi.stock.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -8,7 +8,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 物品档案对象 edu_goods
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public class StockGoods extends BaseEntity

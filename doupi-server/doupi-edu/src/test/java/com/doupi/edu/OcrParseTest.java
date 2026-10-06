@@ -1,4 +1,4 @@
-package com.doupi.edu;
+﻿package com.doupi.edu;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
@@ -346,7 +346,7 @@ public class OcrParseTest
     @Test
     public void testWeChatGuiPng() throws Exception
     {
-        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/RuoYi-Vue-v3.9.2/微信界面.png");
+        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/doupi-Vue-v3.9.2/微信界面.png");
         if (!imgFile.exists()) {
             System.out.println("微信界面.png 不存在，跳过");
             return;
@@ -427,7 +427,7 @@ public class OcrParseTest
     @Test
     public void testUserUploadedImage1() throws Exception
     {
-        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/RuoYi-Vue-v3.9.2/测试图片.png");
+        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/doupi-Vue-v3.9.2/测试图片.png");
         if (!imgFile.exists()) {
             System.out.println("测试图片.png 不存在");
             return;
@@ -458,7 +458,7 @@ public class OcrParseTest
     @Test
     public void testUserUploadedImage2() throws Exception
     {
-        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/RuoYi-Vue-v3.9.2/测试图片2.png");
+        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/doupi-Vue-v3.9.2/测试图片2.png");
         if (!imgFile.exists()) {
             System.out.println("测试图片2.png 不存在");
             return;
@@ -602,7 +602,7 @@ public class OcrParseTest
     @Test
     public void testUserUploadedImageLatest() throws Exception
     {
-        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/RuoYi-Vue-v3.9.2/最新测试图片.png");
+        java.io.File imgFile = new java.io.File("C:/Users/javal/Desktop/doupi-Vue-v3.9.2/最新测试图片.png");
         if (!imgFile.exists()) return;
         EduOcrServiceImpl service = getMockedService();
         io.github.mymonstercat.ocr.config.HardwareConfig config = io.github.mymonstercat.ocr.config.HardwareConfig.getOnnxConfig();

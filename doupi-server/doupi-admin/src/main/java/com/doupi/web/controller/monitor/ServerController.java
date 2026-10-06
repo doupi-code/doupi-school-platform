@@ -1,4 +1,4 @@
-package com.doupi.web.controller.monitor;
+﻿package com.doupi.web.controller.monitor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +10,7 @@ import com.doupi.framework.web.domain.Server;
 /**
  * 服务器监控
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/monitor/server")

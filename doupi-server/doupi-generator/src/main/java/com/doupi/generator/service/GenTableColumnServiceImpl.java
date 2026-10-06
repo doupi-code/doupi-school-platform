@@ -1,4 +1,4 @@
-package com.doupi.generator.service;
+﻿package com.doupi.generator.service;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +10,7 @@ import com.doupi.generator.mapper.GenTableColumnMapper;
 /**
  * 业务字段 服务层实现
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class GenTableColumnServiceImpl implements IGenTableColumnService 

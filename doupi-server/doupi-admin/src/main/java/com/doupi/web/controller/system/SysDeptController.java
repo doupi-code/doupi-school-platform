@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,7 @@ import com.doupi.system.service.ISysDeptService;
 /**
  * 部门信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/system/dept")

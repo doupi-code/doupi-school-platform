@@ -1,4 +1,4 @@
-package com.doupi.generator.util;
+﻿package com.doupi.generator.util;
 
 import java.util.Arrays;
 import org.apache.commons.lang3.RegExUtils;
@@ -11,7 +11,7 @@ import com.doupi.generator.domain.GenTableColumn;
 /**
  * 代码生成器 工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class GenUtils
 {
@@ -215,7 +215,7 @@ public class GenUtils
      */
     public static String replaceText(String text)
     {
-        return RegExUtils.replaceAll(text, "(?:表|若依)", "");
+        return RegExUtils.replaceAll(text, "(?:表|豆皮)", "");
     }
 
     /**

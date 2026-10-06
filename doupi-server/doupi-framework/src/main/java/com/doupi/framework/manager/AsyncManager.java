@@ -1,4 +1,4 @@
-package com.doupi.framework.manager;
+﻿package com.doupi.framework.manager;
 
 import java.util.TimerTask;
 import java.util.concurrent.ScheduledExecutorService;
@@ -9,7 +9,7 @@ import com.doupi.common.utils.spring.SpringUtils;
 /**
  * 异步任务管理器
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class AsyncManager
 {

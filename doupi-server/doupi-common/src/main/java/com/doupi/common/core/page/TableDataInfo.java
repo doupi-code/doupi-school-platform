@@ -1,4 +1,4 @@
-package com.doupi.common.core.page;
+﻿package com.doupi.common.core.page;
 
 import java.io.Serializable;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * 表格分页数据对象
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class TableDataInfo implements Serializable
 {

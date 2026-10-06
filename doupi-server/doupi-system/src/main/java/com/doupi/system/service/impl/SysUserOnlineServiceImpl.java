@@ -1,4 +1,4 @@
-package com.doupi.system.service.impl;
+﻿package com.doupi.system.service.impl;
 
 import org.springframework.stereotype.Service;
 import com.doupi.common.core.domain.model.LoginUser;
@@ -9,7 +9,7 @@ import com.doupi.system.service.ISysUserOnlineService;
 /**
  * 在线用户 服务层处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysUserOnlineServiceImpl implements ISysUserOnlineService

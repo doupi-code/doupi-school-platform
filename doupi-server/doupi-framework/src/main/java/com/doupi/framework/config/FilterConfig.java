@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +17,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * Filter配置
  *
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class FilterConfig

@@ -1,4 +1,4 @@
-package com.doupi.edu;
+﻿package com.doupi.edu;
 
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
@@ -267,7 +267,7 @@ public class ExportAuditVerifyTest {
         buildS4.setAccessible(true);
         buildS4.invoke(service, wb, wb.createSheet("最细化穿透流水清单"), new HashMap<>(), styles);
 
-        String outputPath = "C:\\Users\\javal\\Desktop\\RuoYi-Vue-v3.9.2\\doupi-server\\test_report_output.xlsx";
+        String outputPath = "C:\\Users\\javal\\Desktop\\doupi-Vue-v3.9.2\\doupi-server\\test_report_output.xlsx";
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             wb.write(fos);
         }

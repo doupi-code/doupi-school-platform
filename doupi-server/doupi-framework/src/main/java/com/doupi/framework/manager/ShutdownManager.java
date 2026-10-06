@@ -1,4 +1,4 @@
-package com.doupi.framework.manager;
+﻿package com.doupi.framework.manager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +8,7 @@ import jakarta.annotation.PreDestroy;
 /**
  * 确保应用退出时能关闭后台线程
  *
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class ShutdownManager

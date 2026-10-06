@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +12,7 @@ import com.doupi.common.constant.Constants;
 /**
  * 资源文件配置加载
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class I18nConfig implements WebMvcConfigurer

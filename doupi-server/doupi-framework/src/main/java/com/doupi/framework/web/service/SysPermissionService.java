@@ -1,4 +1,4 @@
-package com.doupi.framework.web.service;
+﻿package com.doupi.framework.web.service;
 
 import java.util.HashSet;
 import java.util.List;
@@ -17,7 +17,7 @@ import com.doupi.system.service.ISysRoleService;
 /**
  * 用户权限处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class SysPermissionService

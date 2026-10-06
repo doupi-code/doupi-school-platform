@@ -1,4 +1,4 @@
-package com.doupi.generator.controller;
+﻿package com.doupi.generator.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ import com.doupi.generator.service.IGenTableService;
 /**
  * 代码生成 操作处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/tool/gen")

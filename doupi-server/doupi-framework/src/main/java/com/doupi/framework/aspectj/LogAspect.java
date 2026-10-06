@@ -1,4 +1,4 @@
-package com.doupi.framework.aspectj;
+﻿package com.doupi.framework.aspectj;
 
 import java.util.Collection;
 import java.util.Map;
@@ -36,7 +36,7 @@ import com.doupi.system.domain.SysOperLog;
 /**
  * 操作日志记录处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Aspect
 @Component

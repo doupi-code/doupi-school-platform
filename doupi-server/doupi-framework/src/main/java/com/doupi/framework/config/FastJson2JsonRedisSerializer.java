@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import java.nio.charset.Charset;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -12,7 +12,7 @@ import com.doupi.common.constant.Constants;
 /**
  * Redis使用FastJson序列化
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class FastJson2JsonRedisSerializer<T> implements RedisSerializer<T>
 {

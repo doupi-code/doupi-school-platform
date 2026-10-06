@@ -1,4 +1,4 @@
-package com.doupi.web.controller.stock;
+﻿package com.doupi.web.controller.stock;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +25,7 @@ import com.doupi.stock.service.IStockReportService;
 /**
  * 统计报表Controller
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @RestController

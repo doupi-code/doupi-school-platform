@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import jakarta.servlet.ServletResponse;
 /**
  * druid 配置多数据源
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class DruidConfig

@@ -1,4 +1,4 @@
-package com.doupi.system.domain;
+﻿package com.doupi.system.domain;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,7 +12,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 岗位表 sys_post
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysPost extends BaseEntity
 {

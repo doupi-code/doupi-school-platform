@@ -1,4 +1,4 @@
-package com.doupi.edu.service.impl;
+﻿package com.doupi.edu.service.impl;
 
 import java.util.List;
 import com.doupi.common.utils.DateUtils;
@@ -11,7 +11,7 @@ import com.doupi.edu.service.IEduClassService;
 /**
  * 班级档案Service业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @Service

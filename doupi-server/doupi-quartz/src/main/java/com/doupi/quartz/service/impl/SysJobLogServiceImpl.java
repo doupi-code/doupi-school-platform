@@ -1,4 +1,4 @@
-package com.doupi.quartz.service.impl;
+﻿package com.doupi.quartz.service.impl;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +10,7 @@ import com.doupi.quartz.service.ISysJobLogService;
 /**
  * 定时任务调度日志信息 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysJobLogServiceImpl implements ISysJobLogService

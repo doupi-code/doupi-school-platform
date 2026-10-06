@@ -1,4 +1,4 @@
-package com.doupi.system.service.impl;
+﻿package com.doupi.system.service.impl;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -35,7 +35,7 @@ import com.doupi.system.service.ISysUserService;
 /**
  * 用户 业务层处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysUserServiceImpl implements ISysUserService

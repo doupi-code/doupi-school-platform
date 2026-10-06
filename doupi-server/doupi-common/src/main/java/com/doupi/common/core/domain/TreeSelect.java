@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain;
+﻿package com.doupi.common.core.domain;
 
 import java.io.Serializable;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * Treeselect树结构实体类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class TreeSelect implements Serializable
 {

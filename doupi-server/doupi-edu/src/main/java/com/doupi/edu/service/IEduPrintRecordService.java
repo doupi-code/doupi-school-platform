@@ -1,4 +1,4 @@
-package com.doupi.edu.service;
+﻿package com.doupi.edu.service;
 
 import java.util.List;
 import com.doupi.edu.domain.EduPrintRecord;
@@ -6,7 +6,7 @@ import com.doupi.edu.domain.EduPrintRecord;
 /**
  * 印刷登记Service接口
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public interface IEduPrintRecordService 

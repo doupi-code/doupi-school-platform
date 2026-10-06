@@ -1,4 +1,4 @@
-package com.doupi.edu.mapper;
+﻿package com.doupi.edu.mapper;
 
 import java.util.List;
 import com.doupi.edu.domain.EduClass;
@@ -6,7 +6,7 @@ import com.doupi.edu.domain.EduClass;
 /**
  * 班级档案Mapper接口
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public interface EduClassMapper 

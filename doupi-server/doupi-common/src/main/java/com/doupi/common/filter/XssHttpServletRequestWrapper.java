@@ -1,4 +1,4 @@
-package com.doupi.common.filter;
+﻿package com.doupi.common.filter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import com.doupi.common.utils.html.EscapeUtil;
 /**
  * XSS过滤处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper
 {

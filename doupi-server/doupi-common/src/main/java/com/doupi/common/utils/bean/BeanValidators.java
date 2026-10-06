@@ -1,4 +1,4 @@
-package com.doupi.common.utils.bean;
+﻿package com.doupi.common.utils.bean;
 
 import java.util.Set;
 import jakarta.validation.ConstraintViolation;
@@ -8,7 +8,7 @@ import jakarta.validation.Validator;
 /**
  * bean对象属性验证
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class BeanValidators
 {

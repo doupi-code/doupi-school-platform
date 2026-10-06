@@ -1,11 +1,11 @@
-package com.doupi.common.utils.uuid;
+﻿package com.doupi.common.utils.uuid;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import com.doupi.common.utils.DateUtils;
 import com.doupi.common.utils.StringUtils;
 
 /**
- * @author ruoyi 序列生成类
+ * @author doupi 序列生成类
  */
 public class Seq
 {

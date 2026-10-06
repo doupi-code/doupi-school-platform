@@ -1,4 +1,4 @@
-package com.doupi.system.service.impl;
+﻿package com.doupi.system.service.impl;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import com.doupi.system.service.ISysNoticeReadService;
 /**
  * 公告已读记录 服务层实现
  *
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysNoticeReadServiceImpl implements ISysNoticeReadService

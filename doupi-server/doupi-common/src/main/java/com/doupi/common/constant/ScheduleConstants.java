@@ -1,9 +1,9 @@
-package com.doupi.common.constant;
+﻿package com.doupi.common.constant;
 
 /**
  * 任务调度通用常量
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class ScheduleConstants
 {

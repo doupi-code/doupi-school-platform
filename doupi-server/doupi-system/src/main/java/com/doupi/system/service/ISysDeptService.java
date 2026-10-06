@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import com.doupi.common.core.domain.TreeSelect;
@@ -7,7 +7,7 @@ import com.doupi.common.core.domain.entity.SysDept;
 /**
  * 部门管理 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysDeptService
 {

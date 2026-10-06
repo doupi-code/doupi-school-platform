@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import com.doupi.system.domain.SysOperLog;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysOperLog;
 /**
  * 操作日志 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysOperLogService
 {

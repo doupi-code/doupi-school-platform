@@ -1,4 +1,4 @@
-package com.doupi.generator.util;
+﻿package com.doupi.generator.util;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,7 +16,7 @@ import com.doupi.generator.domain.GenTableColumn;
 /**
  * 模板处理工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class VelocityUtils
 {

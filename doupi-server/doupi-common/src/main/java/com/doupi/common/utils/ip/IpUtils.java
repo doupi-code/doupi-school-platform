@@ -1,4 +1,4 @@
-package com.doupi.common.utils.ip;
+﻿package com.doupi.common.utils.ip;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -9,7 +9,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 获取IP方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class IpUtils
 {

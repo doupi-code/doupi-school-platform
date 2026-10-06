@@ -1,4 +1,4 @@
-package com.doupi.web.controller.monitor;
+﻿package com.doupi.web.controller.monitor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +26,7 @@ import com.doupi.system.service.ISysUserOnlineService;
 /**
  * 在线用户监控
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/monitor/online")

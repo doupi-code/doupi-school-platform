@@ -1,9 +1,9 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 /**
  * 操作状态
  * 
- * @author ruoyi
+ * @author doupi
  *
  */
 public enum BusinessStatus

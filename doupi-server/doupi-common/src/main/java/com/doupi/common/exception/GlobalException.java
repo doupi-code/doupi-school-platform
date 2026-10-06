@@ -1,9 +1,9 @@
-package com.doupi.common.exception;
+﻿package com.doupi.common.exception;
 
 /**
  * 全局异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class GlobalException extends RuntimeException
 {

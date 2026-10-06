@@ -1,4 +1,4 @@
-package com.doupi.common.filter;
+﻿package com.doupi.common.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ import com.doupi.common.enums.HttpMethod;
 /**
  * 防止XSS攻击的过滤器
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class XssFilter implements Filter
 {

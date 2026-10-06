@@ -1,11 +1,11 @@
-package com.doupi.framework.web.domain.server;
+﻿package com.doupi.framework.web.domain.server;
 
 import com.doupi.common.utils.Arith;
 
 /**
  * CPU相关信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Cpu
 {

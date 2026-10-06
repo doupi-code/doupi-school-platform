@@ -1,4 +1,4 @@
-package com.doupi.generator.service;
+﻿package com.doupi.generator.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -41,7 +41,7 @@ import com.doupi.generator.util.VelocityUtils;
 /**
  * 业务 服务层实现
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class GenTableServiceImpl implements IGenTableService

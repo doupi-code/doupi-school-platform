@@ -1,11 +1,11 @@
-package com.doupi.system.domain.vo;
+﻿package com.doupi.system.domain.vo;
 
 import com.doupi.common.utils.StringUtils;
 
 /**
  * 路由显示信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class MetaVo
 {

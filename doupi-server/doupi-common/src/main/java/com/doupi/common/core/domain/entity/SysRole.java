@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain.entity;
+﻿package com.doupi.common.core.domain.entity;
 
 import java.util.Set;
 import jakarta.validation.constraints.NotBlank;
@@ -13,7 +13,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 角色表 sys_role
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysRole extends BaseEntity
 {

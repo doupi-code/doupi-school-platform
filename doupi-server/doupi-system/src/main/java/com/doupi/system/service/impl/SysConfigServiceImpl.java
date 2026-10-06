@@ -1,4 +1,4 @@
-package com.doupi.system.service.impl;
+﻿package com.doupi.system.service.impl;
 
 import java.util.Collection;
 import java.util.List;
@@ -18,7 +18,7 @@ import com.doupi.system.service.ISysConfigService;
 /**
  * 参数配置 服务层实现
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysConfigServiceImpl implements ISysConfigService

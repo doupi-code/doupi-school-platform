@@ -1,4 +1,4 @@
-package com.doupi.stock.domain;
+﻿package com.doupi.stock.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -10,7 +10,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 出库单对象 edu_stock_out
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public class StockOut extends BaseEntity

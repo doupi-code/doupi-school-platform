@@ -1,4 +1,4 @@
-package com.doupi.common.core.controller;
+﻿package com.doupi.common.core.controller;
 
 import java.beans.PropertyEditorSupport;
 import java.util.Date;
@@ -24,7 +24,7 @@ import com.doupi.common.utils.sql.SqlUtil;
 /**
  * web层通用数据处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class BaseController
 {

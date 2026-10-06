@@ -1,9 +1,9 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 /**
  * 业务操作类型
  * 
- * @author ruoyi
+ * @author doupi
  */
 public enum BusinessType
 {

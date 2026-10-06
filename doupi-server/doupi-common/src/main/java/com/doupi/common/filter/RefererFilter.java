@@ -1,4 +1,4 @@
-package com.doupi.common.filter;
+﻿package com.doupi.common.filter;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 /**
  * 防盗链过滤器
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class RefererFilter implements Filter
 {

@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.Date;
 import java.util.List;
@@ -27,7 +27,7 @@ import com.doupi.system.service.ISysMenuService;
 /**
  * 登录验证
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 public class SysLoginController

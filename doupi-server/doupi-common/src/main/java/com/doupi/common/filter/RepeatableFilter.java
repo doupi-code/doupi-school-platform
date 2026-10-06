@@ -1,4 +1,4 @@
-package com.doupi.common.filter;
+﻿package com.doupi.common.filter;
 
 import java.io.IOException;
 import jakarta.servlet.Filter;
@@ -14,7 +14,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * Repeatable 过滤器
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class RepeatableFilter implements Filter
 {

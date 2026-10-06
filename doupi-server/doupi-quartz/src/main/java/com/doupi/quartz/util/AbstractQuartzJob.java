@@ -1,4 +1,4 @@
-package com.doupi.quartz.util;
+﻿package com.doupi.quartz.util;
 
 import java.util.Date;
 import org.quartz.Job;
@@ -18,7 +18,7 @@ import com.doupi.quartz.service.ISysJobLogService;
 /**
  * 抽象quartz调用
  *
- * @author ruoyi
+ * @author doupi
  */
 public abstract class AbstractQuartzJob implements Job
 {

@@ -1,4 +1,4 @@
-package com.doupi.web.controller.stock;
+﻿package com.doupi.web.controller.stock;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,7 +24,7 @@ import com.doupi.common.core.page.TableDataInfo;
 /**
  * 入库单Controller
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @RestController

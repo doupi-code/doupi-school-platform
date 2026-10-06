@@ -1,9 +1,9 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 /**
  * 数据源
  * 
- * @author ruoyi
+ * @author doupi
  */
 public enum DataSourceType
 {

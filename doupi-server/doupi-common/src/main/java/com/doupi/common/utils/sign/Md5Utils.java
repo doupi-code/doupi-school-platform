@@ -1,4 +1,4 @@
-package com.doupi.common.utils.sign;
+﻿package com.doupi.common.utils.sign;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Md5加密方法
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Md5Utils
 {

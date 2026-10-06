@@ -1,4 +1,4 @@
-package com.doupi.quartz.util;
+﻿package com.doupi.quartz.util;
 
 import org.quartz.JobExecutionContext;
 import com.doupi.quartz.domain.SysJob;
@@ -6,7 +6,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 定时任务处理（允许并发执行）
  * 
- * @author ruoyi
+ * @author doupi
  *
  */
 public class QuartzJobExecution extends AbstractQuartzJob

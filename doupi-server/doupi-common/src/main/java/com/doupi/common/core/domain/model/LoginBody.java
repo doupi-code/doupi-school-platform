@@ -1,9 +1,9 @@
-package com.doupi.common.core.domain.model;
+﻿package com.doupi.common.core.domain.model;
 
 /**
  * 用户登录对象
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class LoginBody
 {

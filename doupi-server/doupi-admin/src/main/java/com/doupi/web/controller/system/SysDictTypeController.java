@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,7 +25,7 @@ import com.doupi.system.service.ISysDictTypeService;
 /**
  * 数据字典信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/system/dict/type")

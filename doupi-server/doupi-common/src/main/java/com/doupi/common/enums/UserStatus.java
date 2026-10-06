@@ -1,9 +1,9 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 /**
  * 用户状态
  * 
- * @author ruoyi
+ * @author doupi
  */
 public enum UserStatus
 {

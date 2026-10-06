@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import java.util.List;
 import java.util.Set;
@@ -8,7 +8,7 @@ import com.doupi.system.domain.SysUserRole;
 /**
  * 角色业务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysRoleService
 {

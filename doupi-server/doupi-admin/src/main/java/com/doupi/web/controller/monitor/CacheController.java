@@ -1,4 +1,4 @@
-package com.doupi.web.controller.monitor;
+﻿package com.doupi.web.controller.monitor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,7 +25,7 @@ import com.doupi.system.domain.SysCache;
 /**
  * 缓存监控
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/monitor/cache")

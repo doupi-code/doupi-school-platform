@@ -1,4 +1,4 @@
-package com.doupi.generator.mapper;
+﻿package com.doupi.generator.mapper;
 
 import java.util.List;
 import com.doupi.generator.domain.GenTable;
@@ -6,7 +6,7 @@ import com.doupi.generator.domain.GenTable;
 /**
  * 业务 数据层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface GenTableMapper
 {

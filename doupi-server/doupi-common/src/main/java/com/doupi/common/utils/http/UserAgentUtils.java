@@ -1,4 +1,4 @@
-package com.doupi.common.utils.http;
+﻿package com.doupi.common.utils.http;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -9,7 +9,7 @@ import nl.basjes.parse.useragent.UserAgentAnalyzer;
 /**
  * UserAgent解析工具类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class UserAgentUtils
 {

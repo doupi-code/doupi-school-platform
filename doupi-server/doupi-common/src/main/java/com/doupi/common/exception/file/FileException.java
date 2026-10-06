@@ -1,11 +1,11 @@
-package com.doupi.common.exception.file;
+﻿package com.doupi.common.exception.file;
 
 import com.doupi.common.exception.base.BaseException;
 
 /**
  * 文件信息异常类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class FileException extends BaseException
 {

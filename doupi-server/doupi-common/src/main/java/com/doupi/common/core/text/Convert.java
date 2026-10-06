@@ -1,4 +1,4 @@
-package com.doupi.common.core.text;
+﻿package com.doupi.common.core.text;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,7 +12,7 @@ import com.doupi.common.utils.StringUtils;
 /**
  * 类型转换器
  *
- * @author ruoyi
+ * @author doupi
  */
 public class Convert
 {

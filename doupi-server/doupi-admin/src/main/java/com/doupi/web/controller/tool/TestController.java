@@ -1,4 +1,4 @@
-package com.doupi.web.controller.tool;
+﻿package com.doupi.web.controller.tool;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * swagger 用户测试方法
  *
- * @author ruoyi
+ * @author doupi
  */
 @Tag(name = "用户信息管理")
 @RestController

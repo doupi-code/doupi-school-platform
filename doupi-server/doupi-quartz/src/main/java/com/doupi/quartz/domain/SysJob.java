@@ -1,4 +1,4 @@
-package com.doupi.quartz.domain;
+﻿package com.doupi.quartz.domain;
 
 import java.util.Date;
 import jakarta.validation.constraints.NotBlank;
@@ -16,7 +16,7 @@ import com.doupi.quartz.util.CronUtils;
 /**
  * 定时任务调度表 sys_job
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class SysJob extends BaseEntity
 {

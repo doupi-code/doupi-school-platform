@@ -1,4 +1,4 @@
-package com.doupi.system.service;
+﻿package com.doupi.system.service;
 
 import com.doupi.common.core.domain.model.LoginUser;
 import com.doupi.system.domain.SysUserOnline;
@@ -6,7 +6,7 @@ import com.doupi.system.domain.SysUserOnline;
 /**
  * 在线用户 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysUserOnlineService
 {

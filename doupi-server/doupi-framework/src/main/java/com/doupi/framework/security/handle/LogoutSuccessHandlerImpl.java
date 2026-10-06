@@ -1,4 +1,4 @@
-package com.doupi.framework.security.handle;
+﻿package com.doupi.framework.security.handle;
 
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -22,7 +22,7 @@ import com.doupi.framework.web.service.TokenService;
 /**
  * 自定义退出处理类 返回成功
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class LogoutSuccessHandlerImpl implements LogoutSuccessHandler

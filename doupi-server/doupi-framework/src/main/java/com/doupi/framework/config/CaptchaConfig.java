@@ -1,4 +1,4 @@
-package com.doupi.framework.config;
+﻿package com.doupi.framework.config;
 
 import java.util.Properties;
 import org.springframework.context.annotation.Bean;
@@ -10,7 +10,7 @@ import static com.google.code.kaptcha.Constants.*;
 /**
  * 验证码配置
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Configuration
 public class CaptchaConfig

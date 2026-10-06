@@ -1,11 +1,11 @@
-package com.doupi.common.core.text;
+﻿package com.doupi.common.core.text;
 
 import com.doupi.common.utils.StringUtils;
 
 /**
  * 字符串格式化
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class StrFormatter
 {

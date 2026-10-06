@@ -1,9 +1,9 @@
-package com.doupi.common.exception.job;
+﻿package com.doupi.common.exception.job;
 
 /**
  * 计划策略异常
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class TaskException extends Exception
 {

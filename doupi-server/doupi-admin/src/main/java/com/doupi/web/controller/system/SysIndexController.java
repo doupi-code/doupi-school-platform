@@ -1,4 +1,4 @@
-package com.doupi.web.controller.system;
+﻿package com.doupi.web.controller.system;
 
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +16,7 @@ import com.doupi.system.service.ISysUserService;
 /**
  * 首页
  *
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 public class SysIndexController

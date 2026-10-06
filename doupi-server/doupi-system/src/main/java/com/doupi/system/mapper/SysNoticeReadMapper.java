@@ -1,4 +1,4 @@
-package com.doupi.system.mapper;
+﻿package com.doupi.system.mapper;
 
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -8,7 +8,7 @@ import com.doupi.system.domain.SysNotice;
 /**
  * 公告已读记录 数据层
  *
- * @author ruoyi
+ * @author doupi
  */
 public interface SysNoticeReadMapper
 {

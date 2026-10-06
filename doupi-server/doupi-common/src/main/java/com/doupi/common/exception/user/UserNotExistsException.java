@@ -1,9 +1,9 @@
-package com.doupi.common.exception.user;
+﻿package com.doupi.common.exception.user;
 
 /**
  * 用户不存在异常类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class UserNotExistsException extends UserException
 {

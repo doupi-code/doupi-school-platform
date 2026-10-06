@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * 豆皮校园管理平台 — 全端防硬编码自动化审查工具 (Node.js 跨平台版)
  * 运行方式: node scripts/check-hardcoding.mjs
@@ -127,11 +127,11 @@ if (optionViolations.length > 0) {
 
 // 4. 检查移动端外部演示网关写死
 console.log('\n\x1b[33m[4/5] 检查移动端与小程序环境网关地址...\x1b[0m');
-const appFiles = walk(path.join(rootDir, 'ruoyi-app', 'config'), (p) => p.endsWith('.js'))
+const appFiles = walk(path.join(rootDir, 'doupi-app', 'config'), (p) => p.endsWith('.js'))
   .concat(walk(path.join(rootDir, 'doupi-app'), (p) => p.endsWith('.js')));
 
 const urlViolations = [];
-const urlRegex = /vue\.ruoyi\.vip/;
+const urlRegex = /vue\.Doupi\.vip/;
 
 for (const file of appFiles) {
   const content = fs.readFileSync(file, 'utf8');

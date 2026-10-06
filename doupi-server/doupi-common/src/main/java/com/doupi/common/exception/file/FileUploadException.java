@@ -1,4 +1,4 @@
-package com.doupi.common.exception.file;
+﻿package com.doupi.common.exception.file;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 /**
  * 文件上传异常类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class FileUploadException extends Exception
 {

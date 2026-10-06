@@ -1,4 +1,4 @@
-package com.doupi.quartz.service.impl;
+﻿package com.doupi.quartz.service.impl;
 
 import java.util.List;
 import jakarta.annotation.PostConstruct;
@@ -20,7 +20,7 @@ import com.doupi.quartz.util.ScheduleUtils;
 /**
  * 定时任务调度信息 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Service
 public class SysJobServiceImpl implements ISysJobService

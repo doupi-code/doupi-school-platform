@@ -1,4 +1,4 @@
-package com.doupi.common.core.domain;
+﻿package com.doupi.common.core.domain;
 
 import java.io.Serializable;
 import com.doupi.common.constant.HttpStatus;
@@ -6,7 +6,7 @@ import com.doupi.common.constant.HttpStatus;
 /**
  * 响应信息主体
  *
- * @author ruoyi
+ * @author doupi
  */
 public class R<T> implements Serializable
 {

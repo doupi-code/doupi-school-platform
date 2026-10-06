@@ -1,9 +1,9 @@
-package com.doupi.common.enums;
+﻿package com.doupi.common.enums;
 
 /**
  * 操作人类别
  * 
- * @author ruoyi
+ * @author doupi
  */
 public enum OperatorType
 {

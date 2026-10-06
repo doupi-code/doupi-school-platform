@@ -1,9 +1,9 @@
-package com.doupi.common.constant;
+﻿package com.doupi.common.constant;
 
 /**
  * 用户常量信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class UserConstants
 {

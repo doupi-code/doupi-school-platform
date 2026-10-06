@@ -1,4 +1,4 @@
-package com.doupi.quartz.service;
+﻿package com.doupi.quartz.service;
 
 import java.util.List;
 import org.quartz.SchedulerException;
@@ -8,7 +8,7 @@ import com.doupi.quartz.domain.SysJob;
 /**
  * 定时任务调度信息信息 服务层
  * 
- * @author ruoyi
+ * @author doupi
  */
 public interface ISysJobService
 {

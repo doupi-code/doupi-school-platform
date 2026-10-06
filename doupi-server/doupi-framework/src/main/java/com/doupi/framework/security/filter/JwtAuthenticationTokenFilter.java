@@ -1,4 +1,4 @@
-package com.doupi.framework.security.filter;
+﻿package com.doupi.framework.security.filter;
 
 import java.io.IOException;
 import jakarta.servlet.FilterChain;
@@ -19,7 +19,7 @@ import com.doupi.framework.web.service.TokenService;
 /**
  * token过滤器 验证token有效性
  * 
- * @author ruoyi
+ * @author doupi
  */
 @Component
 public class JwtAuthenticationTokenFilter extends OncePerRequestFilter

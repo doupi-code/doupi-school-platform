@@ -1,4 +1,4 @@
-package com.doupi.edu.domain;
+﻿package com.doupi.edu.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -8,7 +8,7 @@ import com.doupi.common.core.domain.BaseEntity;
 /**
  * 教职工档案对象 edu_teacher
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 public class EduTeacher extends BaseEntity

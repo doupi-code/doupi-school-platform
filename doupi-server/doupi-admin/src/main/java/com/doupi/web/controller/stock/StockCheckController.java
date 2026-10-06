@@ -1,4 +1,4 @@
-package com.doupi.web.controller.stock;
+﻿package com.doupi.web.controller.stock;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +26,7 @@ import com.doupi.stock.service.IStockCheckService;
 /**
  * 库存盘点Controller
  * 
- * @author ruoyi
+ * @author doupi
  * @date 2026-09-25
  */
 @RestController

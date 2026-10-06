@@ -1,4 +1,4 @@
-package com.doupi.common.constant;
+﻿package com.doupi.common.constant;
 
 import java.util.Locale;
 import io.jsonwebtoken.Claims;
@@ -6,7 +6,7 @@ import io.jsonwebtoken.Claims;
 /**
  * 通用常量信息
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class Constants
 {

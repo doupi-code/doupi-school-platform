@@ -1,4 +1,4 @@
-package com.doupi.quartz.controller;
+﻿package com.doupi.quartz.controller;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +22,7 @@ import com.doupi.quartz.service.ISysJobLogService;
 /**
  * 调度日志操作处理
  * 
- * @author ruoyi
+ * @author doupi
  */
 @RestController
 @RequestMapping("/monitor/jobLog")

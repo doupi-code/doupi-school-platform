@@ -1,11 +1,11 @@
-package com.doupi.common.exception.user;
+﻿package com.doupi.common.exception.user;
 
 import com.doupi.common.exception.base.BaseException;
 
 /**
  * 用户信息异常类
  * 
- * @author ruoyi
+ * @author doupi
  */
 public class UserException extends BaseException
 {

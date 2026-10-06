@@ -1,4 +1,4 @@
-package com.doupi.common.utils.uuid;
+﻿package com.doupi.common.utils.uuid;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,7 +10,7 @@ import com.doupi.common.exception.UtilException;
 /**
  * 提供通用唯一识别码（universally unique identifier）（UUID）实现
  *
- * @author ruoyi
+ * @author doupi
  */
 public final class UUID implements java.io.Serializable, Comparable<UUID>
 {

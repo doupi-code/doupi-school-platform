@@ -1,8 +1,0 @@
-{
-  "name": "ruoyi-app",
-  "version": "1.0.0",
-  "description": "若依/豆皮移动端 (uni-app x 新一代原生架构)",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  }
-}
