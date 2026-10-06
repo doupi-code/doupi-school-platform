@@ -52,12 +52,10 @@ jobs:
             fi
 
             mkdir -p $TARGET_DIR
-            sudo rm -rf $TARGET_DIR/dist_new
             mkdir -p /tmp/unpack_admin
             tar -xzf /tmp/dist-admin.tar.gz -C /tmp/unpack_admin
-            sudo rm -rf $TARGET_DIR/dist
-            sudo mv /tmp/unpack_admin/dist $TARGET_DIR/dist
-            sudo chown -R ubuntu:ubuntu $TARGET_DIR
+            rm -rf $TARGET_DIR/dist
+            mv /tmp/unpack_admin/dist $TARGET_DIR/dist
             rm -rf /tmp/unpack_admin /tmp/dist-admin.tar.gz
             sudo systemctl reload nginx
             echo "Admin Web Deployed to $TARGET_DIR successfully!"

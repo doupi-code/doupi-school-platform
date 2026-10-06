@@ -50,9 +50,8 @@ jobs:
             mkdir -p $TARGET_DIR
             mkdir -p /tmp/unpack_client
             tar -xzf /tmp/dist-client.tar.gz -C /tmp/unpack_client
-            sudo rm -rf $TARGET_DIR/dist
-            sudo mv /tmp/unpack_client/dist $TARGET_DIR/dist
-            sudo chown -R ubuntu:ubuntu $TARGET_DIR
+            rm -rf $TARGET_DIR/dist
+            mv /tmp/unpack_client/dist $TARGET_DIR/dist
             rm -rf /tmp/unpack_client /tmp/dist-client.tar.gz
             sudo systemctl reload nginx
             echo "Client Web Deployed successfully!"
