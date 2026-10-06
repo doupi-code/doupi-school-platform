@@ -2,7 +2,7 @@ name: Deploy Backend Server (Native Systemd)
 
 on:
   push:
-    branches: [ main, test ]
+    branches: [ main ]
     paths:
       - 'doupi-server/**'
       - '.github/workflows/deploy-server.yml'
@@ -14,6 +14,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Verify Deployment Secrets
+        run: |
+          if [ -z "${{ secrets.SERVER_HOST }}" ] || [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
+            echo "::error::未检测到 GitHub Secrets (SERVER_HOST / SERVER_SSH_KEY)！"
+            echo "::error::请先在仓库 Settings -> Secrets and variables -> Actions 中添加部署密钥。"
+            exit 1
+          fi
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -31,13 +39,12 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          username: ${{ secrets.SERVER_USER || 'cicd' }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 60s
+          command_timeout: 60s
           script: |
             TARGET_DIR="/data/doupi"
-            if [ "${{ github.ref_name }}" = "test" ]; then
-              TARGET_DIR="/data/doupi-test"
-            fi
             mkdir -p $TARGET_DIR/backups
             if [ -f "$TARGET_DIR/doupi-admin.jar" ]; then
               cp "$TARGET_DIR/doupi-admin.jar" "$TARGET_DIR/backups/doupi-admin-$(date +%Y%m%d%H%M%S).jar"
@@ -49,8 +56,9 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          username: ${{ secrets.SERVER_USER || 'cicd' }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 60s
           source: "doupi-server/doupi-admin/target/doupi-admin.jar"
           target: "/tmp/"
           strip_components: 3
@@ -59,17 +67,14 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          username: ${{ secrets.SERVER_USER || 'cicd' }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 60s
+          command_timeout: 60s
           script: |
             TARGET_DIR="/data/doupi"
             SERVICE_NAME="doupi-server"
             HEALTH_PORT=8088
-            if [ "${{ github.ref_name }}" = "test" ]; then
-              TARGET_DIR="/data/doupi-test"
-              SERVICE_NAME="doupi-server-test"
-              HEALTH_PORT=8089
-            fi
 
             mv /tmp/doupi-admin.jar $TARGET_DIR/doupi-admin.jar
             sudo systemctl restart $SERVICE_NAME
