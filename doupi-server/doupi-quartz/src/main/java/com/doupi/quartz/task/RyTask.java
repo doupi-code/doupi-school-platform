@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.task;
+package com.doupi.quartz.task;
 
 import org.springframework.stereotype.Component;
 import com.doupi.common.utils.StringUtils;

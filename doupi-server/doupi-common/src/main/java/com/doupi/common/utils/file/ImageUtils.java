@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.file;
+package com.doupi.common.utils.file;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;

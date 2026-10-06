@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.http;
+package com.doupi.common.utils.http;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

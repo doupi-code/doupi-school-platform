@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.service;
+package com.doupi.quartz.service;
 
 import java.util.List;
 import com.doupi.quartz.domain.SysJobLog;

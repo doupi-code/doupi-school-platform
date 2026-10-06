@@ -1,4 +1,4 @@
-﻿package com.doupi.system.domain.vo;
+package com.doupi.system.domain.vo;
 
 import com.doupi.common.utils.StringUtils;
 

@@ -1,4 +1,4 @@
-﻿package com.doupi.web.controller.common;
+package com.doupi.web.controller.common;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-﻿package com.doupi.stock.domain;
+package com.doupi.stock.domain;
 
 import java.math.BigDecimal;
 import org.apache.commons.lang3.builder.ToStringBuilder;

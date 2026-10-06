@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception.user;
+package com.doupi.common.exception.user;
 
 /**
  * 用户错误最大次数异常类

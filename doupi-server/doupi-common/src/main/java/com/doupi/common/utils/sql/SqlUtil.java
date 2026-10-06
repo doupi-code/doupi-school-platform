@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.sql;
+package com.doupi.common.utils.sql;
 
 import com.doupi.common.exception.UtilException;
 import com.doupi.common.utils.StringUtils;

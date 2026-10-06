@@ -1,4 +1,4 @@
-﻿package com.doupi.common.constant;
+package com.doupi.common.constant;
 
 import java.util.Locale;
 import io.jsonwebtoken.Claims;

@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config;
+package com.doupi.framework.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;

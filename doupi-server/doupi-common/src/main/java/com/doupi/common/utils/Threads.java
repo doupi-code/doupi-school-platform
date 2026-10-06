@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils;
+package com.doupi.common.utils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;

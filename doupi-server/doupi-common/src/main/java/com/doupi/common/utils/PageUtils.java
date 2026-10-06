@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils;
+package com.doupi.common.utils;
 
 import com.github.pagehelper.PageHelper;
 import com.doupi.common.core.page.PageDomain;

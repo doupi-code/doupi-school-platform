@@ -1,4 +1,4 @@
-﻿package com.doupi.edu.mapper;
+package com.doupi.edu.mapper;
 
 import java.util.List;
 import com.doupi.edu.domain.EduTeacher;

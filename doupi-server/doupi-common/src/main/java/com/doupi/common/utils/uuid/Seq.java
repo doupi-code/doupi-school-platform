@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.uuid;
+package com.doupi.common.utils.uuid;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import com.doupi.common.utils.DateUtils;

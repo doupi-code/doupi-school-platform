@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.bean;
+package com.doupi.common.utils.bean;
 
 import java.util.Set;
 import jakarta.validation.ConstraintViolation;

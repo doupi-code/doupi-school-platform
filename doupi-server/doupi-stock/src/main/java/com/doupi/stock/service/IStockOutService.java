@@ -1,4 +1,4 @@
-﻿package com.doupi.stock.service;
+package com.doupi.stock.service;
 
 import java.util.List;
 import com.doupi.stock.domain.StockOut;

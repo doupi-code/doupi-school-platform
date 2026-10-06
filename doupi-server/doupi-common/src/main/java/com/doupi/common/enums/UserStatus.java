@@ -1,4 +1,4 @@
-﻿package com.doupi.common.enums;
+package com.doupi.common.enums;
 
 /**
  * 用户状态

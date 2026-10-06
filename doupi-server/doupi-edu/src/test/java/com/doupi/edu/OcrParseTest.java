@@ -1,4 +1,4 @@
-﻿package com.doupi.edu;
+package com.doupi.edu;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;

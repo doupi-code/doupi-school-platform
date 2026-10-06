@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.util;
+package com.doupi.quartz.util;
 
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;

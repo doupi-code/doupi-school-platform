@@ -1,4 +1,4 @@
-﻿package com.doupi.system.service.impl;
+package com.doupi.system.service.impl;
 
 import org.springframework.stereotype.Service;
 import com.doupi.common.core.domain.model.LoginUser;

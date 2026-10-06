@@ -1,4 +1,4 @@
-﻿package com.doupi.common.config.serializer;
+package com.doupi.common.config.serializer;
 
 import java.io.IOException;
 import java.util.Objects;

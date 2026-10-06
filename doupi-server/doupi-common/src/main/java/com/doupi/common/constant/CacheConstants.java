@@ -1,4 +1,4 @@
-﻿package com.doupi.common.constant;
+package com.doupi.common.constant;
 
 /**
  * 缓存的key 常量

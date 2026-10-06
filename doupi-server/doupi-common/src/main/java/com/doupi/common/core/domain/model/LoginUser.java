@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.domain.model;
+package com.doupi.common.core.domain.model;
 
 import java.util.Collection;
 import java.util.Collections;

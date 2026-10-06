@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.config;
+package com.doupi.generator.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config;
+package com.doupi.framework.config;
 
 import java.util.Random;
 import com.google.code.kaptcha.text.impl.DefaultTextCreator;

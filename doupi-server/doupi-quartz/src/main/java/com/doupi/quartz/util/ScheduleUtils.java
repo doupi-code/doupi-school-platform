@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.util;
+package com.doupi.quartz.util;
 
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;

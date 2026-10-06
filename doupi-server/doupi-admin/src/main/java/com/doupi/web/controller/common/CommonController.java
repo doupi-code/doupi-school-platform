@@ -1,4 +1,4 @@
-﻿package com.doupi.web.controller.common;
+package com.doupi.web.controller.common;
 
 import java.util.ArrayList;
 import java.util.List;

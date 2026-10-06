@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.file;
+package com.doupi.common.utils.file;
 
 import java.io.File;
 import org.apache.commons.lang3.StringUtils;

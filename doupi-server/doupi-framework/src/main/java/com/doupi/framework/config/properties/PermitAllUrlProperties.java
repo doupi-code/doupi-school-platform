@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config.properties;
+package com.doupi.framework.config.properties;
 
 import java.util.ArrayList;
 import java.util.List;

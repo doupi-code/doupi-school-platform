@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception.user;
+package com.doupi.common.exception.user;
 
 /**
  * 验证码失效异常类

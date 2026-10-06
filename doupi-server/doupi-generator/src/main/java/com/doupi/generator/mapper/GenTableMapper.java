@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.mapper;
+package com.doupi.generator.mapper;
 
 import java.util.List;
 import com.doupi.generator.domain.GenTable;

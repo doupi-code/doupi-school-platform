@@ -1,4 +1,4 @@
-﻿package com.doupi.stock.mapper;
+package com.doupi.stock.mapper;
 
 import java.util.List;
 import com.doupi.stock.domain.StockSupplier;

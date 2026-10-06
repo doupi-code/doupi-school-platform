@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.datasource;
+package com.doupi.framework.datasource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.util;
+package com.doupi.quartz.util;
 
 import org.quartz.JobExecutionContext;
 import com.doupi.quartz.domain.SysJob;

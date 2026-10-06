@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config;
+package com.doupi.framework.config;
 
 import com.doupi.common.utils.Threads;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;

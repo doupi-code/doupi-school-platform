@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.web.service;
+package com.doupi.framework.web.service;
 
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;

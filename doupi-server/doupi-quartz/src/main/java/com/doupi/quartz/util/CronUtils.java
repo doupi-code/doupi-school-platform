@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.util;
+package com.doupi.quartz.util;
 
 import java.text.ParseException;
 import java.util.Date;

@@ -1,4 +1,4 @@
-﻿package com.doupi.system.mapper;
+package com.doupi.system.mapper;
 
 import java.util.List;
 import com.doupi.system.domain.SysPost;

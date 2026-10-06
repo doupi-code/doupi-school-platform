@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.html;
+package com.doupi.common.utils.html;
 
 import java.util.ArrayList;
 import java.util.Collections;

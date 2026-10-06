@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.domain.entity;
+package com.doupi.common.core.domain.entity;
 
 import java.util.Date;
 import java.util.List;

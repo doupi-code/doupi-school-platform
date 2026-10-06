@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.service;
+package com.doupi.generator.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

@@ -1,4 +1,4 @@
-﻿package com.doupi.common.enums;
+package com.doupi.common.enums;
 
 import java.util.HashMap;
 import java.util.Map;

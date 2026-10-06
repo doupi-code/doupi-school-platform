@@ -1,4 +1,4 @@
-﻿package com.doupi.edu;
+package com.doupi.edu;
 
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;

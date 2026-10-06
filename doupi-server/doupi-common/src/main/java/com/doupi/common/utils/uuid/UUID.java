@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.uuid;
+package com.doupi.common.utils.uuid;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

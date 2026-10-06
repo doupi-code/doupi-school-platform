@@ -1,4 +1,4 @@
-﻿package com.doupi.common.filter;
+package com.doupi.common.filter;
 
 import com.alibaba.fastjson2.filter.SimplePropertyPreFilter;
 

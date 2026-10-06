@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.domain;
+package com.doupi.generator.domain;
 
 import jakarta.validation.constraints.NotBlank;
 import com.doupi.common.core.domain.BaseEntity;

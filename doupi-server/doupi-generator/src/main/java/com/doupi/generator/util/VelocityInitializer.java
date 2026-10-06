@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.util;
+package com.doupi.generator.util;
 
 import java.util.Properties;
 import org.apache.velocity.app.Velocity;

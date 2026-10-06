@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.sign;
+package com.doupi.common.utils.sign;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

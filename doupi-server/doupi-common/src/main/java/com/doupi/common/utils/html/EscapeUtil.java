@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.html;
+package com.doupi.common.utils.html;
 
 import com.doupi.common.utils.StringUtils;
 

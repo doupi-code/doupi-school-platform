@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.page;
+package com.doupi.common.core.page;
 
 import com.doupi.common.core.text.Convert;
 import com.doupi.common.utils.ServletUtils;

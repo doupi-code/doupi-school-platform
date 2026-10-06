@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.page;
+package com.doupi.common.core.page;
 
 import java.io.Serializable;
 import java.util.List;

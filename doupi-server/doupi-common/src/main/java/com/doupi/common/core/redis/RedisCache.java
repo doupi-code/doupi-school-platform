@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.redis;
+package com.doupi.common.core.redis;
 
 import java.util.Collection;
 import java.util.Iterator;

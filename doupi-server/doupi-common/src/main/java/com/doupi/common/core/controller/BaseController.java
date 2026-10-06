@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.controller;
+package com.doupi.common.core.controller;
 
 import java.beans.PropertyEditorSupport;
 import java.util.Date;

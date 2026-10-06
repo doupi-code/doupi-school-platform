@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.reflect;
+package com.doupi.common.utils.reflect;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

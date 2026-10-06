@@ -1,4 +1,4 @@
-﻿package com.doupi.stock.service.impl;
+package com.doupi.stock.service.impl;
 
 import java.util.List;
 import com.doupi.common.utils.DateUtils;

@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils;
+package com.doupi.common.utils;
 
 /**
  * 处理并记录日志文件

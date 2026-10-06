@@ -1,4 +1,4 @@
-﻿package com.doupi.common.xss;
+package com.doupi.common.xss;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

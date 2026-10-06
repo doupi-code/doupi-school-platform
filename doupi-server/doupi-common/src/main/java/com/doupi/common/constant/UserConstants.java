@@ -1,4 +1,4 @@
-﻿package com.doupi.common.constant;
+package com.doupi.common.constant;
 
 /**
  * 用户常量信息

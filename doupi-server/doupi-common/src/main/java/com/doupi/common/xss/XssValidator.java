@@ -1,4 +1,4 @@
-﻿package com.doupi.common.xss;
+package com.doupi.common.xss;
 
 import com.doupi.common.utils.StringUtils;
 import jakarta.validation.ConstraintValidator;

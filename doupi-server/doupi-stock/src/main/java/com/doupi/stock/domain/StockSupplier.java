@@ -1,4 +1,4 @@
-﻿package com.doupi.stock.domain;
+package com.doupi.stock.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;

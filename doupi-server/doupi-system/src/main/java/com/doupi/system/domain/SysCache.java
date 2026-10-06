@@ -1,4 +1,4 @@
-﻿package com.doupi.system.domain;
+package com.doupi.system.domain;
 
 import com.doupi.common.utils.StringUtils;
 

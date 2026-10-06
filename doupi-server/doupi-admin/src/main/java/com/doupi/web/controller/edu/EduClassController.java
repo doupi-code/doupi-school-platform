@@ -1,4 +1,4 @@
-﻿package com.doupi.web.controller.edu;
+package com.doupi.web.controller.edu;
 
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;

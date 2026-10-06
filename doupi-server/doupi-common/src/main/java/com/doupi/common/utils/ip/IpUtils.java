@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.ip;
+package com.doupi.common.utils.ip;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

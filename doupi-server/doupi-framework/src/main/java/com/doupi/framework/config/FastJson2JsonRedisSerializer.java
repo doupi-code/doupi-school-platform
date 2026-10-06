@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config;
+package com.doupi.framework.config;
 
 import java.nio.charset.Charset;
 import org.springframework.data.redis.serializer.RedisSerializer;

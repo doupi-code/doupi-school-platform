@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.mapper;
+package com.doupi.quartz.mapper;
 
 import java.util.List;
 import com.doupi.quartz.domain.SysJobLog;

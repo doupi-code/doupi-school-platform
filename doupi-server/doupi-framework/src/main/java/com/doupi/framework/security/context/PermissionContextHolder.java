@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.security.context;
+package com.doupi.framework.security.context;
 
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;

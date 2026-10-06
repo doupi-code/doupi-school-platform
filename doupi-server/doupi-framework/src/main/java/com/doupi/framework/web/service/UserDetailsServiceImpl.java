@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.web.service;
+package com.doupi.framework.web.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

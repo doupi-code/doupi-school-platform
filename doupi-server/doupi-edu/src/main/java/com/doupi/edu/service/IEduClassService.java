@@ -1,4 +1,4 @@
-﻿package com.doupi.edu.service;
+package com.doupi.edu.service;
 
 import java.util.List;
 import com.doupi.edu.domain.EduClass;

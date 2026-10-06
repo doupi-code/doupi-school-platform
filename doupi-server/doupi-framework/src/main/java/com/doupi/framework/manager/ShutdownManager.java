@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.manager;
+package com.doupi.framework.manager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

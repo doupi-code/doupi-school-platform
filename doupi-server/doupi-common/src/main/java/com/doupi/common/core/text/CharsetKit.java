@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.text;
+package com.doupi.common.core.text;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;

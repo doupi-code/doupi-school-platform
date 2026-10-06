@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.util;
+package com.doupi.generator.util;
 
 import java.util.ArrayList;
 import java.util.HashSet;

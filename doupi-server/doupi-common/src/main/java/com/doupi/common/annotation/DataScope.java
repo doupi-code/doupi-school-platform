@@ -1,4 +1,4 @@
-﻿package com.doupi.common.annotation;
+package com.doupi.common.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

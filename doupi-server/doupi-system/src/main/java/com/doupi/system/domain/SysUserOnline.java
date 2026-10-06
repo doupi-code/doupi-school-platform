@@ -1,4 +1,4 @@
-﻿package com.doupi.system.domain;
+package com.doupi.system.domain;
 
 /**
  * 当前在线会话

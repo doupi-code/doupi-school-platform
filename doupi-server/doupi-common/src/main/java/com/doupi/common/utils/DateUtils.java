@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils;
+package com.doupi.common.utils;
 
 import java.lang.management.ManagementFactory;
 import java.text.ParseException;

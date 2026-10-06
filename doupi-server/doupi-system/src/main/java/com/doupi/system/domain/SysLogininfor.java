@@ -1,4 +1,4 @@
-﻿package com.doupi.system.domain;
+package com.doupi.system.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;

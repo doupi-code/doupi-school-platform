@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception.base;
+package com.doupi.common.exception.base;
 
 import com.doupi.common.utils.MessageUtils;
 import com.doupi.common.utils.StringUtils;

@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception.file;
+package com.doupi.common.exception.file;
 
 import com.doupi.common.exception.base.BaseException;
 

@@ -1,4 +1,4 @@
-﻿package com.doupi.web.controller.tool;
+package com.doupi.web.controller.tool;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

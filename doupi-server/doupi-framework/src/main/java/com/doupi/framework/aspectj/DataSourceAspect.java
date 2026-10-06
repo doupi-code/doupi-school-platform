@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.aspectj;
+package com.doupi.framework.aspectj;
 
 import java.util.Objects;
 import org.aspectj.lang.ProceedingJoinPoint;

@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.manager;
+package com.doupi.framework.manager;
 
 import java.util.TimerTask;
 import java.util.concurrent.ScheduledExecutorService;

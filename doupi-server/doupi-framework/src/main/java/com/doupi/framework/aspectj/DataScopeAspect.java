@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.aspectj;
+package com.doupi.framework.aspectj;
 
 import java.util.ArrayList;
 import java.util.List;

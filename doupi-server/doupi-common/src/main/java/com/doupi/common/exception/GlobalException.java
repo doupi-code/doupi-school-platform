@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception;
+package com.doupi.common.exception;
 
 /**
  * 全局异常

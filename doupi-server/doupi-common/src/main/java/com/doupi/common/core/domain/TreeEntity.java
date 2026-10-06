@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.domain;
+package com.doupi.common.core.domain;
 
 import java.util.ArrayList;
 import java.util.List;

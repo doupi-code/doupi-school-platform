@@ -1,4 +1,4 @@
-﻿package com.doupi.common.core.domain.entity;
+package com.doupi.common.core.domain.entity;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

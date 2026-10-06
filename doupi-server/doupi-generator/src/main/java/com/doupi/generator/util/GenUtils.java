@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.util;
+package com.doupi.generator.util;
 
 import java.util.Arrays;
 import org.apache.commons.lang3.RegExUtils;

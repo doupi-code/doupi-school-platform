@@ -1,4 +1,4 @@
-﻿package com.doupi.quartz.domain;
+package com.doupi.quartz.domain;
 
 import java.util.Date;
 import jakarta.validation.constraints.NotBlank;

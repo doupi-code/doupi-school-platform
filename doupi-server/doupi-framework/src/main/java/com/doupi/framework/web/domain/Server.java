@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.web.domain;
+package com.doupi.framework.web.domain;
 
 import java.net.UnknownHostException;
 import java.util.LinkedList;

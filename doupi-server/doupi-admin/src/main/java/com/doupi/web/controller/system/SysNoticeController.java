@@ -1,4 +1,4 @@
-﻿package com.doupi.web.controller.system;
+package com.doupi.web.controller.system;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;

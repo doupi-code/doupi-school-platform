@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.domain;
+package com.doupi.generator.domain;
 
 import java.util.List;
 import jakarta.validation.Valid;

@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.config;
+package com.doupi.framework.config;
 
 import java.util.Properties;
 import org.springframework.context.annotation.Bean;

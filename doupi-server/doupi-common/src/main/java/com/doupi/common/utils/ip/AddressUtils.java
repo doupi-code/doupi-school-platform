@@ -1,4 +1,4 @@
-﻿package com.doupi.common.utils.ip;
+package com.doupi.common.utils.ip;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

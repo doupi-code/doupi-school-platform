@@ -1,4 +1,4 @@
-﻿package com.doupi.common.exception.user;
+package com.doupi.common.exception.user;
 
 import com.doupi.common.exception.base.BaseException;
 

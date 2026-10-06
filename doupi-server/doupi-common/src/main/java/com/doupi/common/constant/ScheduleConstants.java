@@ -1,4 +1,4 @@
-﻿package com.doupi.common.constant;
+package com.doupi.common.constant;
 
 /**
  * 任务调度通用常量

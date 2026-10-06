@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.security.context;
+package com.doupi.framework.security.context;
 
 import org.springframework.security.core.Authentication;
 

@@ -1,4 +1,4 @@
-﻿package com.doupi.system.service;
+package com.doupi.system.service;
 
 import java.util.List;
 import com.doupi.system.domain.SysLogininfor;

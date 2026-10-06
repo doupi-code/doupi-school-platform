@@ -1,4 +1,4 @@
-﻿package com.doupi.framework.aspectj;
+package com.doupi.framework.aspectj;
 
 import java.util.Collection;
 import java.util.Map;

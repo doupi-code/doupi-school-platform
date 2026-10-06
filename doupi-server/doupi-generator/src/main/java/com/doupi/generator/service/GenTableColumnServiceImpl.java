@@ -1,4 +1,4 @@
-﻿package com.doupi.generator.service;
+package com.doupi.generator.service;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
