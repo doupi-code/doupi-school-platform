@@ -1,0 +1,550 @@
+<template>
+    <view class="up-picker-warrper">
+        <view v-if="hasInput"
+			class="up-picker-input cursor-pointer"
+			@click="showByClickInput = !showByClickInput">
+            <slot>
+                <view>
+					{{ inputLabel.length > 0 ? inputLabel.join('/') : placeholder }}
+				</view>
+            </slot>
+        </view>
+		<up-popup
+			:show="pageInline || show || (hasInput && showByClickInput)"
+			:mode="popupMode"
+			:pageInline="pageInline"
+			@close="closeHandler"
+			@closed="closedHandler"
+		>
+			<view class="up-picker">
+				<up-toolbar
+					v-if="showToolbar"
+					:cancelColor="cancelColor"
+					:confirmColor="confirmColor"
+					:cancelText="cancelText"
+					:confirmText="confirmText"
+					:title="title"
+					:rightSlot="toolbarRightSlot ? true : false"
+					@cancel="cancel"
+					@confirm="confirm"
+				>
+					<template #right>
+						<slot name="toolbar-right"></slot>
+					</template>
+				</up-toolbar>
+				<slot name="toolbar-bottom"></slot>
+				<picker-view
+					class="up-picker__view"
+					:indicatorStyle="`height: ${addUnit(itemHeight)}`"
+					:value="innerIndex"
+					:immediateChange="immediateChange"
+					:style="{
+						height: pickerViewHeight
+					}"
+					@change="changeHandler"
+				>
+					<picker-view-column
+						v-for="(item, index) in innerColumns"
+						:key="index"
+						class="up-picker__view__column"
+					>
+						<view
+							v-if="testArray(item)"
+							class="up-picker__view__column__item up-line-1"
+							v-for="(item1 , index1) in item"
+							:key="index1"
+							:style="{
+								height: addUnit(itemHeight)
+							}"
+						>
+							<text class="up-picker__view__column__item__text"
+								:style="{
+									lineHeight: addUnit(itemHeight),
+									fontWeight: (innerIndex.length -1  >= index && index1 === innerIndex[index]) ? 'bold' : 'normal',
+								}">
+								{{ getItemText(item1) }}
+							</text>
+						</view>
+					</picker-view-column>
+				</picker-view>
+				<view
+					v-if="loading"
+					class="up-picker--loading"
+				>
+					<up-loading-icon mode="circle"></up-loading-icon>
+				</view>
+			</view>
+		</up-popup>
+    </view>
+</template>
+
+<script setup lang="uts">
+/**
+ * up-picker
+ * @description 选择器
+ * @property {Boolean}			show				是否显示picker弹窗（默认 false ）
+ * @property {Boolean}			showToolbar			是否显示顶部的操作栏（默认 true ）
+ * @property {String}			title				顶部标题
+ * @property {Array}			columns				对象数组，设置每一列的数据
+ * @property {Boolean}			loading				是否显示加载中状态（默认 false ）
+ * @property {String | Number}	itemHeight			各列中，单个选项的高度（默认 44 ）
+ * @property {String}			cancelText			取消按钮的文字（默认 '取消' ）
+ * @property {String}			confirmText			确认按钮的文字（默认 '确定' ）
+ * @property {String}			cancelColor			取消按钮的颜色（默认 '#909193' ）
+ * @property {String}			confirmColor		确认按钮的颜色（默认 '#3c9cff' ）
+ * @property {String | Number}	visibleItemCount	每列中可见选项的数量（默认 5 ）
+ * @property {String}			keyName				选项对象中，需要展示的属性键名（默认 'text' ）
+ * @property {Boolean}			closeOnClickOverlay	是否允许点击遮罩关闭选择器（默认 false ）
+ * @property {Array}			defaultIndex		各列的默认索引
+ * @property {Boolean}			immediateChange		是否在手指松开时立即触发change事件（默认 true ）
+ * @event {Function} close		关闭选择器时触发
+ * @event {Function} cancel		点击取消按钮触发
+ * @event {Function} change		当选择值变化时触发
+ * @event {Function} confirm	点击确定按钮，返回当前选择的值
+ */
+import { computed, nextTick, ref, watch } from 'vue';
+import defProps from './picker.uts';
+import { addUnit as addUnitFn } from '../../libs/function/index.uts';
+import { array as testArrayFn } from '../../libs/function/test.uts';
+
+defineOptions({
+	styleIsolation: 'app-and-page',
+	name: 'up-picker'
+})
+
+const props = defineProps({
+	modelValue: {
+		type: Array,
+		default: [] as Array<any>
+	},
+	hasInput: {
+		type: Boolean,
+		default: false
+	},
+	placeholder: {
+		type: String,
+		default: '请选择'
+	},
+	// 是否展示picker弹窗
+	show: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['show']
+	},
+	// 弹出的方向，可选值为 top bottom right left center
+	popupMode: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['popupMode']
+	},
+	// 是否展示顶部的操作栏
+	showToolbar: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['showToolbar']
+	},
+	// 顶部标题
+	title: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['title']
+	},
+	// 对象数组，设置每一列的数据
+	columns: {
+		type: Array,
+		default: (defProps['picker'] as UTSJSONObject)['columns']
+	},
+	// 是否显示加载中状态
+	loading: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['loading']
+	},
+	// 各列中，单个选项的高度
+	itemHeight: {
+		type: [String, Number],
+		default: (defProps['picker'] as UTSJSONObject)['itemHeight']
+	},
+	// 取消按钮的文字
+	cancelText: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['cancelText']
+	},
+	// 确认按钮的文字
+	confirmText: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['confirmText']
+	},
+	// 取消按钮的颜色
+	cancelColor: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['cancelColor']
+	},
+	// 确认按钮的颜色
+	confirmColor: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['confirmColor']
+	},
+	// 每列中可见选项的数量
+	visibleItemCount: {
+		type: [String, Number],
+		default: (defProps['picker'] as UTSJSONObject)['visibleItemCount']
+	},
+	// 选项对象中，需要展示的属性键名
+	keyName: {
+		type: String,
+		default: (defProps['picker'] as UTSJSONObject)['keyName']
+	},
+	// 是否允许点击遮罩关闭选择器
+	closeOnClickOverlay: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['closeOnClickOverlay']
+	},
+	// 各列的默认索引
+	defaultIndex: {
+		type: Array,
+		default: (defProps['picker'] as UTSJSONObject)['defaultIndex']
+	},
+	// 是否在手指松开时立即触发 change 事件。若不开启则会在滚动动画结束后触发 change 事件，只在微信2.21.1及以上有效
+	immediateChange: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['immediateChange']
+	},
+	// 工具栏右侧插槽是否开启
+	toolbarRightSlot: {
+		type: Boolean,
+		default: false
+	},
+	// 是否内联在页面中（不使用弹窗形式）
+	pageInline: {
+		type: Boolean,
+		default: (defProps['picker'] as UTSJSONObject)['pageInline']
+	}
+})
+
+const emit = defineEmits(['close', 'closed', 'cancel', 'confirm', 'change', 'update:modelValue'])
+
+// 上一次选择的列索引
+const lastIndex = ref<number[]>([] as number[])
+// 索引值 ，对应picker-view的value
+const innerIndex = ref<number[]>([] as number[])
+// 各列的值
+const innerColumns = ref<Array<Array<any>>>([] as Array<Array<any>>)
+// 上一次的变化列索引
+const columnIndex = ref(0)
+const showByClickInput = ref(false)
+
+const addUnit = (str: any): string => {
+	return addUnitFn(str)
+}
+
+const testArray = (obj: any): boolean => {
+	return testArrayFn(obj)
+}
+
+const getKeyName = (): string => {
+	const keyName = props.keyName
+	return keyName != null ? keyName.toString() : 'text'
+}
+
+const pickerViewHeight = computed((): string => {
+	// @ts-ignore
+	let tmp = parseInt(props.visibleItemCount.toString())
+	// @ts-ignore
+		* parseInt(props.itemHeight.toString())
+	return addUnitFn(tmp)
+})
+
+const inputLabel = computed((): string[] => {
+	let items: Array<any> = []
+	innerColumns.value.map((item: Array<any>, index: number) => {
+		const idx = index < innerIndex.value.length ? innerIndex.value[index] : 0
+		if (idx < item.length) {
+			items.push(item[idx])
+		}
+	})
+	let res: string[] = []
+	items.forEach(element => {
+		if (typeof element == 'object' && element != null) {
+			const itemText = (element as UTSJSONObject)[getKeyName()]
+			if (itemText != null) {
+				res.push(itemText.toString())
+			}
+		}
+	})
+	return res
+})
+
+const inputValue = computed((): Array<any> => {
+	// items里面可能是字符串也可能是对象
+	let items: Array<any> = []
+	innerColumns.value.map((item: Array<any>, index: number) => {
+		const idx = index < innerIndex.value.length ? innerIndex.value[index] : 0
+		if (idx < item.length) {
+			items.push(item[idx])
+		}
+	})
+	let res: any[] = []
+	items.forEach(element => {
+		if (typeof element == 'string') {
+			res.push(element.toString())
+		} else {
+			let ele1 = (element as UTSJSONObject)['id']
+			if (ele1 != null) {
+				res.push(ele1)
+			}
+		}
+	})
+	return res
+})
+
+// 获取item需要显示的文字，判别为对象还是文本
+const getItemText = (item: any): any | null => {
+	if (typeof item == 'object' && item != null) {
+		let ele1 = (item as UTSJSONObject)[getKeyName()]
+		if (ele1 != null) {
+			return ele1.toString()
+		}
+		return ""
+	}
+	return item
+}
+
+// 关闭选择器
+const closeHandler = (): void => {
+	if (props.closeOnClickOverlay) {
+		if (props.hasInput) {
+			showByClickInput.value = false
+		}
+		emit('close')
+	}
+}
+
+// 弹窗离场动画结束，透传给使用者
+const closedHandler = (): void => {
+	emit('closed')
+}
+
+// 点击工具栏的取消按钮
+const cancel = (): void => {
+	if (props.hasInput) {
+		showByClickInput.value = false
+	}
+	emit('cancel')
+}
+
+// 点击工具栏的确定按钮
+const confirm = (): void => {
+	emit('update:modelValue', inputValue.value)
+	if (props.hasInput) {
+		showByClickInput.value = false
+	}
+	emit('confirm', {
+		indexs: innerIndex.value,
+		value: innerColumns.value.map((item: Array<any>, index: number) => {
+			// return item[innerIndex.value[index]]
+		}),
+		values: innerColumns.value
+	})
+}
+
+// 记录上一次的各列索引位置
+const setLastIndex = (index: number[]): void => {
+	// 当能进入此方法，意味着当前设置的各列默认索引，即为“上一次”的选中值，需要记录，是因为changeHandler中
+	// 需要拿前后的变化值进行对比，得出当前发生改变的是哪一列
+	lastIndex.value = [...index]
+}
+
+// 设置index索引，此方法可被外部调用设置
+const setIndexs = (index: number[] | null, setLastIndexValue: boolean): void => {
+	innerIndex.value = index != null ? [...index] : []
+	if (setLastIndexValue) {
+		setLastIndex(innerIndex.value)
+	}
+}
+
+// 选择器某一列的数据发生变化时触发
+const changeHandler = (e: UniPickerViewChangeEvent): void => {
+	const { value } = e.detail
+	let index = 0
+	let currentColumnIndex = 0
+	// 通过对比前后两次的列索引，得出当前变化的是哪一列
+	for (let i = 0; i < value.length; i++) {
+		let item = value[i]
+		if (item !== (i < lastIndex.value.length ? lastIndex.value[i] : 0)) {
+			// 设置columnIndex为当前变化列的索引
+			currentColumnIndex = i
+			// index则为变化列中的变化项的索引
+			index = item
+			break // 终止循环，即使少一次循环，也是性能的提升
+		}
+	}
+	columnIndex.value = currentColumnIndex
+	const values = innerColumns.value
+	// 将当前的各项变化索引，设置为"上一次"的索引变化值
+	setLastIndex(value)
+	setIndexs(value, false)
+
+	emit('update:modelValue', inputValue.value)
+
+	// 获取原始值
+	let valueOrigin: Array<any> = []
+	innerColumns.value.map((item: Array<any>, index: number) => {
+		const idx = index < value.length ? value[index] : 0
+		if (idx < item.length) {
+			valueOrigin.push(item[idx])
+		}
+	})
+	emit('change', {
+		value: valueOrigin,
+		index,
+		indexs: value,
+		// values为当前变化列的数组内容
+		values,
+		columnIndex: currentColumnIndex
+	})
+}
+
+// 设置对应列选项的所有值
+const setColumnValues = (columnIndexValue: number, values: Array<any>): void => {
+	// 替换innerColumns数组中columnIndex索引的值为values，使用的是数组的splice方法
+	innerColumns.value.splice(columnIndexValue, 1, values)
+	// 替换完成之后将修改列之后的已选值置空
+	setLastIndex(innerIndex.value.slice(0, columnIndexValue))
+	// 拷贝一份原有的innerIndex做临时变量，将大于当前变化列的所有的列的默认索引设置为0
+	let tmpIndex = [...innerIndex.value]
+	for (let i = 0; i < innerColumns.value.length; i++) {
+		if (i > columnIndex.value) {
+			tmpIndex[i] = 0
+		}
+	}
+	// 一次性赋值，不能单个修改，否则无效
+	setIndexs(tmpIndex, false)
+}
+
+// 获取对应列的所有选项
+const getColumnValues = (columnIndexValue: number): Array<any> => {
+	return innerColumns.value[columnIndexValue]
+}
+
+// 设置整体各列的columns的值
+const setColumns = (columns: Array<Array<any>>): void => {
+	// 修复异步columns加载时defaultIndex位置不更新的问题 (issue #841)
+	const prevColumns = innerColumns.value
+	innerColumns.value = columns
+	// 如果在设置各列数据时，没有被设置默认的各列索引defaultIndex，那么用0去填充它，数组长度为列的数量
+	if (innerIndex.value.length == 0) {
+		innerIndex.value = new Array(columns.length).fill(0)
+	} else {
+		// 当某列从空数组变为有数据时，picker-view不会因为:value未变化而重新滚动到指定位置
+		// 需要通过先清空再赋值的方式强制触发picker-view的滚动更新
+		let hasColumnsChangedFromEmpty = false
+		for (let i = 0; i < columns.length; i++) {
+			const col = columns[i]
+			const prev = i < prevColumns.length ? prevColumns[i] : [] as Array<any>
+			if (col != null && col.length > 0 && (prev == null || prev.length == 0)) {
+				hasColumnsChangedFromEmpty = true
+				break
+			}
+		}
+		if (hasColumnsChangedFromEmpty) {
+			const targetIndex = [...innerIndex.value]
+			innerIndex.value = [] as number[]
+			nextTick(() => {
+				innerIndex.value = targetIndex
+			})
+		}
+	}
+}
+
+// 获取各列选中值对应的索引
+const getIndexs = (): number[] => {
+	return innerIndex.value
+}
+
+// 获取各列选中的值
+const getValues = (): Array<any> => {
+	let res: Array<any> = []
+	return innerColumns.value.map((item: Array<any>, index: number) => {
+		res.push(item[innerIndex.value[index]])
+	})
+}
+
+watch((): number[] => props.defaultIndex as number[], (n: number[]) => {
+	setIndexs(n, true)
+}, { immediate: true, deep: true })
+
+watch((): Array<Array<any>> => props.columns as Array<Array<any>>, (n: Array<Array<any>>) => {
+	setColumns(n)
+}, { immediate: true, deep: true })
+
+defineExpose({
+	lastIndex,
+	innerIndex,
+	innerColumns,
+	columnIndex,
+	showByClickInput,
+	pickerViewHeight,
+	inputLabel,
+	inputValue,
+	addUnit,
+	testArray,
+	getItemText,
+	closeHandler,
+	closedHandler,
+	cancel,
+	confirm,
+	changeHandler,
+	setIndexs,
+	setLastIndex,
+	setColumnValues,
+	getColumnValues,
+	setColumns,
+	getIndexs,
+	getValues
+})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+
+	.up-picker {
+		position: relative;
+		background-color: #ffffff;
+
+		&__view {
+
+			&__column {
+				@include flex;
+				flex: 1;
+				justify-content: center;
+
+				&__item {
+					@include flex;
+					justify-content: center;
+					align-items: center;
+					&__text {
+						font-size: 16px;
+						text-align: center;
+						color: $up-main-color;
+					}
+
+					&--disabled {
+						/* #ifdef H5 */
+						cursor: not-allowed;
+						/* #endif */
+						opacity: 0.35;
+					}
+				}
+			}
+		}
+
+		&--loading {
+			position: absolute;
+			top: 0;
+			right: 0;
+			left: 0;
+			bottom: 0;
+			@include flex;
+			justify-content: center;
+			align-items: center;
+			background-color: rgba(255, 255, 255, 0.87);
+			z-index: 1000;
+		}
+	}
+</style>

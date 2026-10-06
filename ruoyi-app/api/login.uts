@@ -1,0 +1,17 @@
+import request from '@/utils/request'
+
+export function login(data: any): Promise<any> {
+  return request.post('/login', data)
+}
+
+export function getInfo(): Promise<any> {
+  return request.get('/getInfo')
+}
+
+export function logout(): Promise<any> {
+  return request.post('/logout')
+}
+
+export function getCaptchaImage(): Promise<any> {
+  return request.get('/captchaImage')
+}

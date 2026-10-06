@@ -1,0 +1,71 @@
+# ==========================================
+# 操作系统与通用编辑器
+# ==========================================
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# 敏感文件与私钥
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+
+# 历史外部参考备份目录 (不纳入主业务代码仓库)
+back/
+
+# ==========================================
+# Java / Maven (doupi-server)
+# ==========================================
+target/
+doupi-server/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+.mvn/wrapper/maven-wrapper.jar
+logs/
+*.log
+
+# ==========================================
+# Node.js / 前端 (doupi-web-admin-react, doupi-web-client-react)
+# ==========================================
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 前端打包产物
+dist/
+**/dist/
+dist-ssr/
+*.local
+
+# 环境变量敏感文件 (保留 .env.example)
+.env.local
+.env.*.local
+
+# ==========================================
+# 临时归档与数据库快照
+# ==========================================
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# 排除大型数据清洗与临时导出 sql (保留基础 init 模板)
+scripts/backup_*.sql
+scripts/*.tar.gz

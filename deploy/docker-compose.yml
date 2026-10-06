@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 1. MySQL 8.0 关系型数据库 (持久化 + 字符集调优)
+  # ==========================================
+  doupi-mysql:
+    image: mysql:8.0.36
+    container_name: doupi-mysql
+    restart: always
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=512M
+      --max-connections=200
+      --sql-mode="STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-doupi_secure_pwd_2026}
+      MYSQL_DATABASE: ${MYSQL_DB:-doupi}
+      TZ: Asia/Shanghai
+    volumes:
+      - doupi-mysql-data:/var/lib/mysql
+      - ../doupi-server/sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    networks:
+      - doupi-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD:-doupi_secure_pwd_2026}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # 2. Redis 7.2 高性能缓存 (AOF 持久化 + 内存限制)
+  # ==========================================
+  doupi-redis:
+    image: redis:7.2-alpine
+    container_name: doupi-redis
+    restart: always
+    command: >
+      redis-server 
+      --requirepass "${REDIS_PASSWORD:-doupi123456}" 
+      --appendonly yes 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - doupi-redis-data:/data
+    networks:
+      - doupi-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-doupi123456}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 3. 后端 Spring Boot 4 + Druid + RapidOCR 服务
+  # ==========================================
+  doupi-server:
+    build:
+      context: ../doupi-server
+      dockerfile: ../deploy/docker/Dockerfile.server
+    container_name: doupi-server
+    restart: always
+    depends_on:
+      doupi-mysql:
+        condition: service_healthy
+      doupi-redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC -Dfile.encoding=UTF-8 -Duser.timezone=GMT+08"
+      SPRING_DATASOURCE_DRUID_MASTER_URL: "jdbc:mysql://doupi-mysql:3306/${MYSQL_DB:-doupi}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8"
+      SPRING_DATASOURCE_DRUID_MASTER_USERNAME: "${MYSQL_USER:-root}"
+      SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: "${MYSQL_PASSWORD:-doupi_secure_pwd_2026}"
+      SPRING_DATA_REDIS_HOST: "doupi-redis"
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: "${REDIS_PASSWORD:-doupi123456}"
+      DOUPI_PROFILE: "/home/doupi/uploadPath"
+    volumes:
+      - doupi-upload-data:/home/doupi/uploadPath
+      - doupi-logs-data:/home/doupi/logs
+    networks:
+      - doupi-net
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  # ==========================================
+  # 4. Nginx 统一前置网关 (路由聚合 + Gzip + SSL + 静态托管)
+  # ==========================================
+  doupi-nginx:
+    image: nginx:1.26-alpine
+    container_name: doupi-nginx
+    restart: always
+    depends_on:
+      - doupi-server
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../doupi-web-client-react/dist:/usr/share/nginx/html/client:ro
+      - ../doupi-web-admin-react/dist:/usr/share/nginx/html/admin:ro
+      - doupi-upload-data:/home/doupi/uploadPath:ro
+      - doupi-nginx-logs:/var/log/nginx
+    networks:
+      - doupi-net
+
+networks:
+  doupi-net:
+    driver: bridge
+
+volumes:
+  doupi-mysql-data:
+    driver: local
+  doupi-redis-data:
+    driver: local
+  doupi-upload-data:
+    driver: local
+  doupi-logs-data:
+    driver: local
+  doupi-nginx-logs:
+    driver: local

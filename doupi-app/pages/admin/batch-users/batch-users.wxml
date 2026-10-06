@@ -1,0 +1,61 @@
+<view class="page">
+  <view class="card">
+    <view class="card-title">{{displayText.titleRoleSelect}}</view>
+    <view class="role-options">
+      <view
+        wx:for="{{roleOptions}}"
+        wx:key="value"
+        class="role-option {{selectedRole === item.value ? 'active' : ''}}"
+        data-role="{{item.value}}"
+        bindtap="onSelectRole"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">{{displayText.titlePhoneMultiInput}}</view>
+    <textarea
+      class="phone-textarea"
+      placeholder="{{displayText.placeholderPhoneExamples}}"
+      value="{{rawPhones}}"
+      bindinput="onPhonesInput"
+    />
+    <view class="hint">{{displayText.hintPhoneSplitSupported}}</view>
+
+    <view class="actions">
+      <button class="btn-secondary" bindtap="onReset">{{displayText.btnReset}}</button>
+      <button class="btn-primary" bindtap="onPreview">{{displayText.btnPreview}}</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{previewList.length}}">
+    <view class="card-title">{{displayText.titlePreview}}（{{previewSummary.total}}）</view>
+    <view class="summary-row">
+      <t-tag theme="success" variant="light">{{displayText.labelValid}} {{previewSummary.valid}}</t-tag>
+      <t-tag theme="warning" variant="light">{{displayText.labelInvalid}} {{previewSummary.invalid}}</t-tag>
+      <t-tag theme="default" variant="light">{{displayText.labelDuplicated}} {{previewSummary.duplicated}}</t-tag>
+    </view>
+
+    <view class="preview-list">
+      <view class="preview-item" wx:for="{{previewList}}" wx:key="key">
+        <view class="preview-left">
+          <text class="phone">{{item.phone}}</text>
+          <text class="meta">{{displayText.labelRolePrefix}}{{roleLabel}}</text>
+        </view>
+        <view class="preview-right">
+          <t-tag wx:if="{{item.status === 'valid'}}" theme="success" variant="light">{{displayText.labelValid}}</t-tag>
+          <t-tag wx:elif="{{item.status === 'duplicated'}}" theme="default" variant="light">{{displayText.labelDuplicated}}</t-tag>
+          <t-tag wx:else theme="warning" variant="light">{{displayText.labelInvalid}}</t-tag>
+        </view>
+      </view>
+    </view>
+
+    <view class="actions actions-bottom">
+      <button class="btn-secondary" bindtap="onReset">{{displayText.btnReset}}</button>
+      <button class="btn-primary" bindtap="onSave" disabled="{{!canSave}}">{{displayText.btnSaveNew}}</button>
+    </view>
+  </view>
+</view>
+

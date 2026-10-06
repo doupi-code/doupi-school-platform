@@ -1,0 +1,24 @@
+/*
+ * @Author       : LQ
+ * @Description  :
+ * @version      : 3.0
+ * @Date         : 2021-08-20 16:44:21
+ * @LastAuthor   : jry
+ * @lastTime     : 2025-12-19 08:55:21
+ * @FilePath     : /uview-ultra/libs/config/props/switch.js
+ */
+export default {
+    // switch
+    switch: {
+        loading: false,
+        disabled: false,
+        size: 25,
+        activeColor: 'var(--up-switch-active-color, var(--up-primary, #2979ff))',
+        inactiveColor: 'var(--up-switch-inactive-color, #ffffff)',
+        value: false,
+        activeValue: true,
+        inactiveValue: false,
+        asyncChange: false,
+        space: 0
+    }
+}

@@ -1,0 +1,44 @@
+import { request } from '@/utils/request'
+
+/**
+ * 查询教务文印记录列表
+ */
+export function listPrintRecord(query: any): Promise<any> {
+  return request({
+    url: '/edu/record/list',
+    method: 'GET',
+    data: query
+  })
+}
+
+/**
+ * 提交文印印刷申请
+ */
+export function addPrintRecord(data: any): Promise<any> {
+  return request({
+    url: '/edu/record',
+    method: 'POST',
+    data: data
+  })
+}
+
+/**
+ * 获取文印详情
+ */
+export function getPrintRecord(printId: number): Promise<any> {
+  return request({
+    url: '/edu/record/' + printId,
+    method: 'GET'
+  })
+}
+
+/**
+ * 查询教学耗材/教材列表
+ */
+export function listEduMaterial(query: any): Promise<any> {
+  return request({
+    url: '/edu/material/list',
+    method: 'GET',
+    data: query
+  })
+}

@@ -1,0 +1,125 @@
+<view class="page">
+  <view class="page-header">
+    <view>
+      <text class="page-title">媒体台账</text>
+      <text class="page-desc">图片、视频统一登记到云存储，头像默认永久保留</text>
+    </view>
+    <view class="header-actions">
+      <view class="header-btn primary" bindtap="onRefreshTap">刷新台账</view>
+      <view class="header-btn danger" bindtap="onCleanupTap">清理过期图片</view>
+    </view>
+  </view>
+
+  <view class="summary-grid">
+    <view class="summary-card {{scope === 'total' ? 'active' : ''}}" data-scope="total" bindtap="onScopeTap">
+      <text class="summary-value">{{summary.totalCount}}</text>
+      <text class="summary-label">全部媒体</text>
+      <text class="summary-hint">查看全部登记记录</text>
+    </view>
+    <view class="summary-card warn {{scope === 'expired' ? 'active' : ''}}" data-scope="expired" bindtap="onScopeTap">
+      <text class="summary-value">{{summary.expiredCount}}</text>
+      <text class="summary-label">待清理</text>
+      <text class="summary-hint">超过 {{summary.expireDays}} 天未访问</text>
+    </view>
+    <view class="summary-card safe {{scope === 'permanent' ? 'active' : ''}}" data-scope="permanent" bindtap="onScopeTap">
+      <text class="summary-value">{{summary.permanentCount}}</text>
+      <text class="summary-label">永久保留</text>
+      <text class="summary-hint">头像等长期资源</text>
+    </view>
+  </view>
+
+  <view class="list-panel">
+    <view class="panel-head">
+      <view>
+        <text class="panel-title">{{titleText}}</text>
+        <text class="panel-subtitle">共 {{total}} 条记录</text>
+      </view>
+    </view>
+
+    <view class="filter-panel">
+      <input
+        class="search-input"
+        placeholder="搜索 fileID / 分类 / 来源"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onKeywordConfirm"
+        confirm-type="search"
+      />
+      <view class="advanced-toggle" bindtap="onToggleAdvancedFilters">
+        <text class="advanced-toggle-text">{{showAdvancedFilters ? '收起高级筛选' : '展开高级筛选'}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{showAdvancedFilters}}" class="filter-toolbar">
+      <picker mode="selector" range="{{filterOptions.fileTypes}}" range-key="label" value="{{filterIndex.fileType}}" data-field="fileType" bindchange="onFilterChange">
+        <view class="toolbar-chip">{{filterLabels.fileType}}</view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.categories}}" range-key="label" value="{{filterIndex.category}}" data-field="category" bindchange="onFilterChange">
+        <view class="toolbar-chip">{{filterLabels.category}}</view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.refCollections}}" range-key="label" value="{{filterIndex.refCollection}}" data-field="refCollection" bindchange="onFilterChange">
+        <view class="toolbar-chip">{{filterLabels.refCollection}}</view>
+      </picker>
+    </view>
+
+    <view class="filter-actions {{showAdvancedFilters ? '' : 'compact'}}">
+      <view class="mini-btn primary" bindtap="onSearchTap">立即搜索</view>
+      <view class="mini-btn ghost" bindtap="onResetFilters">重置</view>
+    </view>
+
+    <view wx:if="{{loading && list.length === 0}}" class="panel-empty">加载中...</view>
+
+    <view wx:elif="{{list.length > 0}}" class="asset-list">
+      <view class="asset-item" wx:for="{{list}}" wx:key="fileID">
+        <view class="asset-top">
+          <view class="asset-top-main">
+            <text class="asset-title">{{item.categoryText}}</text>
+            <text class="asset-type">{{item.fileTypeText}}</text>
+          </view>
+          <text class="asset-status {{item.isPermanent ? 'permanent' : 'temporary'}}">{{item.statusText}}</text>
+        </view>
+
+        <view class="asset-body">
+          <view class="asset-row">
+            <text class="asset-label">文件标识</text>
+            <text class="asset-value mono">{{item.shortFileID}}</text>
+          </view>
+          <view class="asset-row">
+            <text class="asset-label">引用位置</text>
+            <text class="asset-value">{{item.refText}}</text>
+          </view>
+          <view class="asset-row">
+            <text class="asset-label">最近访问</text>
+            <text class="asset-value">{{item.lastAccessText}}</text>
+          </view>
+          <view class="asset-row">
+            <text class="asset-label">当前状态</text>
+            <text class="asset-value">{{item.idleText}}</text>
+          </view>
+        </view>
+
+        <view class="asset-actions">
+          <view
+            class="view-btn"
+            data-id="{{item.id}}"
+            bindtap="onViewDetail"
+          >查看</view>
+          <view
+            class="delete-btn {{item.canDelete && !item.deleting ? '' : 'disabled'}}"
+            data-id="{{item.id}}"
+            data-candelete="{{item.canDelete}}"
+            bindtap="onDeleteAsset"
+          >{{item.deleting ? '删除中...' : '删除'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="panel-empty">{{scope === 'expired' ? '暂无待清理媒体' : scope === 'permanent' ? '暂无永久保留媒体' : '暂无媒体记录'}}</view>
+
+    <view wx:if="{{list.length > 0}}" class="list-footer">
+      <text wx:if="{{loadingMore}}">加载中...</text>
+      <text wx:elif="{{hasMore}}">上拉继续加载</text>
+      <text wx:else>没有更多了</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,205 @@
+<!-- 预约列表页面 - 美化版本 -->
+<view class="page-container">
+
+  <!-- 统计概览卡片 -->
+  <view class="stats-overview">
+    <view class="stat-item" bindtap="filterByStatus" data-status="pending">
+      <text class="stat-number text-warning">{{stats.pending || 0}}</text>
+      <text class="stat-label">{{displayText.statPending}}</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="filterByStatus" data-status="verified">
+      <text class="stat-number text-primary">{{stats.verified || 0}}</text>
+      <text class="stat-label">{{displayText.statVerified}}</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="filterByStatus" data-status="cancelled">
+      <text class="stat-number text-error">{{stats.cancelled || 0}}</text>
+      <text class="stat-label">{{displayText.statCancelled}}</text>
+    </view>
+  </view>
+
+  <!-- Tab 切换 -->
+  <view class="tab-container">
+    <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="tab-scroll">
+      <view class="tab-list">
+        <view
+          wx:for="{{tabs}}"
+          wx:key="value"
+          class="tab-item {{currentTab === item.value ? 'active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onTabChange"
+        >
+          <text class="tab-text">{{item.label}}</text>
+          <view class="tab-indicator" wx:if="{{currentTab === item.value}}"></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 筛选条件区域 -->
+  <view class="filter-section">
+    <t-search
+      value="{{searchKeyword}}"
+      placeholder="搜索姓名、手机号、日期、时段"
+      bind:change="onSearchChange"
+      bind:clear="onSearchClear"
+    />
+    <view class="filter-dropdown-wrap">
+      <t-dropdown-menu>
+        <t-dropdown-item
+          options="{{dateDropdownOptions}}"
+          value="{{selectedDate}}"
+          bind:change="onDateFilterChange"
+        />
+        <t-dropdown-item
+          options="{{sortOptions}}"
+          value="{{sortOrder}}"
+          bind:change="onSortFilterChange"
+        />
+      </t-dropdown-menu>
+    </view>
+  </view>
+
+  <!-- 预约列表 -->
+  <view class="appointment-list">
+
+    <!-- 空状态 -->
+    <view wx:if="{{isEmpty && !loading}}" class="empty-state">
+        <view class="empty-illustration">
+          <t-icon name="calendar" size="80rpx" class="icon-text icon-text--empty"></t-icon>
+        </view>
+      <text class="empty-title">{{displayText.noBookings}}</text>
+      <text class="empty-desc">{{currentTab === 'all' ? displayText.emptyNoBookingsDesc : (displayText.emptyNoBookingsInStatusPrefix + displayText.noRecordInTab)}}</text>
+      <button class="btn-go-appointment" bindtap="goToAppointment" wx:if="{{currentTab === 'all'}}">
+        {{displayText.btnBookNow}}
+      </button>
+    </view>
+
+    <!-- 预约卡片列表 -->
+    <view wx:elif="{{!loading}}" class="appointment-cards">
+      <view
+        wx:for="{{filteredAppointments}}"
+        wx:key="id"
+        class="appointment-card"
+        data-id="{{item.id}}"
+        bindtap="onNavigateToDetail"
+      >
+
+        <!-- 卡片头部 - 状态标签 -->
+        <view class="card-header">
+          <view
+            class="status-tag {{item.status === 'pending' ? 'status-pending' : (item.status === 'verified' ? 'status-completed' : 'status-cancelled')}}"
+          >
+            <view class="status-dot"></view>
+            <text>{{item.status === 'pending' ? '待核销' : (item.status === 'verified' ? '已核销' : '已取消')}}</text>
+          </view>
+        </view>
+
+        <!-- 校园名称 -->
+        <!-- 预约信息 -->
+        <view class="info-list">
+          <view class="info-row">
+            <view class="info-icon-wrap">
+              <t-icon name="calendar" size="28rpx" color="#999999"></t-icon>
+            </view>
+            <text class="info-label">{{displayText.labelVisitDate}}</text>
+            <text class="info-value">{{item.visitDate}}</text>
+          </view>
+          <view class="info-row">
+            <view class="info-icon-wrap">
+              <t-icon name="time" size="28rpx" color="#999999"></t-icon>
+            </view>
+            <text class="info-label">{{displayText.labelVisitTime}}</text>
+            <text class="info-value highlight">{{item.visitTime}}</text>
+          </view>
+          <view class="info-row">
+            <view class="info-icon-wrap">
+              <t-icon name="user" size="28rpx" color="#999999"></t-icon>
+            </view>
+            <text class="info-label">{{displayText.labelVisitorName}}</text>
+            <text class="info-value">{{item.visitorName}}</text>
+          </view>
+          <view class="info-row">
+            <view class="info-icon-wrap">
+              <t-icon name="call" size="28rpx" color="#999999"></t-icon>
+            </view>
+            <text class="info-label">{{displayText.labelContactPhone}}</text>
+            <text
+              class="info-value phone"
+              catchtap="makeCallFromList"
+              data-phone-raw="{{item.visitorPhoneRaw}}"
+            >
+              {{item.visitorPhone}}
+            </text>
+          </view>
+          <view class="info-row" wx:if="{{item.visitorCount}}">
+            <view class="info-icon-wrap">
+              <t-icon name="usergroup" size="28rpx" color="#999999"></t-icon>
+            </view>
+            <text class="info-label">{{displayText.labelVisitorCount}}</text>
+            <text class="info-value">{{item.visitorCount}}人</text>
+          </view>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="card-actions">
+          <view
+            wx:if="{{item.status === 'pending'}}"
+            class="action-btn action-btn--cancel"
+            data-id="{{item.id}}"
+            catchtap="onCancelBooking"
+          >
+            <t-icon name="close" size="24rpx" class="icon-text icon-text--danger"></t-icon>
+            <text>{{displayText.btnCancelBooking}}</text>
+          </view>
+          <view
+            class="action-btn action-btn--detail"
+            data-id="{{item.id}}"
+            catchtap="onNavigateToDetail"
+          >
+            <text>{{displayText.btnViewDetail}}</text>
+          </view>
+        </view>
+
+      </view>
+    </view>
+
+    <!-- 加载状态 -->
+    <view wx:if="{{loading}}" class="loading-state">
+      <view class="loading-spinner">
+        <t-loading theme="circular" size="72rpx" color="#3088F4"></t-loading>
+      </view>
+      <text class="loading-text">{{displayText.loadingText}}</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view wx:if="{{hasMore && !loading}}" class="load-more" bindtap="loadMore">
+      <text class="load-more-text">{{displayText.loadMoreText}}</text>
+      <text class="icon-text">⌄</text>
+    </view>
+
+    <!-- 没有更多数据 -->
+    <view wx:if="{{!hasMore && !isEmpty && !loading}}" class="no-more">
+      <view class="no-more-line"></view>
+      <text class="no-more-text">{{displayText.noMoreText}}</text>
+      <view class="no-more-line"></view>
+    </view>
+
+  </view>
+
+  <!-- 取消预约确认弹窗 -->
+  <t-dialog
+    visible="{{showCancelModal}}"
+    title="{{displayText.modalCancelBookingTitle}}"
+    content="{{displayText.modalCancelBookingContent}}"
+    confirm-btn="{{displayText.btnConfirmCancel}}"
+    cancel-btn="{{displayText.btnRethink}}"
+    bind:confirm="onConfirmCancel"
+    bind:cancel="onCancelModalClose"
+    bind:close="onCancelModalClose"
+    class="cancel-dialog"
+  >
+  </t-dialog>
+
+</view>

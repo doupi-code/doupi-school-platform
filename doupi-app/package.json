@@ -1,0 +1,9 @@
+{
+  "name": "huaxiang-miniprogram",
+  "private": true,
+  "version": "1.0.0",
+  "description": "汉外华襄预约小程序端依赖（TDesign 组件库）",
+  "dependencies": {
+    "tdesign-miniprogram": "^1.13.2"
+  }
+}

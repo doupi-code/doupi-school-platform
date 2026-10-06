@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.recruit.mapper.DoupiRecruitTeacherBindingMapper">
+    
+    <resultMap type="com.doupi.recruit.domain.DoupiRecruitTeacherBinding" id="DoupiRecruitTeacherBindingResult">
+        <result property="bindingId"    column="binding_id"    />
+        <result property="teacherId"    column="teacher_id"    />
+        <result property="teacherName"  column="teacher_name"  />
+        <result property="teacherPhone" column="teacher_phone" />
+        <result property="directorId"   column="director_id"   />
+        <result property="directorName" column="director_name" />
+        <result property="status"       column="status"        />
+        <result property="auditRemark"  column="audit_remark"  />
+        <result property="createTime"   column="create_time"   />
+        <result property="auditTime"    column="audit_time"    />
+    </resultMap>
+
+    <sql id="selectDoupiRecruitTeacherBindingVo">
+        select binding_id, teacher_id, teacher_name, teacher_phone, director_id, director_name, status, audit_remark, create_time, audit_time from doupi_recruit_teacher_binding
+    </sql>
+
+    <select id="selectDoupiRecruitTeacherBindingList" parameterType="com.doupi.recruit.domain.DoupiRecruitTeacherBinding" resultMap="DoupiRecruitTeacherBindingResult">
+        <include refid="selectDoupiRecruitTeacherBindingVo"/>
+        <where>  
+            <if test="teacherName != null and teacherName != ''"> and teacher_name like concat('%', #{teacherName}, '%')</if>
+            <if test="teacherPhone != null and teacherPhone != ''"> and teacher_phone like concat('%', #{teacherPhone}, '%')</if>
+            <if test="directorName != null and directorName != ''"> and director_name like concat('%', #{directorName}, '%')</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="directorId != null and directorId != ''"> and director_id = #{directorId}</if>
+        </where>
+        order by create_time desc
+    </select>
+    
+    <select id="selectDoupiRecruitTeacherBindingById" parameterType="Long" resultMap="DoupiRecruitTeacherBindingResult">
+        <include refid="selectDoupiRecruitTeacherBindingVo"/>
+        where binding_id = #{bindingId}
+    </select>
+
+    <select id="selectDoupiRecruitTeacherBindingByTeacherId" parameterType="String" resultMap="DoupiRecruitTeacherBindingResult">
+        <include refid="selectDoupiRecruitTeacherBindingVo"/>
+        where teacher_id = #{teacherId}
+        order by create_time desc limit 1
+    </select>
+        
+    <insert id="insertDoupiRecruitTeacherBinding" parameterType="com.doupi.recruit.domain.DoupiRecruitTeacherBinding" useGeneratedKeys="true" keyProperty="bindingId">
+        insert into doupi_recruit_teacher_binding
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="teacherId != null and teacherId != ''">teacher_id,</if>
+            <if test="teacherName != null and teacherName != ''">teacher_name,</if>
+            <if test="teacherPhone != null and teacherPhone != ''">teacher_phone,</if>
+            <if test="directorId != null and directorId != ''">director_id,</if>
+            <if test="directorName != null and directorName != ''">director_name,</if>
+            <if test="status != null">status,</if>
+            <if test="auditRemark != null">audit_remark,</if>
+            <if test="auditTime != null">audit_time,</if>
+            create_time
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="teacherId != null and teacherId != ''">#{teacherId},</if>
+            <if test="teacherName != null and teacherName != ''">#{teacherName},</if>
+            <if test="teacherPhone != null and teacherPhone != ''">#{teacherPhone},</if>
+            <if test="directorId != null and directorId != ''">#{directorId},</if>
+            <if test="directorName != null and directorName != ''">#{directorName},</if>
+            <if test="status != null">#{status},</if>
+            <if test="auditRemark != null">#{auditRemark},</if>
+            <if test="auditTime != null">#{auditTime},</if>
+            sysdate()
+         </trim>
+    </insert>
+
+    <update id="updateDoupiRecruitTeacherBinding" parameterType="com.doupi.recruit.domain.DoupiRecruitTeacherBinding">
+        update doupi_recruit_teacher_binding
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+        </trim>
+        where binding_id = #{bindingId}
+    </update>
+
+    <delete id="deleteDoupiRecruitTeacherBindingById" parameterType="Long">
+        delete from doupi_recruit_teacher_binding where binding_id = #{bindingId}
+    </delete>
+</mapper>

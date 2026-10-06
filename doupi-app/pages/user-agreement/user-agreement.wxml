@@ -1,0 +1,7 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced>
+    <view class="agreement-card">
+      <rich-text class="rich-text" nodes="{{formattedContent}}"></rich-text>
+    </view>
+  </scroll-view>
+</view>

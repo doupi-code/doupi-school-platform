@@ -1,0 +1,399 @@
+/* 页面容器 */
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #F5F6F8;
+}
+
+/* 导航栏 */
+/* 内容区域 */
+.content {
+  flex: 1;
+  min-height: 0;
+  padding: 24rpx 32rpx;
+  padding-bottom: 24rpx;
+  box-sizing: border-box;
+}
+
+/* 角色Tab切换 */
+.role-tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 8rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.role-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 12rpx;
+  border-radius: 16rpx;
+  transition: all 0.25s ease;
+}
+
+.role-tab.active {
+  background: #3088F4;
+  box-shadow: 0 4rpx 12rpx rgba(48, 136, 244, 0.3);
+}
+
+.tab-icon-wrap {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 12rpx;
+  margin-bottom: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F5F6F8;
+}
+
+.role-tab.active .tab-icon-wrap {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.tab-label {
+  font-size: 24rpx;
+  color: #666;
+  font-weight: 500;
+  transition: color 0.25s ease;
+}
+
+.role-tab.active .tab-label {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 角色信息卡片 */
+.role-info-card {
+  margin-bottom: 24rpx;
+}
+
+.role-info-header {
+  margin-bottom: 24rpx;
+}
+
+.role-name-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 10rpx;
+}
+
+.role-name {
+  font-size: 34rpx;
+  color: #333;
+  font-weight: 700;
+}
+
+.permission-count {
+  display: flex;
+  align-items: baseline;
+  padding: 4rpx 14rpx;
+  background: #E8F2FE;
+  border-radius: 20rpx;
+}
+
+.count-num {
+  font-size: 26rpx;
+  color: #3088F4;
+  font-weight: 700;
+}
+
+.count-sep {
+  font-size: 22rpx;
+  color: #999;
+  margin: 0 4rpx;
+}
+
+.count-total {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.role-desc {
+  font-size: 26rpx;
+  color: #888;
+  line-height: 1.5;
+}
+
+.role-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 72rpx;
+  border-radius: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.action-btn.enable {
+  background: #F6FFED;
+  border: 2rpx solid #B7EB8F;
+}
+
+.action-btn.enable:active {
+  background: #D9F7BE;
+}
+
+.action-btn.disable {
+  background: #FFF1F0;
+  border: 2rpx solid #FFCCC7;
+}
+
+.action-btn.disable:active {
+  background: #FFCCC7;
+}
+
+.action-text {
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.action-btn.enable .action-text {
+  color: #52C41A;
+}
+
+.action-btn.disable .action-text {
+  color: #FF4D4F;
+}
+
+/* 卡片样式 */
+.card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.card-title {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 600;
+}
+
+.card-hint {
+  font-size: 22rpx;
+  color: #BBB;
+}
+
+.perm-tree-group {
+  margin-bottom: 16rpx;
+}
+
+.perm-tree-group:last-child {
+  margin-bottom: 0;
+}
+
+.perm-tree-title {
+  font-size: 24rpx;
+  color: #666;
+  font-weight: 600;
+  padding: 8rpx 0 0;
+}
+
+.perm-group-child {
+  padding-left: 18rpx;
+  border-left: 4rpx solid #F0F0F0;
+  margin-top: 8rpx;
+}
+
+/* 权限列表 */
+.perm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #F5F5F5;
+  transition: background 0.15s ease;
+}
+
+.perm-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.perm-item:active {
+  background: #FAFAFA;
+  margin: 0 -16rpx;
+  padding: 24rpx 16rpx;
+  border-radius: 12rpx;
+}
+
+.perm-item.locked {
+  opacity: 0.85;
+}
+
+.perm-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  flex: 1;
+  margin-right: 20rpx;
+}
+
+.perm-icon-wrap {
+  flex-shrink: 0;
+  width: 20rpx;
+  height: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perm-status-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.perm-status-dot.on {
+  background: #52C41A;
+  box-shadow: 0 0 8rpx rgba(82, 196, 26, 0.4);
+}
+
+.perm-status-dot.off {
+  background: #D9D9D9;
+}
+
+.perm-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.perm-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 6rpx;
+}
+
+.perm-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.locked-badge {
+  font-size: 20rpx;
+  color: #FA8C16;
+  background: #FFF7E6;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  font-weight: 500;
+}
+
+.perm-desc {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+
+.perm-switch {
+  transform: scale(0.85);
+  flex-shrink: 0;
+}
+
+/* 帮助说明卡片 */
+.help-card {
+  padding: 24rpx 32rpx;
+}
+
+.help-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0;
+}
+
+.help-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.help-dot.green {
+  background: #52C41A;
+}
+
+.help-dot.gray {
+  background: #D9D9D9;
+}
+
+.help-badge-sample {
+  font-size: 20rpx;
+  color: #FA8C16;
+  background: #FFF7E6;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.help-text {
+  font-size: 24rpx;
+  color: #888;
+}
+
+.bottom-spacer {
+  height: calc(144rpx + env(safe-area-inset-bottom));
+}
+
+/* 底部按钮区域 */
+.bottom-area {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 90;
+}
+
+.save-btn {
+  width: 100%;
+  height: 96rpx;
+  background: #3088F4;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 48rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 96rpx;
+  transition: all 0.2s ease;
+}
+
+.save-btn:not(.disabled):active {
+  background: #1A6FD8;
+  transform: scale(0.98);
+}
+
+.save-btn.disabled {
+  background: #B3CDE8;
+  color: rgba(255, 255, 255, 0.8);
+}

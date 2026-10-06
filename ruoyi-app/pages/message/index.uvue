@@ -1,0 +1,164 @@
+<template>
+  <scroll-view class="message-page" scroll-y="true">
+    <!-- 顶部分类标签 (使用 up-tabs 组件) -->
+    <view class="tab-header">
+      <up-tabs 
+        :list="tabs" 
+        lineColor="#165DFF"
+        activeStyle="color: #165DFF; font-weight: bold;"
+        @click="handleTabClick"
+      ></up-tabs>
+    </view>
+
+    <!-- 消息列表 (使用 up-tag 组件) -->
+    <view class="msg-list">
+      <view 
+        class="msg-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index"
+      >
+        <view class="msg-header">
+          <up-tag 
+            :type="item.tagType" 
+            :text="item.tagText" 
+            size="mini"
+          ></up-tag>
+          <text class="msg-time">{{ item.time }}</text>
+        </view>
+        <text class="msg-title">{{ item.title }}</text>
+        <text class="msg-content">{{ item.content }}</text>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="message" 
+        text="暂无相关消息通知"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+type MessageItem = {
+  id: number
+  category: string
+  tagText: string
+  tagType: string
+  time: string
+  title: string
+  content: string
+}
+
+export default {
+  data() {
+    return {
+      currentTab: 'ALL',
+      tabs: [
+        { name: '全部消息', value: 'ALL' },
+        { name: '待办任务', value: 'TASK' },
+        { name: '系统公告', value: 'NOTICE' }
+      ],
+      messages: [
+        {
+          id: 1,
+          category: 'NOTICE',
+          tagText: '系统升级',
+          tagType: 'primary',
+          time: '今天 10:30',
+          title: '若依移动端纯原生架构全面升级',
+          content: '若依系统已全面适配 uni-app x 新一代原生渲染架构，三端性能大幅提升，零卡顿原生级体验！'
+        },
+        {
+          id: 2,
+          category: 'TASK',
+          tagText: '待办审批',
+          tagType: 'warning',
+          time: '今天 09:15',
+          title: '高三年级模考文具领料出库待审批',
+          content: '高三年级组陈老师提交了 2B铅笔 300支、橡皮 300块的出库申请，请库管人员尽快完成审核。'
+        },
+        {
+          id: 3,
+          category: 'TASK',
+          tagText: '招生核销',
+          tagType: 'success',
+          time: '昨天 16:45',
+          title: '新的访校预约待现场核销',
+          content: '王女士等 3 人已成功预约本周六校园开放日参访，凭单码 839201，请注意核销接待。'
+        }
+      ] as MessageItem[]
+    }
+  },
+  computed: {
+    filteredList(): MessageItem[] {
+      if (this.currentTab === 'ALL') {
+        return this.messages
+      }
+      return this.messages.filter((item: MessageItem): boolean => item.category === this.currentTab)
+    }
+  },
+  methods: {
+    handleTabClick(item: any) {
+      const obj = item as UTSJSONObject
+      if (obj != null && obj['value'] != null) {
+        this.currentTab = obj['value'] as string
+      }
+    }
+  }
+}
+</script>
+
+<style>
+.message-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.tab-header {
+  background-color: #FFFFFF;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid #F2F3F5;
+}
+
+.msg-list {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.msg-card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.msg-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.msg-time {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.msg-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1D2129;
+  margin-bottom: 6px;
+}
+
+.msg-content {
+  font-size: 13px;
+  color: #4E5969;
+  line-height: 20px;
+}
+</style>

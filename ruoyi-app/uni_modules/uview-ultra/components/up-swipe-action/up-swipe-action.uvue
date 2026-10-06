@@ -1,0 +1,105 @@
+<template>
+	<view class="up-swipe-action">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, watch } from 'vue';
+	import defProps from './swipeAction.uts';
+	import { useUltraUI } from '../../libs/composable/useUltraUI.uts';
+	/**
+	 * SwipeAction 滑动单元格 
+	 * @description 该组件一般用于左滑唤出操作菜单的场景，用的最多的是左滑删除操作
+	 * @tutorial https://uview-plus.jiangruyi.com/components/swipeAction.html
+	 * @property {Boolean}	autoClose	是否自动关闭其他swipe按钮组
+	 * @event {Function(index)}	click	点击组件时触发
+	 * @example	<up-swipe-action><up-swipe-action-item :rightOptions="options1" ></up-swipe-action-item></up-swipe-action>
+	 */
+	const { children, getChildren, addChild } = useUltraUI()
+
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-swipe-action'
+	})
+
+	const props = defineProps({
+		// 是否自动关闭其他swipe按钮组
+		autoClose: {
+			type: Boolean,
+			default: (defProps['swipeAction'] as UTSJSONObject)['autoClose']
+		},
+		// 是否存在打开的按钮组
+		opendItem: {
+			type: Boolean,
+			default: false
+		}
+	})
+
+	const emit = defineEmits(['opendItem:update'])
+
+	const parentDataCpu = computed((): UTSJSONObject => {
+		return {
+			autoClose: props.autoClose
+		} as UTSJSONObject
+	})
+
+	const closeOther = (child: ComponentPublicInstance): void => {
+		if (props.autoClose) {
+			// 历遍所有的单元格，找出非当前操作中的单元格，进行关闭
+			children.value.map((item: ComponentPublicInstance) => {
+				if (child !== item) {
+					item?.$callMethod('closeHandler')
+				}
+			})
+		}
+	}
+
+	const closeAll = (): void => {
+		// 关闭所有单元格
+		children.value.map((item: ComponentPublicInstance) => {
+			item?.$callMethod('closeHandler')
+		})
+	}
+
+	const setOpendItem = (_ins: any): void => {
+		emit('opendItem:update', true)
+	}
+
+	const getProps = (): UTSJSONObject => {
+		return parentDataCpu.value
+	}
+
+	const getRefs = (): UTSJSONObject => {
+		return {} as UTSJSONObject
+	}
+
+	watch(parentDataCpu, () => {
+		if (children.value.length > 0) {
+			children.value.map((child: ComponentPublicInstance) => {
+				// 判断子组件(up-swipe-action-item)如果有updateParentData方法的话，就就执行
+				child?.$callMethod('updateParentData')
+			})
+		}
+	}, { deep: true })
+
+	watch((): boolean => props.opendItem, (val: boolean) => {
+		if (val == false) {
+			closeAll()
+		}
+	})
+
+	defineExpose({
+		closeOther,
+		closeAll,
+		setOpendItem,
+		getChildren,
+		addChild,
+		getProps,
+		getRefs
+	})
+</script>
+
+<style lang="scss" scoped>
+
+</style>

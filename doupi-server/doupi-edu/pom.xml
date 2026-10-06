@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.doupi</groupId>
+        <artifactId>doupi</artifactId>
+        <version>3.9.2</version>
+    </parent>
+
+    <artifactId>doupi-edu</artifactId>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+
+    <dependencies>
+
+        <!-- 通用工具-->
+        <dependency>
+            <groupId>com.doupi</groupId>
+            <artifactId>doupi-common</artifactId>
+        </dependency>
+
+        <!-- 系统模块-->
+        <dependency>
+            <groupId>com.doupi</groupId>
+            <artifactId>doupi-system</artifactId>
+        </dependency>
+
+        <!-- 库存模块-->
+        <dependency>
+            <groupId>com.doupi</groupId>
+            <artifactId>doupi-stock</artifactId>
+        </dependency>
+
+        <!-- RapidOCR 开源离线高精度OCR引擎（基于PaddleOCR优化，纯CPU高效推理） -->
+        <dependency>
+            <groupId>io.github.mymonstercat</groupId>
+            <artifactId>rapidocr</artifactId>
+            <version>0.0.7</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- ONNX 模型文件包 (内置PP-OCRv3中文轻量高精模型) -->
+        <dependency>
+            <groupId>io.github.mymonstercat</groupId>
+            <artifactId>rapidocr-onnx-models</artifactId>
+            <version>1.2.2</version>
+        </dependency>
+        <!-- Windows x86_64 原生推理运行库 (本地开发与运行) -->
+        <dependency>
+            <groupId>io.github.mymonstercat</groupId>
+            <artifactId>rapidocr-onnx-windows-x86_64</artifactId>
+            <version>1.2.2</version>
+        </dependency>
+        <!-- Linux x86_64 原生推理运行库 (Docker容器与Linux服务器生产部署) -->
+        <dependency>
+            <groupId>io.github.mymonstercat</groupId>
+            <artifactId>rapidocr-onnx-linux-x86_64</artifactId>
+            <version>1.2.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

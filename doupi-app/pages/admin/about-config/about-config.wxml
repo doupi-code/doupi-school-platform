@@ -1,0 +1,81 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="card sync-card">
+      <view class="sync-header">
+        <view>
+          <text class="card-title">校园简介</text>
+          <text class="sync-subtitle">此内容同步自校园管理，当前页面仅展示，不支持直接编辑。</text>
+        </view>
+        <view class="sync-action" bindtap="goToCampus">
+          <t-icon name="chevron-right" size="28rpx" color="#3088F4"></t-icon>
+          <text class="sync-action-text">前往维护</text>
+        </view>
+      </view>
+      <view class="sync-tip">
+        <t-icon name="info-circle" size="28rpx" color="#3088F4"></t-icon>
+        <text class="sync-tip-text">修改学校简介、学校名称、校园封面等内容，请进入“校园管理”页面维护，关于我们页会自动同步最新发布内容。</text>
+      </view>
+      <view class="readonly-panel">
+        <text class="readonly-label">当前学校名称</text>
+        <text class="readonly-title">{{campusTitle || '未配置'}}</text>
+        <text class="readonly-label intro-label">当前校园简介</text>
+        <text class="readonly-content">{{campusIntro || '暂未维护校园简介内容'}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">关于我们其他信息</text>
+        <text class="card-desc">以下字段单独用于“关于我们”页面展示。</text>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">招生热线</text>
+        <input class="form-input" value="{{formData.contactPhone}}" data-field="contactPhone" bindinput="onInputChange" placeholder="请输入招生热线" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">电子邮箱</text>
+        <input class="form-input" value="{{formData.contactEmail}}" data-field="contactEmail" bindinput="onInputChange" placeholder="请输入电子邮箱" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">学校地址</text>
+        <input class="form-input" value="{{formData.address}}" data-field="address" bindinput="onInputChange" placeholder="请输入学校地址" />
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">办公时间</text>
+        <text class="card-desc">用于关于我们页“办公时间”区域展示。</text>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">周一至周五</text>
+        <input class="form-input" value="{{formData.officeHourWeekday}}" data-field="officeHourWeekday" bindinput="onInputChange" placeholder="例如：08:30 - 17:00" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">周六</text>
+        <input class="form-input" value="{{formData.officeHourSaturday}}" data-field="officeHourSaturday" bindinput="onInputChange" placeholder="例如：09:00 - 16:00" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">周日及法定节假日</text>
+        <input class="form-input" value="{{formData.officeHourHoliday}}" data-field="officeHourHoliday" bindinput="onInputChange" placeholder="例如：休息" />
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <view class="bottom-area">
+    <view class="btn-row">
+      <button class="reset-btn" bindtap="discardChanges">丢弃更改</button>
+      <button class="save-btn {{saving ? 'disabled' : ''}}" bindtap="saveConfig" disabled="{{saving}}">
+        {{saving ? '保存中...' : '保存关于我们配置'}}
+      </button>
+    </view>
+  </view>
+</view>

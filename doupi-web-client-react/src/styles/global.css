@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #3088F4;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  background-color: #f5f5f5;
+}
+
+/* ==========================================================================
+   全局下拉选择与日期选择控件：鼠标展示形式统一为指针（手型 / 下拉框样式），彻底杜绝文本光标（I-beam）
+   覆盖组件：Select（包含普通单选、可搜索 showSearch、多选 multiple）、DatePicker、TimePicker、RangePicker、Cascader、TreeSelect
+   ========================================================================== */
+
+/* 1. 下拉选择器 Select 及其全子元素（包括带搜索框 showSearch、多选等）鼠标指针统一下拉框手型 pointer */
+.ant-select:not(.ant-select-disabled),
+.ant-select:not(.ant-select-disabled) *,
+.ant-select:not(.ant-select-disabled) .ant-select-selector,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-wrap,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-search,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-search-input,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-search input,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-item,
+.ant-select:not(.ant-select-disabled) .ant-select-selection-placeholder,
+.ant-select:not(.ant-select-disabled) .ant-select-arrow,
+.ant-select:not(.ant-select-disabled) .ant-select-clear,
+.ant-select:not(.ant-select-disabled) input,
+.ant-select-show-search:not(.ant-select-disabled),
+.ant-select-show-search:not(.ant-select-disabled) *,
+.ant-select-show-search:not(.ant-select-disabled) .ant-select-selector,
+.ant-select-show-search:not(.ant-select-disabled) .ant-select-selection-wrap,
+.ant-select-show-search:not(.ant-select-disabled) .ant-select-selection-search,
+.ant-select-show-search:not(.ant-select-disabled) .ant-select-selection-search-input,
+.ant-select-show-search:not(.ant-select-disabled) .ant-select-selection-search input,
+.ant-select-show-search:not(.ant-select-disabled) input,
+.ant-select-multiple:not(.ant-select-disabled),
+.ant-select-multiple:not(.ant-select-disabled) *,
+.ant-select-multiple:not(.ant-select-disabled) .ant-select-selector,
+.ant-select-multiple:not(.ant-select-disabled) input {
+  cursor: pointer !important;
+}
+
+/* 2. 日期/时间选择器 DatePicker, TimePicker, RangePicker 鼠标指针统一下拉/选择框手型 pointer */
+.ant-picker:not(.ant-picker-disabled),
+.ant-picker:not(.ant-picker-disabled) *,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-input,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-input > input,
+.ant-picker:not(.ant-picker-disabled) input,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-suffix,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-clear,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-range-separator,
+.ant-picker:not(.ant-picker-disabled) .ant-picker-separator {
+  cursor: pointer !important;
+}
+
+/* 3. 级联选择器 Cascader 鼠标指针统一为 pointer */
+.ant-cascader:not(.ant-cascader-disabled),
+.ant-cascader:not(.ant-cascader-disabled) *,
+.ant-cascader:not(.ant-cascader-disabled) .ant-select-selector,
+.ant-cascader:not(.ant-cascader-disabled) input {
+  cursor: pointer !important;
+}
+
+/* 4. 树选择器 TreeSelect 鼠标指针统一为 pointer */
+.ant-tree-select:not(.ant-tree-select-disabled),
+.ant-tree-select:not(.ant-tree-select-disabled) *,
+.ant-tree-select:not(.ant-tree-select-disabled) .ant-select-selector,
+.ant-tree-select:not(.ant-tree-select-disabled) input {
+  cursor: pointer !important;
+}
+
+/* 5. 颜色选择器 ColorPicker 触发区域 */
+.ant-color-picker-trigger,
+.ant-color-picker-trigger * {
+  cursor: pointer !important;
+}
+
+/* 6. ProComponents 封装字段与触发器 */
+.ant-pro-core-field-dropdown,
+.ant-pro-core-field-dropdown * {
+  cursor: pointer !important;
+}
+
+/* 7. 禁用状态保持不允许点击禁行光标 (not-allowed) */
+.ant-select-disabled,
+.ant-select-disabled *,
+.ant-picker-disabled,
+.ant-picker-disabled *,
+.ant-cascader-disabled,
+.ant-cascader-disabled *,
+.ant-tree-select-disabled,
+.ant-tree-select-disabled * {
+  cursor: not-allowed !important;
+}
+
+/* 8. 弹出的下拉菜单、日期面板、树节点内的条目鼠标保持手型指针 */
+.ant-select-dropdown .ant-select-item,
+.ant-select-dropdown .ant-select-item-option,
+.ant-select-dropdown .ant-select-item-option-content,
+.ant-picker-dropdown .ant-picker-cell,
+.ant-picker-dropdown .ant-picker-cell-inner,
+.ant-picker-dropdown .ant-picker-header-view button,
+.ant-picker-dropdown .ant-picker-header button,
+.ant-cascader-dropdown .ant-cascader-menu-item,
+.ant-tree-select-dropdown .ant-select-tree-node-content-wrapper {
+  cursor: pointer !important;
+}

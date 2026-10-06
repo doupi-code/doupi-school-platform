@@ -1,0 +1,114 @@
+<view class="page">
+  <view class="hero">
+    <image class="hero-bg" src="/images/shared-hero-bg.png" mode="aspectFill"></image>
+    <view class="hero-mask"></view>
+    <view class="hero-icon-wrap">
+      <image class="hero-icon" src="/images/icons/logo.png" mode="aspectFit"></image>
+    </view>
+    <text class="hero-title">汉外华襄预约小程序</text>
+    <text class="hero-subtitle">专业的校园参观预约平台</text>
+  </view>
+
+  <view class="card">
+    <text class="title">{{step === 'phone' ? '手机号登录' : '输入验证码'}}</text>
+    <text class="desc">
+      {{step === 'phone'
+        ? '未注册的手机号验证后将自动创建账号'
+        : (showCodeHint ? codeHintText : ('验证码已发送至 ' + phone))
+      }}
+    </text>
+
+    <block wx:if="{{step === 'phone'}}">
+      <view class="input-wrap">
+        <text class="prefix">+86</text>
+        <input
+          class="phone-input"
+          type="number"
+          maxlength="11"
+          placeholder="请输入手机号"
+          value="{{phone}}"
+          bindinput="handlePhoneInput"
+        />
+      </view>
+      <text class="error-text" wx:if="{{errors.phone}}">{{errors.phone}}</text>
+
+      <view class="agreement-line" bindtap="handleAgreedChange" data-checked="{{!agreed}}">
+        <view class="checkbox {{agreed ? 'checkbox--checked' : ''}}"></view>
+        <text class="agreement-text">我已阅读并同意</text>
+        <text class="link" catchtap="goToPrivacy">《隐私政策》</text>
+        <text class="agreement-text">和</text>
+        <text class="link" catchtap="goToAgreement">《用户协议》</text>
+      </view>
+      <text class="error-text" wx:if="{{errors.agreed}}">{{errors.agreed}}</text>
+
+      <button class="primary-btn" bindtap="handleSendCode" disabled="{{sendingCode}}">
+        {{sendingCode ? '发送中...' : '获取验证码'}}
+      </button>
+    </block>
+
+    <block wx:else>
+      <view class="input-wrap">
+        <input
+          class="phone-input"
+          type="number"
+          maxlength="6"
+          placeholder="请输入6位验证码"
+          value="{{code}}"
+          bindinput="handleCodeInput"
+        />
+      </view>
+      <text class="error-text" wx:if="{{errors.code}}">{{errors.code}}</text>
+
+      <view class="code-actions">
+        <text class="link" bindtap="handleChangePhone">修改手机号</text>
+        <text class="agreement-text" wx:if="{{countdown > 0}}">{{countdown}}s</text>
+        <text class="link" bindtap="handleResendCode" wx:else>重新获取</text>
+      </view>
+
+      <button class="primary-btn" bindtap="handleLogin" disabled="{{loggingIn || code.length !== 6}}">
+        {{loggingIn ? '登录中...' : '登录'}}
+      </button>
+    </block>
+
+    <view class="other-login">
+      <view class="line"></view>
+      <text class="other-text">手机号快捷登录</text>
+      <view class="line"></view>
+    </view>
+
+    <view class="quick-login-btn-wrap">
+      <button
+        class="primary-btn quick-login-btn"
+        open-type="getPhoneNumber"
+        bindgetphonenumber="handleWechatQuickLogin"
+        disabled="{{wechatLoggingIn}}"
+        hover-class="button-hover"
+      >
+        {{wechatLoggingIn ? '授权中...' : '手机号快捷登录'}}
+      </button>
+    </view>
+
+    <button
+      class="decline-login-btn"
+      bindtap="handleDeclineLogin"
+      disabled="{{wechatLoggingIn || loggingIn || sendingCode}}"
+    >
+      暂不登录，返回原页面
+    </button>
+  </view>
+
+  <view class="auth-modal-mask" wx:if="{{showPhoneAuthModal}}">
+    <view class="auth-modal" catchtap="noop">
+      <text class="auth-modal__title">需要授权手机号</text>
+      <text class="auth-modal__desc">授权手机号后才能登录系统。若本次不授权，登录流程将中止。</text>
+      <view class="auth-modal__actions">
+        <button class="auth-modal__btn auth-modal__btn--ghost" bindtap="handlePhoneAuthCancel">取消</button>
+        <button
+          class="auth-modal__btn auth-modal__btn--primary"
+          open-type="getPhoneNumber"
+          bindgetphonenumber="handlePhoneAuthRetry"
+        >去授权</button>
+      </view>
+    </view>
+  </view>
+</view>

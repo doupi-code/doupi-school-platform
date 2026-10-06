@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.recruit.mapper.DoupiRecruitCampusMapper">
+    
+    <resultMap type="com.doupi.recruit.domain.DoupiRecruitCampus" id="DoupiRecruitCampusResult">
+        <result property="campusId"      column="campus_id"      />
+        <result property="campusName"    column="campus_name"    />
+        <result property="title"         column="title"          />
+        <result property="summary"       column="summary"        />
+        <result property="intro"         column="intro"          />
+        <result property="address"       column="address"        />
+        <result property="latitude"      column="latitude"       />
+        <result property="longitude"     column="longitude"      />
+        <result property="contactPhone"  column="contact_phone"  />
+        <result property="nature"        column="nature"         />
+        <result property="section"       column="section"        />
+        <result property="coverImage"    column="cover_image"    />
+        <result property="published"     column="published"      />
+        <result property="sortOrder"     column="sort_order"     />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectDoupiRecruitCampusVo">
+        select campus_id, campus_name, title, summary, intro, address, latitude, longitude, contact_phone, nature, section, cover_image, published, sort_order, create_time, update_time 
+        from doupi_recruit_campus
+    </sql>
+
+    <select id="selectDoupiRecruitCampusList" parameterType="com.doupi.recruit.domain.DoupiRecruitCampus" resultMap="DoupiRecruitCampusResult">
+        <include refid="selectDoupiRecruitCampusVo"/>
+        <where>  
+            <if test="campusName != null and campusName != ''"> and campus_name like concat('%', #{campusName}, '%')</if>
+            <if test="published != null"> and published = #{published}</if>
+        </where>
+        order by sort_order asc
+    </select>
+    
+    <select id="selectDoupiRecruitCampusById" parameterType="String" resultMap="DoupiRecruitCampusResult">
+        <include refid="selectDoupiRecruitCampusVo"/>
+        where campus_id = #{campusId}
+    </select>
+        
+    <insert id="insertDoupiRecruitCampus" parameterType="com.doupi.recruit.domain.DoupiRecruitCampus">
+        insert into doupi_recruit_campus
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="campusId != null and campusId != ''">campus_id,</if>
+            <if test="campusName != null and campusName != ''">campus_name,</if>
+            <if test="title != null">title,</if>
+            <if test="summary != null">summary,</if>
+            <if test="intro != null">intro,</if>
+            <if test="address != null">address,</if>
+            <if test="latitude != null">latitude,</if>
+            <if test="longitude != null">longitude,</if>
+            <if test="contactPhone != null">contact_phone,</if>
+            <if test="nature != null">nature,</if>
+            <if test="section != null">section,</if>
+            <if test="coverImage != null">cover_image,</if>
+            <if test="published != null">published,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            create_time
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="campusId != null and campusId != ''">#{campusId},</if>
+            <if test="campusName != null and campusName != ''">#{campusName},</if>
+            <if test="title != null">#{title},</if>
+            <if test="summary != null">#{summary},</if>
+            <if test="intro != null">#{intro},</if>
+            <if test="address != null">#{address},</if>
+            <if test="latitude != null">#{latitude},</if>
+            <if test="longitude != null">#{longitude},</if>
+            <if test="contactPhone != null">#{contactPhone},</if>
+            <if test="nature != null">#{nature},</if>
+            <if test="section != null">#{section},</if>
+            <if test="coverImage != null">#{coverImage},</if>
+            <if test="published != null">#{published},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            sysdate()
+         </trim>
+    </insert>
+
+    <update id="updateDoupiRecruitCampus" parameterType="com.doupi.recruit.domain.DoupiRecruitCampus">
+        update doupi_recruit_campus
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="campusName != null and campusName != ''">campus_name = #{campusName},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="intro != null">intro = #{intro},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="nature != null">nature = #{nature},</if>
+            <if test="section != null">section = #{section},</if>
+            <if test="coverImage != null">cover_image = #{coverImage},</if>
+            <if test="published != null">published = #{published},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = sysdate()
+        </trim>
+        where campus_id = #{campusId}
+    </update>
+
+    <delete id="deleteDoupiRecruitCampusById" parameterType="String">
+        delete from doupi_recruit_campus where campus_id = #{campusId}
+    </delete>
+</mapper>

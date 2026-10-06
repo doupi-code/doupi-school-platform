@@ -1,0 +1,83 @@
+<template>
+	<view class="up-pdf-reader" :style="readerStyle">
+		<web-view :fullscreen="false"
+			:src="viewerUrl" :style="webViewStyle"
+            :webview-styles="webViewStyle"
+			frameborder="0"
+		></web-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, onMounted, ref, watch } from 'vue'
+	/**
+	 * pdfReader PDF阅读器
+	 * @description 基于pdf.js的PDF阅读器组件
+	 * @tutorial https://uview-plus.jiangruyi.com/components/pdfReader.html
+	 * @property {String}			src				PDF文件地址
+	 * @property {String}	        height			组件高度，默认为'700px'
+	 * @property {String}			pdfjsDomain		pdfjs资源域名，默认为'https://uview-plus.jiangruyi.com/h5'
+	 * @example <up-pdf-reader src="https://example.com/file.pdf"></up-pdf-reader>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-pdf-reader'
+	})
+
+	const props = defineProps({
+		src: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: '500px'
+		},
+		baseUrl: {
+			type: String,
+			default: 'https://uview-plus.jiangruyi.com/h5'
+		}
+	})
+
+	const baseUrlInner = ref('https://uview-plus.jiangruyi.com/h5')
+	const viewerUrl = ref('')
+
+	const readerStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		style['height'] = props.height
+		return style
+	})
+
+	const webViewStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		style['width'] = '750rpx'
+		style['height'] = props.height
+		return style
+	})
+
+	const updateViewerUrl = (): void => {
+		const base = baseUrlInner.value.length > 0 ? baseUrlInner.value : 'https://uview-plus.jiangruyi.com/h5'
+		viewerUrl.value = base + '/static/pdfjs/web/viewer.html?file=' + encodeURIComponent(props.src)
+	}
+
+	watch((): string => props.baseUrl, (val: string) => {
+		baseUrlInner.value = val
+		updateViewerUrl()
+	})
+
+	watch((): string => props.src, () => {
+		updateViewerUrl()
+	})
+
+	onMounted(() => {
+		if (props.baseUrl.length > 0) {
+			baseUrlInner.value = props.baseUrl
+		}
+		updateViewerUrl()
+	})
+</script>
+
+<style lang="scss" scoped>	
+	.up-pdf-reader {
+	}
+</style>

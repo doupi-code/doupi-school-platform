@@ -1,0 +1,104 @@
+<template>
+  <view :class="['ui-stat-card', 'ui-stat-card--' + theme]">
+    <view class="ui-stat-card__main">
+      <text class="ui-stat-card__title">{{ title }}</text>
+      <view class="ui-stat-card__val-row">
+        <text class="ui-stat-card__val">{{ value }}</text>
+        <text v-if="unit != ''" class="ui-stat-card__unit">{{ unit }}</text>
+      </view>
+      <view v-if="subText != ''" class="ui-stat-card__sub-row">
+        <text class="ui-stat-card__sub">{{ subText }}</text>
+      </view>
+    </view>
+    <image v-if="icon != ''" class="ui-stat-card__icon" :src="icon" mode="aspectFit"></image>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiStatCard',
+  props: {
+    title: {
+      type: String,
+      default: ''
+    },
+    value: {
+      type: [String, Number],
+      default: '0'
+    },
+    unit: {
+      type: String,
+      default: ''
+    },
+    subText: {
+      type: String,
+      default: ''
+    },
+    icon: {
+      type: String,
+      default: ''
+    },
+    theme: {
+      type: String,
+      default: 'blue' // blue, cyan, orange, green
+    }
+  }
+}
+</script>
+
+<style>
+.ui-stat-card {
+  flex: 1;
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.ui-stat-card__main {
+  flex-direction: column;
+}
+
+.ui-stat-card__title {
+  font-size: 12px;
+  color: #86909C;
+  margin-bottom: 6px;
+}
+
+.ui-stat-card__val-row {
+  flex-direction: row;
+  align-items: baseline;
+}
+
+.ui-stat-card__val {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.ui-stat-card__unit {
+  font-size: 11px;
+  color: #86909C;
+  margin-left: 4px;
+}
+
+.ui-stat-card__sub-row {
+  margin-top: 4px;
+}
+
+.ui-stat-card__sub {
+  font-size: 11px;
+  color: #00B42A;
+  font-weight: 500;
+}
+
+.ui-stat-card__icon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.85;
+}
+</style>

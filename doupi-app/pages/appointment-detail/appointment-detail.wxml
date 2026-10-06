@@ -1,0 +1,249 @@
+<!-- 预约详情页面 - 美化版本 -->
+<page-meta page-style="{{showQRCode ? 'overflow: hidden; height: 100vh;' : ''}}"></page-meta>
+<view class="page-container">
+
+  <!-- 顶部状态横幅 -->
+  <view class="status-banner {{detail.status === 'pending' ? 'pending' : (detail.status === 'verified' ? 'verified' : (detail.status === 'cancelled' ? 'cancelled' : 'completed'))}}">
+    <view class="banner-content">
+      <view class="banner-icon">
+        <t-icon name="{{detail.status === 'pending' ? 'time' : (detail.status === 'verified' ? 'check-circle' : (detail.status === 'cancelled' ? 'close-circle' : 'check-circle-filled'))}}" size="48rpx" color="#ffffff"></t-icon>
+      </view>
+      <view class="banner-text">
+        <text class="banner-title">{{detail.statusText || displayText.titleAppointmentDetail}}</text>
+        <text class="banner-subtitle">{{detail.status === 'pending' ? displayText.subtitlePending : (detail.status === 'verified' ? displayText.subtitleVerified : (detail.status === 'cancelled' ? displayText.subtitleCancelled : displayText.subtitleCompleted))}}</text>
+        <view wx:if="{{detail.status === 'cancelled'}}" class="banner-cancel-reason-wrap">
+          <text class="banner-cancel-reason-label">{{displayText.labelCancelReason}}</text>
+          <text class="banner-cancel-reason-value">{{detail.cancelReason || displayText.cancelReasonNone}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 预约号卡片 -->
+  <view class="info-card appointment-number-card">
+    <view class="card-inner">
+      <view class="appointment-number-info">
+        <view class="appointment-label">{{displayText.labelAppointmentNo}}</view>
+        <view class="appointment-value">{{detail.appointmentNo}}</view>
+      </view>
+      <view class="copy-btn" bindtap="onCopyAppointmentNumber">
+        <t-icon name="copy" size="36rpx" color="#3088F4"></t-icon>
+        <text class="copy-text">{{displayText.btnCopy}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 预约信息卡片 -->
+  <view class="info-card">
+    <view class="card-header-section">
+      <view class="header-icon">
+        <t-icon name="calendar" size="32rpx" color="#3088F4"></t-icon>
+      </view>
+      <text class="card-title">{{displayText.titleAppointmentInfo}}</text>
+    </view>
+    <view class="info-list">
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="time" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelVisitDate}}</text>
+        </view>
+        <text class="info-value">{{detail.visitDate}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="clock" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelVisitTimeSlot}}</text>
+        </view>
+        <text class="info-value highlight">{{detail.visitTime}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="user" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.relatedTeacherLabel}}</text>
+        </view>
+        <text class="info-value">{{detail.appointmentTeacherName}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="user" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.receiveTeacherLabel}}</text>
+        </view>
+        <text class="info-value">{{detail.actualTeacherName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 学生信息卡片 -->
+  <view class="info-card">
+    <view class="card-header-section">
+      <view class="header-icon student-icon">
+        <t-icon name="user" size="32rpx" color="#52C41A"></t-icon>
+      </view>
+      <text class="card-title">{{displayText.titleStudentInfo}}</text>
+    </view>
+    <view class="info-list">
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="name" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelStudentName}}</text>
+        </view>
+        <text class="info-value bold">{{detail.studentName}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="shield" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelIdCardNo}}</text>
+        </view>
+        <text class="info-value font-mono">{{detail.idCardMask}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="home" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelCurrentSchool}}</text>
+        </view>
+        <text class="info-value">{{detail.currentSchool}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 家长信息卡片 -->
+  <view class="info-card">
+    <view class="card-header-section">
+      <view class="header-icon parent-icon">
+        <t-icon name="usergroup" size="32rpx" color="#FAAD14"></t-icon>
+      </view>
+      <text class="card-title">{{displayText.titleParentInfo}}</text>
+    </view>
+    <view class="info-list">
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="user" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelParentName}}</text>
+        </view>
+        <text class="info-value">{{detail.parentName}}</text>
+      </view>
+      <view class="info-item">
+        <view class="item-left">
+          <t-icon name="call" size="28rpx" color="#999999"></t-icon>
+          <text class="info-label">{{displayText.labelContactPhone}}</text>
+        </view>
+        <view class="phone-wrapper">
+          <text class="info-value phone">{{detail.parentPhone}}</text>
+          <view wx:if="{{canCallParentPhone}}" class="call-btn" catchtap="makeCall" data-phone="{{detail.parentPhone}}">
+            <t-icon name="call" size="28rpx" color="#3088F4"></t-icon>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 预约流程时间线 -->
+  <view class="timeline-card">
+    <view class="card-header-section">
+      <view class="header-icon timeline-icon">
+        <t-icon name="time" size="32rpx" color="#3088F4"></t-icon>
+      </view>
+      <text class="card-title">{{displayText.titleAppointmentProgress}}</text>
+    </view>
+    <view class="timeline">
+      <view class="timeline-item {{index <= currentStep ? 'done' : ''}} {{index === currentStep ? 'active' : ''}}" wx:for="{{timelineSteps}}" wx:key="step">
+        <view class="timeline-dot-wrapper">
+          <view class="timeline-dot"></view>
+          <view class="timeline-line" wx:if="{{index < timelineSteps.length - 1}}"></view>
+        </view>
+        <view class="timeline-content">
+          <text class="timeline-title">{{item.title}}</text>
+          <text class="timeline-desc">{{item.desc}}</text>
+          <text class="timeline-time" wx:if="{{item.time}}">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 温馨提示 -->
+  <view class="tips-card" wx:if="{{detail.status === 'pending' && detail.notes}}">
+    <view class="tips-header">
+      <t-icon name="info-circle" size="32rpx" color="#1890FF"></t-icon>
+      <text class="tips-title">{{displayText.titleWarmTips}}</text>
+    </view>
+    <rich-text nodes="{{formattedNotes}}" class="tips-content"></rich-text>
+  </view>
+
+  <!-- 底部占位 -->
+  <view class="bottom-spacer"></view>
+
+</view>
+
+<!-- 操作按钮区域 -->
+<view class="action-section" wx:if="{{detail.status === 'pending'}}">
+  <view class="action-buttons">
+    <button
+      class="cancel-btn"
+      bindtap="onShowCancelModal"
+    >
+      {{displayText.btnCancelBooking}}
+    </button>
+    <button
+      class="qrcode-btn"
+      bindtap="onShowQRCode"
+    >
+      <view class="btn-content">
+        <t-icon name="qrcode" size="36rpx" color="#ffffff"></t-icon>
+        <text>{{displayText.btnShowVerifyQr}}</text>
+      </view>
+    </button>
+  </view>
+</view>
+
+<!-- 二维码弹窗（预渲染后整体动画展示） -->
+<view
+  wx:if="{{showQRCode}}"
+  class="qrcode-mask show"
+  catchtap="onCloseQRCode"
+  catchtouchmove="preventTouchMove"
+>
+  <view class="qrcode-dialog show" catchtap="preventTouchMove" catchtouchmove="preventTouchMove">
+    <view class="qrcode-content">
+      <view class="qrcode-header">
+        <text class="qrcode-title">{{displayText.titleVerifyQrcode}}</text>
+        <text class="qrcode-subtitle">{{displayText.descShowQrcodeToStaff}}</text>
+      </view>
+      <view class="qrcode-box">
+        <t-qrcode
+          wx:if="{{renderQRCode}}"
+          value="verify_{{detail.appointmentNo}}"
+          size="{{qrSize}}"
+          icon=""
+          borderless="{{true}}"
+          t-class="qrcode-td"
+        />
+      </view>
+      <view class="qrcode-footer">
+        <view class="qrcode-appointment-number">
+          <text class="appointment-label">{{displayText.labelAppointmentNo}}</text>
+          <text class="appointment-number">{{detail.appointmentNo}}</text>
+        </view>
+        <view class="qrcode-validity">
+          <t-icon name="time" size="24rpx" color="#999999"></t-icon>
+          <text wx:if="{{qrValidUntilText}}">{{displayText.qrValidUntilPrefix}}{{qrValidUntilText}}</text>
+          <text wx:else>{{displayText.qrValidDuringPeriod}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="qrcode-dialog-footer">
+      <t-button class="qrcode-close-btn" theme="primary" bindtap="onCloseQRCode">{{displayText.btnClose}}</t-button>
+    </view>
+  </view>
+</view>
+
+<!-- 取消确认弹窗 -->
+<t-dialog
+  visible="{{showCancelModal}}"
+  title="{{displayText.modalCancelAppointmentTitle}}"
+  content="{{displayText.modalCancelAppointmentContent}}"
+  bind:confirm="onConfirmCancel"
+  bind:close="onCloseCancelModal"
+  confirm-btn="{{displayText.btnCancelNow}}"
+  cancel-btn="{{displayText.btnThinkAgain}}"
+  class="cancel-dialog"
+></t-dialog>

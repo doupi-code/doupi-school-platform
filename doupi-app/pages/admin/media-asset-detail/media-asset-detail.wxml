@@ -1,0 +1,86 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state-card">加载中...</view>
+
+  <view wx:elif="{{errorText}}" class="state-card">
+    <text class="state-text">{{errorText}}</text>
+    <view class="retry-btn" bindtap="onRetry">重新加载</view>
+  </view>
+
+  <view wx:elif="{{asset}}" class="content">
+    <view class="preview-card">
+      <image
+        wx:if="{{asset.fileType === 'image' && previewUrl}}"
+        class="preview-image"
+        src="{{previewUrl}}"
+        mode="widthFix"
+        bindtap="onPreviewImage"
+      ></image>
+      <video
+        wx:elif="{{asset.fileType === 'video' && previewUrl}}"
+        class="preview-video"
+        src="{{previewUrl}}"
+        controls
+      ></video>
+      <view wx:else class="preview-empty">当前文件暂不支持预览</view>
+    </view>
+
+    <view class="detail-card">
+      <text wx:if="{{fallbackMode}}" class="fallback-tip">当前展示的是列表缓存信息，详情接口暂未返回最新数据</text>
+      <view class="card-head">
+        <text class="card-title">{{asset.categoryText}}</text>
+        <text class="status-tag {{asset.isPermanent ? 'permanent' : 'temporary'}}">{{asset.statusText}}</text>
+      </view>
+      <text class="type-text">{{asset.fileTypeText}}</text>
+
+      <view class="action-row">
+        <view class="action-btn primary" bindtap="onCopyFileId">复制 fileID</view>
+        <view
+          class="action-btn {{asset.sourceMeta.available ? 'ghost' : 'disabled'}}"
+          bindtap="onOpenSource"
+        >{{asset.sourceMeta.available ? asset.sourceMeta.text : '暂无来源页'}}</view>
+      </view>
+      <text class="action-hint">{{asset.sourceMeta.hint}}</text>
+
+      <view class="danger-row">
+        <view
+          class="danger-btn {{asset.canDelete && !deleting ? '' : 'disabled'}}"
+          bindtap="onRemoveAsset"
+        >{{deleting ? '删除中...' : (asset.canDelete ? '删除记录并清理资源' : '当前资源不可删除')}}</view>
+        <text class="danger-hint">
+          {{asset.isPermanent ? '永久保留资源不允许删除' : (asset.status === 'deleted' ? '该资源已删除' : '删除后会同步移除云存储文件与关联记录')}}
+        </text>
+      </view>
+
+      <view class="detail-list">
+        <view class="detail-row">
+          <text class="detail-label">文件标识</text>
+          <text class="detail-value mono">{{asset.fileID}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">引用位置</text>
+          <text class="detail-value">{{asset.refText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">最近访问</text>
+          <text class="detail-value">{{asset.lastAccessText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">访问状态</text>
+          <text class="detail-value">{{asset.idleText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">创建时间</text>
+          <text class="detail-value">{{asset.createdAtText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">更新时间</text>
+          <text class="detail-value">{{asset.updatedAtText}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{asset.status === 'deleted'}}">
+          <text class="detail-label">删除时间</text>
+          <text class="detail-value">{{asset.deletedAtText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

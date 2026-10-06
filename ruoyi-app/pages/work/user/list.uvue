@@ -1,0 +1,202 @@
+<template>
+  <scroll-view class="user-list-page" scroll-y="true">
+    <!-- 顶部搜索条 (使用 up-search 组件) -->
+    <view class="search-header">
+      <up-search 
+        v-model="keyword" 
+        placeholder="搜索姓名、部门或手机号" 
+        :showAction="false"
+        shape="round"
+      ></up-search>
+    </view>
+
+    <!-- 用户列表 (使用 up-tag 组件) -->
+    <view class="list-container">
+      <view 
+        class="user-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index" 
+        @click="navDetail(item)"
+      >
+        <image class="user-avatar" :src="item.avatar" mode="aspectFill"></image>
+        <view class="user-info">
+          <view class="name-row">
+            <text class="user-name">{{ item.nickName }}</text>
+            <up-tag 
+              :type="item.status === '0' ? 'success' : 'info'" 
+              :text="item.status === '0' ? '正常' : '停用'" 
+              size="mini"
+            ></up-tag>
+          </view>
+          <text class="user-dept">{{ item.deptName }}</text>
+          <view class="phone-row">
+            <image class="phone-icon" src="/static/icons/about-phone.svg" mode="aspectFit"></image>
+            <text class="user-phone">{{ item.phonenumber }}</text>
+          </view>
+        </view>
+        <image class="arrow-icon" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="search" 
+        text="未找到匹配的教职工档案"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+type UserItem = {
+  userId: number
+  userName: string
+  nickName: string
+  deptName: string
+  phonenumber: string
+  status: string
+  avatar: string
+}
+
+export default {
+  data() {
+    return {
+      keyword: '',
+      list: [
+        {
+          userId: 1,
+          userName: 'admin',
+          nickName: '若依管理员',
+          deptName: '华襄网络信息中心',
+          phonenumber: '15888888888',
+          status: '0',
+          avatar: '/static/avatar.png'
+        },
+        {
+          userId: 2,
+          userName: 'teacher_li',
+          nickName: '李老师 (招生主任)',
+          deptName: '招生宣传处',
+          phonenumber: '13912345678',
+          status: '0',
+          avatar: '/static/avatar.png'
+        },
+        {
+          userId: 3,
+          userName: 'teacher_wang',
+          nickName: '王老师 (教务专员)',
+          deptName: '教务文印室',
+          phonenumber: '13798765432',
+          status: '0',
+          avatar: '/static/avatar.png'
+        }
+      ] as UserItem[]
+    }
+  },
+  computed: {
+    filteredList(): UserItem[] {
+      if (this.keyword.trim() === '') {
+        return this.list
+      }
+      const kw = this.keyword.toLowerCase()
+      return this.list.filter((item: UserItem): boolean => {
+        return item.nickName.toLowerCase().includes(kw) || 
+               item.deptName.toLowerCase().includes(kw) || 
+               item.phonenumber.includes(kw)
+      })
+    }
+  },
+  methods: {
+    navDetail(item: UserItem) {
+      uni.navigateTo({
+        url: '/pages/work/user/detail?id=' + item.userId
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.user-list-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.search-header {
+  background-color: #FFFFFF;
+  padding: 10px 16px;
+  border-bottom: 1px solid #F2F3F5;
+}
+
+.list-container {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.user-card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  flex-direction: row;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background-color: #F0F2F5;
+  margin-right: 12px;
+}
+
+.user-info {
+  flex: 1;
+  flex-direction: column;
+}
+
+.name-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.user-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1D2129;
+  margin-right: 8px;
+}
+
+.user-dept {
+  font-size: 12px;
+  color: #86909C;
+  margin-bottom: 4px;
+}
+
+.phone-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.phone-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
+.user-phone {
+  font-size: 12px;
+  color: #4E5969;
+}
+
+.arrow-icon {
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  opacity: 0.35;
+}
+</style>

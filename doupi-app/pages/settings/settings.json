@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "设置",
+  "usingComponents": {
+    "profile-edit-modal": "/components/profile-edit-modal/index"
+  }
+}

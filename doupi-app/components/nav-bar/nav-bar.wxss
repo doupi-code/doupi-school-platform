@@ -1,0 +1,41 @@
+/**
+ * 导航栏组件样式
+ * 
+ * 样式设计要点：
+ * - 固定定位在顶部，覆盖状态栏和导航栏区域
+ * - 使用全局 CSS 变量确保与设计系统一致
+ * - 返回按钮支持点击反馈动画
+ * - 右侧插槽区域自适应宽度
+ */
+
+/* 导航栏容器 - 继承全局 .custom-nav-bar 基础样式 */
+/* 全局基础样式已定义在 app.wxss 中，此处仅做组件级补充 */
+
+/* 返回按钮图标 */
+.back-icon {
+  font-size: 44rpx;
+  color: var(--text-primary);
+  line-height: 1;
+  font-weight: 300;
+}
+
+/* 返回按钮文字 */
+.back-text {
+  font-size: 28rpx;
+  color: var(--text-primary);
+  margin-left: 4rpx;
+}
+
+/* 左侧操作区点击反馈 */
+.custom-nav-bar-left:active .back-icon,
+.custom-nav-bar-left:active .back-text {
+  opacity: 0.6;
+}
+
+/* 右侧操作区最小宽度，防止无内容时标题偏移 */
+.custom-nav-bar-right {
+  min-width: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}

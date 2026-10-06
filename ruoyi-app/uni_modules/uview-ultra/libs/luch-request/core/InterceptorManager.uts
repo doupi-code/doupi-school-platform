@@ -1,0 +1,41 @@
+'use strict'
+
+// 拦截器处理项（uts 用 class 而非 interface，便于实例化）
+export class InterceptorHandler {
+    fulfilled: ((config: any | null) => any) | null
+    rejected: ((config: any | null) => any) | null
+    constructor(fulfilled: ((config: any | null) => any) | null, rejected: ((config: any | null) => any) | null) {
+        this.fulfilled = fulfilled
+        this.rejected = rejected
+    }
+}
+
+export default class InterceptorManager {
+    handlers: InterceptorHandler[]
+
+    constructor() {
+        this.handlers = [] as InterceptorHandler[]
+    }
+
+    // 新增拦截器，返回可用于 eject 的下标
+    use(fulfilled: (config: any | null) => any, rejected: ((config: any | null) => any) | null = null): number {
+        this.handlers.push(new InterceptorHandler(fulfilled, rejected))
+        return this.handlers.length - 1
+    }
+
+    // 移除指定拦截器
+    eject(id: number): void {
+        if (id >= 0 && id < this.handlers.length) {
+            this.handlers[id] = new InterceptorHandler(null, null)
+        }
+    }
+
+    // 遍历有效（未被 eject）的拦截器
+    forEach(fn: (h: InterceptorHandler) => void): void {
+        this.handlers.forEach((h: InterceptorHandler) => {
+            if (h.fulfilled != null) {
+                fn(h)
+            }
+        })
+    }
+}

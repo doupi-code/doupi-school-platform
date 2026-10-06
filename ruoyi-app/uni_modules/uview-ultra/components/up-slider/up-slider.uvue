@@ -1,0 +1,679 @@
+<template>
+	<view
+		class="up-slider"
+		:style="[addStyle(customStyle)]"
+	>
+		<template v-if="!useNative || isRange">
+			<view ref="up-slider-inner" class="up-slider-inner" @click="onClick"
+				@onTouchStart="onTouchStart2($event, 1)" @touchmove="onTouchMove2($event, 1)"
+				@touchend="onTouchEnd2($event, 1)" @touchcancel="onTouchEnd2($event, 1)"
+				:class="[disabled ? 'up-slider--disabled' : '']" :style="innerStyleCpu"
+			>
+				<view ref="up-slider__base"
+					class="up-slider__base"
+					:style="[
+						{
+							height: height,
+							backgroundColor: inactiveColor
+						}
+					]"
+				>
+				</view>
+				<view
+					@click="onClick"
+					class="up-slider__gap"
+					:style="[
+						barStyle,
+						{
+							height: height,
+							marginTop: '-' + height,
+							backgroundColor: activeColor
+						}
+					]"
+				>
+				</view>
+				<view v-if="isRange"
+					class="up-slider__gap up-slider__gap-0"
+					:style="[
+						barStyle0,
+						{
+							height: height,
+							marginTop: '-' + height,
+							backgroundColor: inactiveColor
+						}
+					]"
+				>
+				</view>
+				<text v-if="isRange && showValue"
+					class="up-slider__show-range-value"
+					:style="{left: (parseFloat(getPx(barStyle0.width)) + parseFloat(getPx(blockSize))/2) + 'px'}">
+					{{ rangeValue[0] ?? '' }}
+				</text>
+				<text v-if="isRange && showValue"
+					class="up-slider__show-range-value"
+					:style="{left: (parseFloat(getPx(barStyle.width)) + parseFloat(getPx(blockSize))/2) + 'px'}">
+					{{ rangeValue[1] ?? '' }}
+				</text>
+				<template v-if="isRange">
+					<view class="up-slider__button-wrap up-slider__button-wrap-0" @touchstart="onTouchStart($event, 0)"
+						@touchmove="onTouchMove($event, 0)" @touchend="onTouchEnd($event, 0)"
+						@touchcancel="onTouchEnd($event, 0)" :style="{left: (parseFloat(getPx(barStyle0.width)) + parseFloat(getPx(blockSize))/2).toString() + 'px'}">
+						<slot name="min" v-if="$slots['min'] != null || $slots['$min'] != null"/>
+						<view v-else class="up-slider__button" :style="[blockStyle, {
+							height: getPx(blockSize, true),
+							width: getPx(blockSize, true),
+							backgroundColor: blockColor,
+						}]"></view>
+					</view>
+				</template>
+				<view class="up-slider__button-wrap" @touchstart="onTouchStart($event)"
+					@touchmove="onTouchMove($event)" @touchend="onTouchEnd($event)"
+					@touchcancel="onTouchEnd($event)" :style="{left: (parseFloat(getPx(barStyle.width)) + parseFloat(getPx(blockSize))/2) + 'px'}">
+					<slot name="max" v-if="isRange && ($slots['max'] != null || $slots['$max'] != null)"/>
+					<slot v-else-if="$slots['default'] != null || $slots['$default'] != null"/>
+					<view v-else class="up-slider__button" :style="[blockStyle, {
+						height: getPx(blockSize, true),
+						width: getPx(blockSize, true),
+						backgroundColor: blockColor
+					}]"></view>
+				</view>
+			</view>
+			<view class="up-slider__show-value"
+				v-if="showValue && !isRange">{{ modelValue }}</view>
+		</template>
+		<slider
+			class="up-slider__native"
+			v-else
+			:min="min"
+			:max="max"
+			:step="step"
+			:value="modelValue"
+			:activeColor="activeColor"
+			:backgroundColor="inactiveColor"
+			:blockSize="getPx(blockSize)"
+			:blockColor="blockColor"
+			:showValue="showValue"
+			:disabled="disabled"
+			@changing="changingHandler"
+			@change="changeHandler"
+		></slider>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue'
+	import defProps from './slider.uts'
+	import { addStyle as addStyleFn, getPx as getPxFn, upGetRect } from '../../libs/function/index.uts'
+	/**
+	 * slider 滑块选择器
+	 * @tutorial https://uview-plus.jiangruyi.com/components/slider.html
+	 * @property {Number | String} value 滑块默认值（默认0）
+	 * @property {Number | String} min 最小值（默认0）
+	 * @property {Number | String} max 最大值（默认100）
+	 * @property {Number | String} step 步长（默认1）
+	 * @property {Number | String} blockWidth 滑块宽度，高等于宽（30）
+	 * @property {Number | String} height 滑块条高度，单位rpx（默认6）
+	 * @property {String} inactiveColor 底部条背景颜色（默认#c0c4cc）
+	 * @property {String} activeColor 底部选择部分的背景颜色（默认#2979ff）
+	 * @property {String} blockColor 滑块颜色（默认#ffffff）
+	 * @property {Object} blockStyle 给滑块自定义样式，对象形式
+	 * @property {Boolean} disabled 是否禁用滑块(默认为false)
+	 * @event {Function} changing 正在滑动中
+	 * @event {Function} change 滑动结束
+	 * @example <up-slider v-model="value" />
+	 */
+	type barStyleType = {
+		width : string,
+		transition ?: string
+	}
+	type sliderRectType = {
+		left: number,
+		width : number
+	}
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-slider'
+	})
+
+	const props = defineProps({
+		// 最小可选值
+		min: {
+			type: [Number, String],
+			default: (defProps['slider'] as UTSJSONObject)['min']
+		},
+		// 最大可选值
+		max: {
+			type: [Number, String],
+			default: (defProps['slider'] as UTSJSONObject)['max']
+		},
+		// 步长，取值必须大于 0，并且可被(max - min)整除
+		step: {
+			type: [Number, String],
+			default: (defProps['slider'] as UTSJSONObject)['step']
+		},
+		// 当前取值
+		modelValue: {
+			type: [Number],
+			default: (defProps['slider'] as UTSJSONObject)['value']
+		},
+		// 是否区间模式
+		isRange: {
+			type: Boolean,
+			default: false
+		},
+		// 双滑块时值
+		rangeValue: {
+			type: Array,
+			default: [0, 0]
+		},
+		// 滑块右侧已选择部分的背景色
+		activeColor: {
+			type: String,
+			default: (defProps['slider'] as UTSJSONObject)['activeColor']
+		},
+		// 滑块左侧未选择部分的背景色
+		inactiveColor: {
+			type: String,
+			default: (defProps['slider'] as UTSJSONObject)['inactiveColor']
+		},
+		// 滑块的大小，取值范围为 12 - 28
+		blockSize: {
+			type: [Number, String],
+			default: (defProps['slider'] as UTSJSONObject)['blockSize']
+		},
+		// 滑块的颜色
+		blockColor: {
+			type: String,
+			default: (defProps['slider'] as UTSJSONObject)['blockColor']
+		},
+		// 用户对滑块的自定义颜色
+		blockStyle: {
+			type: UTSJSONObject,
+			default: (defProps['slider'] as UTSJSONObject)['blockStyle']
+		},
+		// 禁用状态
+		disabled: {
+			type: Boolean,
+			default: (defProps['slider'] as UTSJSONObject)['disabled']
+		},
+		// 是否显示当前的选择值
+		showValue: {
+			type: Boolean,
+			default: (defProps['slider'] as UTSJSONObject)['showValue']
+		},
+		// 是否渲染uni-app框架内置组件
+		useNative: {
+			type: Boolean,
+			default: (defProps['slider'] as UTSJSONObject)['useNative']
+		},
+		// 滑块高度
+		height: {
+			type: String,
+			default: (defProps['slider'] as UTSJSONObject)['height']
+		},
+		innerStyle: {
+			type: UTSJSONObject,
+			default: (defProps['slider'] as UTSJSONObject)['innerStyle']
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		}
+	})
+
+	const emit = defineEmits(["start", "changing", "change", "update:modelValue"])
+	const instance = getCurrentInstance()!.proxy!
+
+	const startX = ref(0)
+	const status = ref('end')
+	const newValue = ref(0)
+	const distanceX = ref(0)
+	const startValue0 = ref(0)
+	const startValue = ref(0)
+	const barStyle0 = ref<barStyleType>({
+		width: '0px'
+	} as barStyleType)
+	const barStyle = ref<barStyleType>({
+		width: '0px',
+		transition: ''
+	} as barStyleType)
+	const sliderRect = ref<sliderRectType>({
+		left: 0,
+		width: 0
+	} as sliderRectType)
+
+	const addStyle = (e: any): any => {
+		return addStyleFn(e)
+	}
+
+	function getPx(e: any, s: boolean = false): string {
+		return getPxFn(e, s)
+	}
+
+	const innerStyleCpu = computed((): UTSJSONObject => {
+		let style: UTSJSONObject = props.innerStyle != null ? props.innerStyle : {} as UTSJSONObject
+		style['height'] = (props.isRange && props.showValue)
+			? (parseFloat(getPx(props.blockSize)) + 24).toString() + 'px'
+			: (getPx(props.blockSize)) + 'px'
+		return style
+	})
+
+	function toSliderNumber(value: any | null, fallback: number = 0): number {
+		if (value == null) return fallback
+		const number = parseFloat(value.toString())
+		return isNaN(number) ? fallback : number
+	}
+
+	function rangeValueNumber(index: number, fallback: number = 0): number {
+		return toSliderNumber(props.rangeValue[index], fallback)
+	}
+
+	function getSliderStep(): number {
+		const step = toSliderNumber(props.step, 1)
+		return step > 0 ? step : 1
+	}
+
+	function digitLengthLocal(value: number): number {
+		const eSplit = value.toString().split(/[eE]/)
+		const baseSplit = eSplit[0].split('.')
+		let decimalLength = 0
+		if (baseSplit.length > 1) {
+			decimalLength = baseSplit[1].length
+		}
+		let exponent = 0
+		if (eSplit.length > 1) {
+			exponent = parseInt(eSplit[1])
+		}
+		const len = decimalLength - exponent
+		return len > 0 ? len : 0
+	}
+
+	function stripLocal(num: number, precision: number = 15): number {
+		return parseFloat((num as Number).toPrecision(precision))
+	}
+
+	function normalizeSliderValue(value: number, ...refs: number[]): number {
+		let precision = digitLengthLocal(value)
+		precision = Math.max(precision, digitLengthLocal(toSliderNumber(props.min)))
+		precision = Math.max(precision, digitLengthLocal(toSliderNumber(props.max, 100)))
+		precision = Math.max(precision, digitLengthLocal(getSliderStep()))
+		refs.forEach((item: number) => {
+			precision = Math.max(precision, digitLengthLocal(toSliderNumber(item)))
+		})
+		precision = Math.min(15, precision)
+		return parseFloat(stripLocal(value).toFixed(precision))
+	}
+
+	function formatByStep(value: number, lowerLimit: number, upperLimit: number): number {
+		const min = toSliderNumber(props.min)
+		const max = toSliderNumber(props.max, 100)
+		const step = getSliderStep()
+		const lower = Math.min(Math.max(toSliderNumber(lowerLimit, min), min), max)
+		const upper = Math.max(Math.min(toSliderNumber(upperLimit, max), max), lower)
+		const boundedValue = Math.max(lower, Math.min(toSliderNumber(value, min), upper))
+		const steps = Math.round((boundedValue - min) / step)
+		const valueFormat = normalizeSliderValue(min + steps * step, boundedValue)
+		return normalizeSliderValue(Math.max(lower, Math.min(valueFormat, upper)), boundedValue)
+	}
+
+	function formatValue(value: number, index: number = 1): number {
+		if (props.isRange) {
+			const min = toSliderNumber(props.min)
+			const max = toSliderNumber(props.max, 100)
+			const step = getSliderStep()
+			switch (index) {
+				case 0:
+					return formatByStep(
+						value,
+						min,
+						// @ts-ignore
+						normalizeSliderValue(toSliderNumber(props.rangeValue[1]!, max) - step)
+					)
+				case 1:
+					return formatByStep(
+						value,
+						// @ts-ignore
+						normalizeSliderValue(toSliderNumber(props.rangeValue[0]!, min) + step),
+						max
+					)
+				default:
+					return formatByStep(value, min, max)
+			}
+		}
+		return formatByStep(value, toSliderNumber(props.min), toSliderNumber(props.max, 100))
+	}
+
+	function updateValue(value: number, drag: boolean, index: number = 1): Array<number> | number {
+		let valueFormat: number = formatValue(value, index)
+		const min = toSliderNumber(props.min)
+		const max = toSliderNumber(props.max, 100)
+		const range = max - min
+		// 不允许滑动的值超过max最大值
+		if (valueFormat > max) {
+			valueFormat = max
+		}
+		if (valueFormat < min) {
+			valueFormat = min
+		}
+		// 设置移动的距离，不能用百分比，因为NVUE不支持。
+		let width = range == 0 ? 0 : Math.min((valueFormat - min) / range * sliderRect.value.width, sliderRect.value.width)
+		let nextBarStyle = {
+			width: width.toString() + 'px'
+		} as barStyleType
+		// 移动期间无需过渡动画
+		if (drag == true) {
+			nextBarStyle['transition'] = 'none'
+		} else {
+			// 非移动期间，删掉对过渡为空的声明，让css中的声明起效
+			nextBarStyle['transition'] = ''
+		}
+		// 修改value值
+		if (props.isRange) {
+			// @ts-ignore
+			props.rangeValue[index] = valueFormat
+			emit("update:modelValue", props.rangeValue)
+		} else {
+			emit("update:modelValue", valueFormat)
+		}
+
+		switch (index) {
+			case 0:
+				barStyle0.value.width = nextBarStyle.width
+				break
+			case 1:
+				barStyle.value.width = nextBarStyle.width
+				break
+			default:
+				break
+		}
+		if (props.isRange) {
+			return props.rangeValue as Array<number>
+		}
+		return valueFormat
+	}
+
+	const modelValueNumber = (): number => props.modelValue != null ? props.modelValue : 0
+
+	const init = (): void => {
+		if (props.isRange) {
+			// @ts-ignore
+			updateValue(rangeValueNumber(0), false, 0)
+			// @ts-ignore
+			updateValue(rangeValueNumber(1), false, 1)
+		} else {
+			updateValue(modelValueNumber(), false)
+		}
+	}
+
+	// native拖动过程中触发
+	const changingHandler = (e: UniSliderChangeEvent): void => {
+		const { value } = e.detail
+		// 更新v-model的值
+		emit("update:modelValue", value)
+		// 触发事件
+		emit('changing', value)
+	}
+
+	// native滑动结束时触发
+	const changeHandler = (e: UniSliderChangeEvent): void => {
+		const { value } = e.detail
+		// 更新v-model的值
+		emit("update:modelValue", value)
+		// 触发事件
+		emit('change', value)
+	}
+
+	function onTouchStart(e: any, index: number = 1): void {
+		let event = e as UniTouchEvent
+		if (props.disabled) return
+		startX.value = 0
+		// 触摸点集
+		let touches = event.touches[0]
+		// 触摸点到屏幕左边的距离
+		startX.value = touches.clientX
+		// 此处的modelValue虽为props值，但是通过$emit('update:modelValue')进行了修改
+		if (props.isRange) {
+			// @ts-ignore
+			startValue0.value = formatValue(rangeValueNumber(0), 0)
+			// @ts-ignore
+			startValue.value = formatValue(rangeValueNumber(1), 1)
+		} else {
+			startValue.value = formatValue(modelValueNumber())
+		}
+		// 标示当前的状态为开始触摸滑动
+		status.value = 'start'
+
+		let clientX = 0
+		// #ifndef APP-NVUE
+		clientX = touches.clientX
+		// #endif
+		// #ifdef APP-NVUE
+		clientX = touches.screenX
+		// #endif
+		distanceX.value = clientX - sliderRect.value.left
+		// 获得移动距离对整个滑块的值，此为带有多位小数的值，不能用此更新视图
+		// 否则造成通信阻塞，需要每改变一个step值时修改一次视图
+		const min = toSliderNumber(props.min)
+		const max = toSliderNumber(props.max, 100)
+		newValue.value = ((distanceX.value / sliderRect.value.width) * (max - min)) + min
+		status.value = 'moving'
+		// 发出moving事件
+		let crtFmtValue = updateValue(newValue.value, true, index)
+		emit('changing', crtFmtValue)
+	}
+
+	function onTouchMove(e: any, index: number = 1): void {
+		let event = e as UniTouchEvent
+		if (props.disabled) return
+		// 连续触摸的过程会一直触发本方法，但只有手指触发且移动了才被认为是拖动了，才发出事件
+		// 触摸后第一次移动已经将status设置为moving状态，故触摸第二次移动不会触发本事件
+		if (status.value == 'start') emit('start')
+		let touches = event.touches[0]
+		let clientX = 0
+		// #ifndef APP-NVUE
+		clientX = touches.clientX
+		// #endif
+		// #ifdef APP-NVUE
+		clientX = touches.screenX
+		// #endif
+		distanceX.value = clientX - sliderRect.value.left
+		// 获得移动距离对整个滑块的值，此为带有多位小数的值，不能用此更新视图
+		// 否则造成通信阻塞，需要每改变一个step值时修改一次视图
+		const min = toSliderNumber(props.min)
+		const max = toSliderNumber(props.max, 100)
+		newValue.value = ((distanceX.value / sliderRect.value.width) * (max - min)) + min
+		status.value = 'moving'
+		// 发出moving事件
+		let crtFmtValue = updateValue(newValue.value, true, index)
+		emit('changing', crtFmtValue)
+	}
+
+	function onTouchEnd(_e: any, index: number = 1): void {
+		if (props.disabled) return
+		if (status.value === 'moving') {
+			let crtFmtValue = updateValue(newValue.value, false, index)
+			emit('change', crtFmtValue)
+		}
+		status.value = 'end'
+	}
+
+	function onTouchStart2(_e: any, _index: number = 1): void {
+		if (!props.isRange) {
+			// onChangeStart(event, index)
+		}
+	}
+
+	function onTouchMove2(_e: any, _index: number = 1): void {
+		if (!props.isRange) {
+			// onTouchMove(event, index)
+		}
+	}
+
+	function onTouchEnd2(_e: any, _index: number = 1): void {
+		if (!props.isRange) {
+			// onTouchEnd(event, index)
+		}
+	}
+
+	const onClick = (event: UniPointerEvent): void => {
+		// if (isRange) return
+		if (props.disabled) return
+		// 直接点击滑块的情况，计算方式与onTouchMove方法相同
+		// #ifndef APP-NVUE
+		// nvue下暂时无法获取坐标
+		let clientX = event.x - sliderRect.value.left
+		const min = toSliderNumber(props.min)
+		const max = toSliderNumber(props.max, 100)
+		// 滑块在弹窗等元素中未显示时量不到长度，此时算出来的只会是min，
+		// 别把它当成"用户点了min"发出去，等 onMounted 量到尺寸后由用户重新操作
+		if (sliderRect.value.width == 0) return
+		newValue.value = ((clientX / sliderRect.value.width) * (max - min)) + min
+		// 点击等同于一次完整的取值，需要和拖动结束一样对外发出change，
+		// 否则单向绑定(:modelValue)时外部拿不到点击后的值
+		const $crtFmtValue = updateValue(newValue.value, false, 1)
+		emit('change', $crtFmtValue)
+		// #endif
+	}
+
+	watch((): number => modelValueNumber(), () => {
+		// 只有在非滑动状态时，才可以通过value更新滑块值，这里监听，是为了让用户触发
+		if (status.value == 'end') {
+			const crtFmtValue = updateValue(modelValueNumber(), false)
+			emit('change', crtFmtValue)
+		}
+	})
+
+	watch((): Array<number> => props.rangeValue as Array<number>, (n: Array<number>) => {
+		if (status.value == 'end') {
+			updateValue(n[0], false, 0)
+			updateValue(n[1], false, 1)
+			emit('change', n)
+		}
+	}, { deep: true })
+
+	onMounted(() => {
+		// 获取滑块条的尺寸信息
+		if (!props.useNative) {
+			upGetRect('.up-slider__base', false, instance).then((rect: NodeInfo) => {
+				sliderRect.value.width = rect.width ?? 0
+				sliderRect.value.left = rect.left ?? 0
+				if (sliderRect.value.width == 0) {
+					console.info('如在弹窗等元素中使用，请使用v-if来显示滑块，否则无法计算长度。')
+				}
+				init()
+			})
+		}
+	})
+
+	defineExpose({
+		startX,
+		status,
+		newValue,
+		distanceX,
+		startValue0,
+		startValue,
+		barStyle0,
+		barStyle,
+		sliderRect,
+		innerStyleCpu,
+		addStyle,
+		getPx,
+		init,
+		changingHandler,
+		changeHandler,
+		onTouchStart,
+		onTouchMove,
+		onTouchEnd,
+		onTouchStart2,
+		onTouchMove2,
+		onTouchEnd2,
+		onClick,
+		updateValue,
+		format: formatValue
+	})
+</script>
+
+<style lang="scss" scoped>
+	.up-slider {
+		position: relative;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+
+		&__native {
+			flex: 1;
+		}
+
+		&-inner {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			position: relative;
+			border-radius: 999px;
+			padding: 10px 18px;
+			justify-content: center;
+		}
+
+		&__show-value {
+			margin: 10px 18px 10px 0px;
+		}
+
+		&__show-range-value {
+			padding-top: 2px;
+			font-size: 12px;
+			line-height: 12px;
+			position: absolute;
+    		bottom: 0;
+		}
+
+		&__base {
+			background-color: #ebedf0;
+		}
+
+		/* #ifndef APP-NVUE */
+		&-inner:before {
+			position: absolute;
+			right: 0;
+			left: 0;
+			// wait uni-app-x
+			// content: '';
+			top: -8px;
+			bottom: -8px;
+			z-index: -1;
+		}
+		/* #endif */
+
+		&__gap {
+			position: relative;
+			border-radius: 999px;
+			transition: width 0.2s;
+			background-color: #1989fa;
+		}
+
+		&__button {
+			width: 24px;
+			height: 24px;
+			border-radius: 999px;
+			/* #ifndef APP */
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+			/* #endif */
+			/* #ifdef APP */
+			border-width: 1px;
+			border-style: solid;
+			border-color: #d0d0d0;
+			/* #endif */
+			background-color: #fff;
+			/* #ifdef H5 */
+			cursor: pointer;
+			/* #endif */
+		}
+
+		&__button-wrap {
+			position: absolute;
+		}
+
+		&--disabled {
+			opacity: 0.5;
+		}
+	}
+</style>

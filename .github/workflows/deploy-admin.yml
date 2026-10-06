@@ -1,0 +1,63 @@
+name: Deploy Admin Web (Native Nginx)
+
+on:
+  push:
+    branches: [ main, test ]
+    paths:
+      - 'doupi-web-admin-react/**'
+      - '.github/workflows/deploy-admin.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: doupi-web-admin-react/package-lock.json
+
+      - name: Build Frontend
+        run: |
+          cd doupi-web-admin-react
+          npm ci
+          npm run build
+          tar -czf dist-admin.tar.gz dist
+
+      - name: Upload Dist Archive
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "doupi-web-admin-react/dist-admin.tar.gz"
+          target: "/tmp/"
+          strip_components: 1
+
+      - name: Atomic Deploy & Nginx Reload
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            TARGET_DIR="/var/www/doupi-web-admin"
+            if [ "${{ github.ref_name }}" = "test" ]; then
+              TARGET_DIR="/var/www/doupi-web-admin-test"
+            fi
+
+            mkdir -p $TARGET_DIR
+            sudo rm -rf $TARGET_DIR/dist_new
+            mkdir -p /tmp/unpack_admin
+            tar -xzf /tmp/dist-admin.tar.gz -C /tmp/unpack_admin
+            sudo rm -rf $TARGET_DIR/dist
+            sudo mv /tmp/unpack_admin/dist $TARGET_DIR/dist
+            sudo chown -R ubuntu:ubuntu $TARGET_DIR
+            rm -rf /tmp/unpack_admin /tmp/dist-admin.tar.gz
+            sudo systemctl reload nginx
+            echo "Admin Web Deployed to $TARGET_DIR successfully!"

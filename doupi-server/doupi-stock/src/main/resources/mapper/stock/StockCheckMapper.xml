@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.stock.mapper.StockCheckMapper">
+    
+    <resultMap type="StockCheck" id="StockCheckResult">
+        <result property="checkId"    column="check_id"    />
+        <result property="checkNo"    column="check_no"    />
+        <result property="checkType"    column="check_type"    />
+        <result property="category"    column="category"    />
+        <result property="checkTime"    column="check_time"    />
+        <result property="operator"    column="operator"    />
+        <result property="status"    column="status"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectStockCheckVo">
+        select check_id, check_no, check_type, category, check_time, operator, status, remark, create_by, create_time, update_by, update_time, del_flag from edu_stock_check
+    </sql>
+
+    <select id="selectEduStockCheckList" parameterType="StockCheck" resultMap="StockCheckResult">
+        <include refid="selectStockCheckVo"/>
+        <where>  
+            and del_flag = '0'
+            <if test="checkNo != null and checkNo != ''"> and check_no like concat('%', #{checkNo}, '%')</if>
+            <if test="checkType != null and checkType != ''"> and check_type = #{checkType}</if>
+            <if test="category != null and category != ''"> and category = #{category}</if>
+            <if test="operator != null and operator != ''"> and operator like concat('%', #{operator}, '%')</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(check_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(check_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by check_id desc
+    </select>
+    
+    <select id="selectEduStockCheckByCheckId" parameterType="Long" resultMap="StockCheckResult">
+        <include refid="selectStockCheckVo"/>
+        where check_id = #{checkId}
+    </select>
+
+    <select id="selectMaxCheckNo" resultType="String">
+        select max(check_no) from edu_stock_check where check_no like concat(#{prefix}, '%')
+    </select>
+
+    <insert id="insertEduStockCheck" parameterType="StockCheck" useGeneratedKeys="true" keyProperty="checkId">
+        insert into edu_stock_check
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="checkNo != null and checkNo != ''">check_no,</if>
+            <if test="checkType != null and checkType != ''">check_type,</if>
+            <if test="category != null">category,</if>
+            <if test="checkTime != null">check_time,</if>
+            <if test="operator != null and operator != ''">operator,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="checkNo != null and checkNo != ''">#{checkNo},</if>
+            <if test="checkType != null and checkType != ''">#{checkType},</if>
+            <if test="category != null">#{category},</if>
+            <if test="checkTime != null">#{checkTime},</if>
+            <if test="operator != null and operator != ''">#{operator},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduStockCheck" parameterType="StockCheck">
+        update edu_stock_check
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="checkNo != null and checkNo != ''">check_no = #{checkNo},</if>
+            <if test="checkType != null and checkType != ''">check_type = #{checkType},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="checkTime != null">check_time = #{checkTime},</if>
+            <if test="operator != null and operator != ''">operator = #{operator},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where check_id = #{checkId}
+    </update>
+
+    <update id="deleteEduStockCheckByCheckId" parameterType="Long">
+        update edu_stock_check set del_flag = '2' where check_id = #{checkId}
+    </update>
+
+    <update id="deleteEduStockCheckByCheckIds" parameterType="String">
+        update edu_stock_check set del_flag = '2' where check_id in 
+        <foreach item="checkId" collection="array" open="(" separator="," close=")">
+            #{checkId}
+        </foreach>
+    </update>
+</mapper>

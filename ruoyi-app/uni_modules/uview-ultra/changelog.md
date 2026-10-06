@@ -1,0 +1,1421 @@
+## 4.5.46
+fix: 修复 uni-app Vue3（.js/.vue）侧无法编译与运行的 12 处问题，并补全 168 处导入扩展名
+
+uview-ultra 是双实现：`.uts`/`.uvue` 走 uni-app x 编译链，`.js`/`.vue` 走 uni-app Vue3 编译链。此前只有 uni-app x 工程，`.js`/`.vue` 那一套从未进入任何编译链，缺陷只能等用户反馈。本次搭了独立的 uni-app Vue3 工程做全量编译门禁与 126 个示例页逐页运行时验证，并修掉暴露出的问题。
+
+Vue3 侧编译期问题：
+- `libs/config/props.js`：补回 `registerComponentProps()`。3.x 有这个 API，4.x 移植时漏了，而 `up-calendar-strip` / `up-guide` 的 `props.js` 都在 import 它，构建报 `does not provide an export named 'registerComponentProps'`
+- `up-grid/props.js`：`crtProp` 未声明（漏了 `const crtProp = defProps.grid`）
+- `up-action-sheet.vue` / `up-text.vue`：`defineProps` 里展开了局部 const `buttonProps`，而 defineProps 的参数会被 hoist 到 setup 之外，编译器直接拒绝，改为内联进字面量
+- `up-parse.vue`：`defineOptions` 里 `, components:` 与 `#ifdef MP-WEIXIN` 的 `options` 块共用同一个逗号，非小程序平台裁掉 options 后变成双逗号，编译报 `Unexpected token`
+- `libs/function/index.js`：补 `getDeviceInfo()` 与 `upGetRect()`。`.vue` 侧一直在 import，`.js` 侧却没有实现，构建报 `not exported by`
+- `up-album/props.js`：`defProps` 被换成了本地 `album.js`，`defProps.image` 为 undefined，读 `.shape` 直接抛。改回 `registerComponentProps(AlbumDefaultProps)`，与 3.x 一致
+- `index.js`：去掉 `export default` 里未定义的 `UpNoNetwork`（`index.uts` 与 3.x 都不导出它，运行期直接报 `UpNoNetwork is not defined`）；H5 分支不再 glob `./components/up-*/up-*.uvue`，Vue3 编译器不认识 uvue 语法
+
+Vue3 侧运行期问题：
+- `up-tabbar.vue`：`children` 里可能混进非 `tabbar-item` 的实例，调用 `updateFromParent` 前加 `typeof` 判断（`up-steps.vue` 本来就有这个防御）
+- `up-list-item.vue`：`children` 是父级 `up-list` 共用的，里面会混进 `up-cell`，取 `lastChild.rect` 前判空，并按 uvue 侧语义补 `?? 0`
+- `up-qrcode.vue`：`Object.assign(Object.create(componentProxy), ...)` 会走 `[[Set]]` 命中 Vue 组件实例代理的 set 陷阱并抛 `'set' on proxy: trap returned falsish`，改用 `Object.defineProperties`
+- `up-poster.vue`：`rpx2px` 全库不存在，改用 `uni.upx2px`
+
+影响面最大的一类是导入解析：uni-app 的 `resolve.extensions` 是 `['.uts', '.mjs', '.js', ...]`，`.uts` 排在第一位，而且非 uni-app x 构建也是这个顺序（见 `@dcloudio/uni-cli-shared` 的 `COMMON_EXTENSIONS`）。凡是「同名 `.js` 与 `.uts` 并存、导入又省略扩展名」的地方，在 Vue3 工程里都会解析到 `.uts`，被 esbuild 当 UTS 解析而失败；目录导入（如 `libs/i18n`）会解析到 `index.uts`，运行期直接报 `UTSJSONObject is not defined`。本次给 `.js`/`.vue` 里 168 处相对导入补全了显式 `.js` 扩展名，涉及 96 个文件。
+
+验证方式：新增独立的 uni-app Vue3 工程（`ly-ultra-ui/uview-ultra-uni-app`），六段门禁——示例页漂移 / 导入解析 / SFC 全量编译 / no-undef / 模块加载冒烟 / 真实 `uni build`（H5），全绿；126 个示例页 Playwright 逐页运行时冒烟全部通过。
+
+## 4.5.45
+feat: 新增 up-video 视频播放器，并适配 uni-app-x 蒸汽模式（HBuilderX 5.26）
+
+HBuilderX 5.26 起 uni-app-x 进入蒸汽模式（vapor），运行期与编译器均有变化：不再支持 \p{...} Unicode 属性转义、scroll-view 移除 scroll-x/scroll-y/enable-flex，部分运行期 API 与 UTS 注解处理方式也发生改变。本次一并修复由此暴露的组件缺陷，并对齐 uview-plus 3.8.127 / 3.8.128 的上游修复。
+
+新增：
+- up-video（对齐 uview-plus u-video）：自绘控制层的播放器，支持倍速、音量、封面、锁屏、返回、全屏
+- video-danmaku 弹幕层：归一化、时间游标二分查找、轨道分配，支持滚动 / 顶部 / 底部三种模式
+- video-slider：进度与音量共用的拖动条；配套选集面板、贴片广告（前置 / 暂停 / 后置）与暂停贴片
+- 注册进 props 配置、10 种语言 i18n、types/comps/video.d.ts；新增示例页 pages/componentsD/video
+- 说明：uni-app-x 的 video 为原生组件无法承载子节点，控制层改用同级绝对定位覆盖层；进全屏请走原生全屏按钮
+
+蒸汽模式（vapor）适配与缺陷修复：
+- marked-uts：\p{P}\p{S} 等 Unicode 属性转义改为等价 ASCII 字面量字符类（设备 JS 引擎不支持会直接 SyntaxError 白屏），并保留 u 标志
+- marked-uts/Tokenizer：@Suppress 注解补 #ifndef VUE3-VAPOR 守卫，修复 Suppress is not defined
+- 组件模板不再遮蔽全局 $up（index.uts 注册的 UPUtils 实例）：移除 import * as $up，改为直接调用 addUnit / addStyle / getPx
+- up-loading-icon：删除触发 vue.useVaporCssVars 的死代码 $radius: v-bind(size)px，修复按钮页等打开即报错
+- scroll-view：迁移到新版 direction（scroll-x/scroll-y/enable-flex 已移除），涉及 up-table2 / up-list / up-choose / up-cascader / up-cate-tab / up-calendar / up-action-sheet / up-goods-sku / up-virtual-list / up-pull-refresh / up-novel-reader / up-dragsort / up-dropdown-item 等；表格列固定随之恢复生效
+- up-checkbox：disabled / labelDisabled 同时识别布尔与字符串，修复 <up-checkbox disabled> 禁用无效
+- up-row / up-gap / up-card / up-dropdown-item：默认值取值函数与配置类型不匹配（对字符串配置用 getNumber/getBoolean）导致 null，已修正并补显式默认值
+- up-button：textSize 已含 px 又拼接一次导致字号异常（约 11px → 14px）
+- up-dropdown-item：scroll-view 被误写为 view 且带 scroll-y="false"，已改回 <scroll-view direction="vertical">
+- up-dropdown-item / up-grid-item / useUltraUI：跨组件读取 $data['children'] 在新版下为 undefined，改用父组件暴露的 $callMethod('getChildren')
+- up-textarea：placeholder-style 统一传字符串、新增 cursor 数字计算（-1 表示不指定），修复原生类型校验告警与 ClassCastException
+- up-tabbar：内联样式不再拼接 !important（新版不支持），修复 border-*-color 非法值
+- up-short-video：传给 up-slider 的 innerStyle 改为 UTSJSONObject，修复 prop 类型校验告警
+- libs/function/test.uts：修正 date() 判断反转（数字时间戳被误判非法），修复 up-text 日期模式误报
+- up-novel-reader：readPersistedState 对空串 / 非法 JSON 加保护，避免 JSON.parse 抛原生异常
+- up-dropdown / up-lazy-load：修正 translate3D / transition3d 拼写
+
+对齐 uview-plus 3.8.127 / 3.8.128：
+- up-slider：点击轨道时不再丢弃 updateValue 返回值，直接触发 change；补 sliderRect 宽度为 0 的兜底
+- up-datetime-picker：空值不再被夹取成 minDate / minHour:minMinute，外部清空后输入框保持为空；confirm 时先按各列当前显示值取真值；getBoundary / updateIndexs 补空值兜底，避免 Invalid Date 产生 NaN
+- up-car-keyboard：补「警」字（省份切分 30~37）；up-car-keyboard / up-number-keyboard 退格键改为 tap 单删 + touchstart 600ms 长按递推，短按不再连删，PC 端浏览器无 touch 时也可删除
+- up-parse：parser.js 支持 quill 的 align-left / align-right / justify class
+- up-calendar：onScroll 在各月份 top 未测量出来时不再把副标题钉到最后一个月；scrollIntoDefaultMonth 同步更新 monthIndex
+- up-collapse-item：init() 在父组件 value 为 null / undefined 时不再重置已展开状态；展开动画结束后把高度交还内容，避免异步变高的内容被裁切；快速连点只认最后一次动画回调
+- up-cate-tab：leftMenuStatus 仅在选中项真正变化时同步 update:current，消除重复通知
+- up-textarea：confirmType 默认改为 return（回车换行，与原生一致），新增 confirmHold 属性
+- up-cell：必填星号改用真实 <text> 节点渲染（原 :before 伪元素在 nvue / 小程序下不显示且通栏布局会跑出屏幕）；补上此前完全缺失的 required 属性；修正 aclass= 笔误
+- up-upload：H5 下 chooseVideo 返回的真实 File 对象透传给 uni.uploadFile，修复部分 webview 读 blob: 得到空内容导致上传失败（#801）
+
+小程序相关修复：
+- up-search：placeholder-class 改为非 scoped 样式块 + CSS 变量下发颜色，解决 scoped 类名匹配不到小程序内部 placeholder 节点的问题
+- up-icon：字体加载失败后由定时器重试有限次数，不再立刻释放请求锁（#844）
+- 解决 mp-weixin 编译挂死：up-pull-refresh / up-novel-reader 中 uni-app-x 不支持的 v-bind 改为显式属性传递
+
+示例与其它：
+- 移除 90 个示例页根节点的 App 专用 scroll-view 包装层（蒸汽模式下页面本身可滚动，保留会触发嵌套滚动告警）
+- 修复示例页中的 HTML / SVG 标签：empty 页 <div> 改 <view>，slider 页内联 <svg> 改用 up-icon
+- types：新增 pagination.d.ts 并在 comps.d.ts 注册，补齐 numberBox / form 的类型与事件载荷
+
+## 4.5.44
+fix: 修复 up-markdown 在 uni-app-x 4.72+（含蒸汽模式）Android 端编译报错，以及 up-signature 的 UTS 编译错误
+
+marked-uts 为兼容旧版 uni-app-x Android 端的 JS 正则引入了原生模块 io.dcloud.uts.jsreg.JSReg，该模块在 uni-app-x 4.72+ 已移除，但相关 import 仅用 #ifdef APP-ANDROID 包裹、未按版本裁剪，导致新版编译时无法解析（Could not resolve "io.dcloud.uts.jsreg.JSReg"），markdown 解析为空、页面空白。同时 up-signature 的 uvue 实现存在 ref 先于使用声明、NodeInfo 坐标可空赋值两处 UTS 编译错误，导致 App-Android 端无法编译通过。
+
+- marked-uts：Tokenizer.uts 删除未使用的 JSReg import；rules.uts 的 callJSReg import 与 utssdk/app-android/index.uts 的 JSReg import、callJSReg 定义统一补上 #ifdef uniVersion < 4.72 版本条件，4.72+ 走原生正则分支，旧版（< 4.72）行为保持不变
+- up-signature：rectLeft / rectTop 两个 ref 移到 getTouchPoint 之前声明，修复 UTS “找不到名称 rectLeft/rectTop” 报错
+- up-signature：rect.left / rect.top 为可空类型（Number?），改用 normalizeNumber 兜底赋值，修复与 Number 的类型不匹配
+- 仅影响 App-Android，H5 / 小程序 / 鸿蒙 / uni-app-x 其它端不受影响
+
+## 4.5.43
+feat: 新增 up-flex 弹性布局容器组件
+
+新增 up-flex 弹性布局容器，用于快速搭建 flex 布局，替代手写 display:flex 样式；同时提供 Vue 与 uvue（uni-app-x）两套实现，覆盖 App / H5 / 小程序 / 鸿蒙。
+
+- 新增 up-flex 组件：通过 direction / justify / align / wrap / gap 属性控制主轴方向、主轴与交叉轴对齐、是否换行以及子元素间距
+- justify 支持 start / end 简写，内部自动映射为 flex-start / flex-end，与 CSS 原生取值兼容
+- gap 支持数字或字符串，非 0 时自动补单位；默认 direction=row、justify=flex-start、align=stretch、wrap=false、gap=0
+- 提供默认插槽承载子元素，支持 click 事件与 customStyle 自定义样式
+- 全部默认值集中在 libs/config/props.js，可通过全局配置统一覆盖
+
+## 4.5.42
+fix: 修复签名组件在 App 端无法绘制、笔迹闪退，并补齐 up-canvas 画布能力
+
+up-signature 在 App 端存在无法落笔、笔迹一闪即消失与落点偏移的问题；同时 up-canvas 相比 3.x 缺少画布就绪事件与禁止滚动属性，业务组件无法对齐使用。
+
+- up-canvas 补齐 ready 事件：初始化完成后回调（携带宽高），与 3.x u-canvas 对齐，业务组件可在画布就绪后再响应绘制
+- up-canvas 补齐 disable-scroll 属性并透传到 canvas 节点
+- up-signature（Vue 与 uvue 两条实现）改为等待画布就绪后再接受绘制，修复上下文异步就绪时首笔丢失
+- 修复笔迹画出后立即消失：touchMove 改为「增量线段」绘制（beginPath + moveTo 上一点 + lineTo 当前点 + stroke）并使用 draw(true) 保留已绘制内容，不再每次 draw(false) 清空命令队列
+- 修复 App 端坐标错乱、笔迹落到画布外：触摸坐标减去画布位置换算到画布坐标系（Vue 端优先取画布相对坐标）
+- 收尾不再 closePath，避免手写笔迹出现回连直线；撤销回放逻辑保持兼容
+- 覆盖 APP-PLUS / APP-HARMONY / uni-app-x / NVUE，微信小程序与 H5 行为保持不变
+
+## 4.5.41
+fix: App 端图标字体改用 static 本地字体，新增通用 Vite 插件入口 UpVite
+
+up-icon 的 Vue 运行时（App-vue / App-nvue）一直通过 import iconFontUrl from './upicon.ttf?url' 加载字体。这条路径在 iOS App 端不生效——App 本地字体必须落在 uni-app 约定的 static 目录下，否则图标不显示。uview-plus 已经修正过同一个问题（?url 改为 static），uview-ultra 当时对齐的是修正前的版本，没有跟进。uvue 路径本身早已使用 /static/iconfont/iconfont.ttf，本次只调整 Vue 路径。
+
+- 新增通用 Vite 插件入口 UpVite（uni_modules/uview-ultra/libs/vite/index.js）。App 构建时把 components/up-icon/upicon.ttf 复制到 static/app-plus/uview-ultra/，并兜底移除已编译进产物的远程 @font-face，避免本地字体与远程字体同时加载
+- 本地图标字体是 UpVite 的第一个 feature，后续组件库新增构建期能力只需在插件内追加，业务项目不需要再改自己的 vite.config
+- App / App-nvue 默认优先加载本地字体；App-Vue 在 uni.loadFontFace 失败后回退 config.iconUrl（每个页面只回退一次），App-nvue 因 dom.addRule 没有失败回调、注册前用 plus.io.resolveLocalFileSystemURL 探测字体文件
+- up-icon.vue 的 App Vue 字体注册时机改到 onMounted：页面未挂载时取不到 getCurrentPages()，原先在 setup 时机注册会被直接跳过
+- util.js 新增 App Vue 页面级加载状态并导出 isLoaded
+- 新增 verify:app-local-icon-font 回归校验
+- 未注册插件的项目会回退 config.iconUrl，行为与改造前等价，升级不会丢图标；不希望使用本地字体可传 UpVite({ appStaticIconFont: false })
+- uvue / uni-app-x、H5、小程序均不受影响
+
+## 4.5.40
+fix: 修复 up-row-notice 横向滚动空格丢失
+
+- 修复文本按 20 个字符切分后，空格落在独立 text 节点首尾时被 nowrap 折叠的问题；Vue 与 UVue 两端均保留原文空白且不换行。
+- 新增 verify:row-notice-space 回归校验，覆盖空格位于第二个 text 节点首部的边界场景。
+
+## 4.5.39
+fix: 修复 up-button 零延迟节流锁死，补齐组件类型导出
+
+- 修复 throttle(func, 0) 仍依赖异步定时器释放全局锁的问题：up-button 默认 throttleTime 为 0 时，真机首次点击后可能因定时器未释放而无法继续点击；现在零延迟节流直接同步执行回调，不再创建定时器。
+- types/index.d.ts 的包入口声明修正为 uview-ultra，并从组件类型文件同步导出 129 个公开类型（Props、Slots、Ref 等），ref<FormRef>() 等类型可以直接从包名导入。
+- types/comps.d.ts 的模板类型提示补齐 up-、u-、u-- 三种组件前缀，组件清单只维护一份，避免前缀提示漂移。
+- 新增 verify:button-throttle 与 verify:types-barrel-exports 回归校验。
+
+## 4.5.38
+fix: 修复 up-datetime-picker 的 format 属性不支持库自身 yyyy-mm-dd 写法 (#537)
+
+issue #537 反馈 `<up-datetime-picker format="yyyy-mm-dd">` 选完日期后不按 format 显示。
+
+根因是 format 直接交给 dayjs 格式化。dayjs 的 token 是大写的 `YYYY-MM-DD`，而 uview-ultra 自己的 `timeFormat`（`$u.timeFormat`）用的是小写 `yyyy-mm-dd`（默认值就是 `'yyyy-mm-dd'`，`up-text` 的 format 也是同一套写法）。于是按库里的通用写法传 `'yyyy-mm-dd'` 时，dayjs 只认得其中的 `mm`(分钟) 与 `dd`(星期)，输入框显示成 `'yyyy-00-Th'`，datetime 模式下是 `'yyyy-13-Su 09:04'`。Vue 与 UVue 两端同一成因。
+
+- Vue/UVue `getInputValue` 中 format 出现小写 y 就按 timeFormat 的规则格式化，大写的 dayjs 写法保持原样
+- Vue `correctValue` 用新增的 `parseDateValue` 统一解析绑定值成毫秒时间戳：number、纯数字字符串、'2024-10-24'、'2024/10/24 15:08:09'、Date 对象都能识别，仍然解析不出来才退回 minDate。此前用 `test.date(value)` 只认 10/13 位时间戳与 yyyy-mm-dd 形态的字符串，Date 对象与 12 位（2001 年前）毫秒时间戳会被判为非法并被替换成 minDate（默认当前年份-10），选择器停在十年前。UVue 版的 `correctValue` 本就自行解析，无此问题
+- 补齐 `hasInput`、`placeholder`、`format` 的类型声明，此前三者在 `types/comps/datetimePicker.d.ts` 中缺失
+- demo 页面新增 hasInput + format 示例，展示库自身的 yyyy-mm-dd hh:MM 写法
+- 新增 `verify:datetime-picker-format` 回归校验：真实挂载组件断言两种 format 写法、字符串/时间戳/12 位时间戳绑定值、非法值回退与边界夹取，未修的代码上 format 用例全部失败
+
+## 4.5.37
+fix: 修复 up-waterfall 在 App 切换 tabbar 后瀑布流有数据但不渲染
+
+App 端从瀑布流页面切走 tabbar 再切回，列表数据已更新但页面空白或停留在旧内容，需杀进程重进才恢复。
+
+根因在 `useUltraUI` 的 `$uGetRect`：此前只在 `rect` 为真值时 `resolve`。页面被 tabbar 切走隐藏后节点已不参与布局，`boundingClientRect` 会回调 `null`，两个分支都不命中，Promise 永不 settle。`up-waterfall` 的 `getColumnHeights()` 在此永久挂起，`runDistributionQueue` 的 `finally` 无法执行，`distributionRunning` 永久为 `true`；切回页面后新数据只能入队，`if (!distributionRunning)` 挡住了消费者，于是数据在但列表不渲染。
+
+- `$uGetRect` 对 `null` 查询结果兜底 `resolve` 零尺寸节点信息（`all` 时返回 `[]`），与卸载分支的既有约定一致。该修复对所有依赖节点测量的组件生效，不限于瀑布流
+- `clear()` 与 `redistributeData()` 强制重置 `distributionRunning`、`distributionPromise`，使外部刷新、切换列数、清空数据都能重新解锁
+- 新增 `runToken` 归属机制：锁被强制重置后由新循环接管，旧循环若从挂起中恢复只能安静退出，不会清掉接管者的运行状态，也不会与新循环同时写入 `columnList` 造成重复分配与错乱列高
+- 分配循环的每个 await 点改用 `isStaleDistribution()` 同时校验 `generation` 与 `runToken`
+- 新增 `verify:waterfall-lock-reset` 回归校验
+
+## 4.5.36
+fix: 修复组件卸载后查询节点导致 APP 与鸿蒙端报错
+
+切换页面时 APP 与鸿蒙端会出现大面积 `Uncaught TypeError: Cannot read properties of undefined (reading '$') at uni-app-view.umd.js`，功能不受影响但日志被淹没，H5 端不出现。
+
+原因是组件卸载后仍在执行的异步回调继续发起节点查询：APP 端 service 层取的是已失效的 `$el.nodeId`，视图层按该 id 查映射表时，对应条目在元素移除时已被删除，读到 undefined 再取 `.$` 即抛错。H5 端直接取 `$el`，没有这层 nodeId 映射，因此不复现。
+
+- `useUltraUI` 的 `$uGetRect` 与 `upCreateIntersectionObserver` 集中拦截，覆盖 26 个走 `$uGetRect` 的组件与 3 个交叉观察器组件，卸载后不再把组件交给原生查询
+- 卸载后 `$uGetRect` 返回零尺寸节点信息、`upCreateIntersectionObserver` 返回空观察器，均保持原有调用形态，调用方无需改写
+- 卸载标记由 `useUltraUI` 的 `onBeforeUnmount` 同步置位，早于 Vue 内部异步置位的 `isUnmounted`；未套用 `useUltraUI` 的组件退回 Vue 自身标记
+- 守卫置于条件编译之外，确保 app-harmony 端同样生效
+- 新增 `verify:unmounted-node-query` 回归校验，同时断言挂载期间必须正常发起查询、卸载后必须完全不发起，并逐平台校验守卫存在
+
+该问题在 tabs、sticky、subsection、waterfall、index-list 等所有依赖节点测量的组件上成因相同，本次为统一修复。
+
+本次仅修 Vue 端（classic uni-app）。uni-app x 原生端没有这层 nodeId 映射表，`.uvue` 变体不复现该报错，故不在范围内。
+
+## 4.5.35
+optimize: up-select 遮罩默认可见但更浅
+
+- `up-select`（Vue 与 UVue）`overlayOpacity` 默认值由 `0.01` 调整为 `0.15`：此前的 0.01 几乎不可见，用户无法察觉下拉已接管整页点击；0.15 明显浅于 `up-popup` 的 `0.5`，不会压暗页面
+- 遮罩仍由 `up-overlay` 渲染，`overlay`、`overlayStyle`、`zIndex`、`duration` 语义不变；需要完全透明的场景显式传 `:overlay-opacity="0"`，需要更深传更大值
+- 新增 verify:select-overlay-opacity 回归校验
+
+## 4.5.34
+fix: 修复 up-tabbar 中间凸起按钮圆弧边框裁剪越界
+
+- `up-tabbar` / `up-tabbar-item`（Vue 与 UVue）改按 tabbar 顶部和中间圆形按钮的实际位置计算边框裁剪高度，不再依赖固定文字/无文字基线
+- 兼容有文字、无文字、`midButtonOffsetY` 自定义偏移及 `border` 开关，避免圆弧边框超出 tabbar 顶部或被错误截断
+
+## 4.5.33
+feat: up-navbar 新增 iOS 大标题模式
+
+新增 `mode` 属性，`ios` 值提供现代 iOS 系统应用的导航栏体验：进入页面时导航栏背景透明、标题以 34px 左对齐显示；向下滚动时大标题被压缩进导航栏，标题过渡为常规居中形态并由下方浮现，同时背景淡入。
+
+- 新增 `mode` 属性，可选 `default`（默认）与 `ios`，非法值按 `default` 处理
+- 新增 `scrollTop` 属性接收页面滚动距离，需由页面 `onPageScroll` 传入；不传时停留在大标题展开态
+- 大标题渲染在 in-flow 层靠原生滚动位移，不经过 JS，避免逐帧回传造成拖影
+- 背景与居中标题的透明度曲线分段递进（0-0.5 与 0.75-1），确保任何滚动位置都不出现两段标题文字互相透出
+- 居中标题在淡入的同时由下方 12px 上浮就位，带 0.15s 过渡补齐离散滚动事件之间的空隙
+- 新增 `--up-navbar-glass-bg-color` 与 `--up-navbar-glass-blur` 主题变量
+- UVue 与 Vue 两份实现同步，共用同一套属性与曲线参数
+
+平台差异：`backdrop-filter` 在 WebView 类端（Web、H5、微信小程序 iOS 等）生效，呈现真实毛玻璃。App 原生端（UVue）的支持情况取决于渲染器：若不生效，磨砂表现为 0.82 不透明底色。该不透明度本身即构成文字可读性下限，因此无论模糊是否生效都不会出现文字与下方内容读串。大标题压缩与居中标题上浮不依赖 `backdrop-filter`，两端均可工作。
+
+另修复 APP 端示例页缺失滚动容器的问题：APP 端页面根节点不会自动滚动，需显式包一层 `scroll-view`。navbarIos 示例页在 APP 端改从容器 `@scroll` 取 `e.detail.scrollTop`（`scroll-view` 内的滚动不触发页面级 `onPageScroll`），非 APP 端仍走 `onPageScroll`。同时为 gap、grid、code、color、countDown、countTo、switch、table、calendar、form、navbar、scrollList、text、datetimePicker 等内容超屏的示例页补上相同容器。
+
+已知边界：`ios` 模式下 `fixed` 与 `placeholder` 被忽略——固定层恒定固定，in-flow 层恒定渲染，因为该层承载的是大标题这一实际内容而非可选占位。`default` 模式的结构、样式与属性语义完全不变。
+
+## 4.5.32
+fix: 修复小程序端使用交叉观察器组件时控制台报枚举实例键告警（uview-plus #864）
+
+- 新增公共方法 `upCreateIntersectionObserver(comp, options)`：优先调用组件实例上的同名方法（内部已完成实例解包，不会把 Vue 代理外泄给原生 API），APP 端实例上没有该方法时回退到全局 API
+- up-sticky、up-lazy-load、up-cate-tab（均为 Vue 版）改用该方法，小程序端不再输出 `Avoid app logic that relies on enumerating keys on a component instance` 告警
+- up-sticky 的 thresholds 原样透传。不能改传 comp.$scope：APP 端页面的 $scope 仅为 `{ $getAppWebview }`，会被全局 API 误判成 options 参数，导致真实配置被静默丢弃
+- up-parse/node 的观察器位于 `#ifdef H5 || APP-PLUS` 条件编译块内，不会编译进小程序，故保持不变；uni-app x（UVue）版本次未改动
+- 新增 verify:up-create-intersection-observer 回归校验
+
+## 4.5.31（2026-08-20）
+feat: up-cropper 支持裁剪业务侧已有的图片路径
+
+- up-cropper（UVue/Vue）`chooseImage(index, params, data)` 新增 `params.imageSrc`：传入非空路径时直接裁剪该图片，不再打开系统选图；空值或非字符串仍保持原有选图行为
+- up-cropper（Vue）抽取共享 `loadImage(path)`，系统选图与外部路径复用同一套图片信息读取、裁剪框初始化与绘制流程
+- up-cropper（UVue）“重选”按钮固定回到系统选图，不会重复加载传入的 `imageSrc`
+- 新增 up-cropper `imageSrc` 回归校验与「裁剪已有图片」示例
+
+## 4.5.30
+fix/feat: up-popup 关闭事件补齐，新增 closed 事件
+
+- up-popup（Vue/UVue）由外部直接将 show 置为 false 关闭时补发 close，此前仅点击遮罩或关闭图标才触发，v-model:show 控制弹窗的业务收不到关闭通知
+- up-popup 新增 closed 事件，在离场动画结束、弹窗真正消失后触发；close 表示关闭动作发生（动画开始前），closed 表示已关闭完毕，需等弹窗消失后再跳转或重置数据的场景请监听 closed
+- pageInline 模式不执行离场动画，closed 由 show 变化补发，保证内联渲染下同样可收到
+- 内部关闭动作与外部改 show 之间做去重，任意关闭方式下 close 只发出一次
+- closed 透传至 up-picker、up-action-sheet、up-keyboard、up-calendar、up-color-picker、up-goods-sku、up-datetime-picker、up-picker-data，Vue 与 uni-app x 双端一致；up-calendar 仅主体弹窗触发，关闭内部时间选择器不会误报
+- 补充 onClosed 类型声明（popup / picker / datetimePicker / actionSheet / keyboard / calendar），新增 verify:popup-close-events 回归校验
+
+## 4.5.29
+fix: 修复 HarmonyOS Canvas 绘制与跨端运行问题
+
+- up-canvas（UVue/Vue）修复 HarmonyOS Canvas 上下文条件编译、首帧时序、DPR 坐标换算和 transparent 颜色解析，二维码恢复完整清晰绘制
+- up-poster 预加载图片后按配置顺序统一绘制，恢复渐变背景、卡片、文字、商品图与二维码；补充中文换行兜底和画布初始化错误处理
+- up-calendar 修复 H5 运行时 monthsItem 类型别名擦除导致的 ReferenceError
+- up-novel-reader 修复 HarmonyOS 编译时 Regex 未定义
+- up-barcode 补充画布上下文判空；新增 Harmony Canvas、Poster 和 Calendar 回归校验
+
+## 4.5.28
+feat/fix: up-tabs 属性、事件与 up-tabs-pro
+
+- up-tabs 的 click 事件在保留 item、index 参数的同时追加原始点击事件；新增 capsule、card、pill-arrow、tag 四种形态模式
+- 新增 Vue 与 UniApp X 双端 up-tabs-pro，支持受控 current、作用域内容插槽以及 click、longPress、change 事件透传
+- 修复 up-tabs 与 up-tabs-pro 在 UniApp X Android 端的 Number 转换、作用域插槽类型推断和样式对象类型兼容问题
+
+## 4.5.27
+optimize/fix: up-novel-reader 工具栏悬浮 + luch-request UTS 版重写
+
+- up-novel-reader（UVue）：顶/底工具栏改为悬浮（position:absolute），正文区域始终占满全高，工具栏显隐不再挤压/改变正文布局
+- luch-request UTS 版重写：修复其在 UniApp X（Android）端无法编译的问题，公开接口与 JS 版保持一致（config/response 为 UTSJSONObject，取值用 ['key']）；去对象 spread / Object.prototype.toString.call / Object.keys(any) / fn.call，改用 UTSJSONObject 与 Array.isArray/instanceof/typeof；then/catch 回调参数与拦截器 fulfilled/rejected 放宽为 any|null；内联对象类型改具名 class
+- uts 入口 index.uts 导出 Request 类与全局 http 实例（对齐 JS 入口）；真机 7/7 纯函数用例通过、真实 GET 请求链路验证
+
+## 4.5.26
+fix: 修复 DatetimePicker 动态边界，及 up-novel-reader 在 App(uni-app x)端的编译与样式问题
+
+- up-datetime-picker（Vue/UVue）：动态修改 minMinute/minHour 等边界值时保留当前已选值，仅按新边界重新校正并重建各列，不再回退到 modelValue；新增 change 去重，边界变化程序化重建列不再重复上抛 change；已选值超出新边界时自动夹取到合法范围并补发一次 change；UVue 端补全此前被注释、未接通的 modelValue/mode/边界值响应式
+- up-novel-reader（UVue）：修复此前无法通过 uni-app x（Android）编译的一系列问题——不支持的 CSS 值（vh/vw、color/border-radius:inherit、display:block、min-height:100% 等）改用 px/百分比/样式绑定；UTSJSONObject Any? 类型不匹配、setup 函数前向引用（Kotlin 局部函数不提升需按依赖排序）、props 与局部 ref/defineExpose 命名冲突、nextTick(async)、数组 API（toMutableArray/removeAt）等
+- up-novel-reader（UVue）：修复 App 端因 display:flex 默认竖向导致工具栏/设置/目录横排错乱的问题（补 flex-direction:row）
+
+## 4.5.25
+fix: 修复文档构建错误
+
+- 修复 barcode 与 goodsSku 文档中的 Markdown 表格类型参数被解析为 Vue 属性的问题
+- 修复 coupon 文档中的错误链接，确保文档构建死链校验通过
+
+## 4.5.24
+feat: 新增 up-novel-reader 小说阅读器组件
+
+- 支持 scroll/page 双模式、目录、设置、主题、书签、进度恢复、阅读时长和安全区
+- Vue 与 UVue 保持同一公开 API
+
+## 4.5.23
+fix: 修复 up-text 无单位行高显示异常
+
+- Vue 与 UVue 版 up-text 支持 1.1、1.2 等无单位行高倍率，避免被误转为 px 后单行文本裁剪成虚线
+- 继续兼容 20 等像素数值和显式单位行高
+
+## 4.5.22
+fix: 修复 overlay 动态挂载二维码时的 Canvas 初始化竞态
+
+- Vue 与 UVue 版 up-qrcode 统一迁移到 up-canvas，由画布组件集中管理节点、context、DPR、图片加载与导出
+- up-canvas 共享同一实例的 in-flight 初始化 Promise，增加 refresh 强制重新初始化入口，避免重复创建 context、重设尺寸或清空画布导致二维码只绘制局部
+- Vue H5 继续交由 uni-h5 内置 HiDPI 处理；Vue 小程序与 UVue Canvas 在宿主层重设 backing store 并只应用一次 pixelRatio 变换
+- 增加 overlay 内二维码示例和 Vue/UVue 静态回归校验
+
+## 4.5.21
+fix: 修复 up-waterfall 快速更新时并发分配错乱
+
+- Vue 与 UVue 版改用共享队列串行消费多批数据，避免异步分配循环交错
+- clear 或全量重排时取消过期任务，避免旧数据继续写回已清空的列
+- 中间插入、重排或列表缩短等非纯追加变化执行全量重排，避免数据错列、重复或丢失
+- 同步 uview-plus issue #1047，并补充双端结构与 Vue 行为回归校验
+
+## 4.5.20（2026-08-04）
+fix: 修复 uni-app x 跨端编译与 Android 运行时兼容问题
+
+- 修复 up-calendar 未设置 closeable 时 Android Boolean 空值拆箱崩溃，并保留 pageInline 动态默认行为
+- 修复多个组件的 H5 严格类型告警及 Android 平台类型不兼容
+- 修复 Android 布局查询空结果、组件导航重复触发及不支持的 view 文本样式告警
+## 4.5.19
+fix: 修复 H5 严格类型检查告警
+
+- 修复 up-search label prop 使用 null 构造器导致的 TS2769 编译错误
+- 移除 up-tabbar、up-tabbar-item、up-calendar 中会破坏 Vue props 推断的 null 构造器
+- 为 steps、radio、picker、text、number-box、popup、tag、rate、swipe-action、checkbox、subsection、waterfall、skeleton、swiper、tabs 等组件增加安全空值兜底
+- 收窄 calendar、form、async-validator、canvas、图片加载和滚动事件相关类型，消除 H5 UTS/TypeScript 编译告警
+- 恢复 up-row 的子组件注册方法，并处理节点尺寸查询为空，修复 H5 运行时 `getChildren not found` 和读取空节点 `width` 的异常
+
+## 4.5.18
+fix: 修复自定义 action-sheet 插槽点击不关闭
+
+- Vue 与 UVue 版 up-action-sheet 的自定义 slot 点击现在遵守 closeOnClickAction
+- Vue 版兼容 up-cell 默认阻止事件冒泡的场景
+- 同步 uview-plus issue #905，并补充对应验证脚本
+
+## 4.5.17
+feat: swipe-action-item 新增 scrolling / v-model:scrolling，用于横向滑动时联动暂停页面或 scroll-view 容器滚动。
+fix: 补充 touchcancel、关闭、禁用和卸载释放逻辑，避免外部滚动锁状态卡住。
+docs: 更新防止页面或容器滚动示例，说明 page-meta 与 scroll-view 用法。
+
+## 4.5.16
+fix: 同步文本组件 flex1 默认行为
+
+- up-text 默认不再占满剩余空间，未显式开启 flex1 时避免影响父级布局
+- 为 Vue 与 uvue 文本组件补齐 flex1 配置、props 与类型声明
+- 仅在 flex1 为 true 时写入 flex 和宽度样式，与 uview-plus 保持一致
+
+## 4.5.15
+fix: 修复 plain 按钮默认白底
+
+- plain 镂空按钮默认背景改为透明，避免深色背景下出现白色底块
+- 同步 Vue 与 uvue 按钮实现，保持多端 plain 表现一致
+- 补充验证脚本，覆盖 plain 按钮默认背景兜底
+
+## 4.5.14
+fix: 修复 tabbar 中间按钮圆弧边框颜色
+
+- 中间按钮上半圆边框跟随 tabbar 的 `borderColor` 属性，避免圆弧与顶部边框颜色不一致
+- `borderColor` 为空时继续使用主题边框色 fallback，保持默认表现不变
+- uview-ultra 同步 Vue 与 uvue 实现，保证两个组件库样式一致
+
+## 4.5.13
+fix: 修复 tabbar 中间按钮上半圆边框
+
+- 中间按钮改为 64px 圆形边框裁剪方案，透明或半透明 tabbar 背景下不再依赖纯色遮罩
+- 根据 `midButtonOffsetY` 自动计算上半圆边框裁剪高度，兼容有文字和无文字布局
+- 修复微信小程序中间按钮图标层级，避免被内层圆形背景遮住
+
+## 4.5.12
+docs: 完善 swiper vertical 纵向滑动说明（#936）
+
+- 补充 Vue 与 uni-app x 的 `vertical` 属性注释、纵向滑动示例与自动校验
+- 文档明确 `vertical` 透传原生 swiper，默认 `false` 保持横向兼容
+
+## 4.5.11
+fix: 同步 .w-full 盒模型样式
+
+- 公共样式补充 `.w-full { box-sizing: border-box; }`，与 uview-plus 对齐
+- 避免宽度 100% 工具类在 padding/border 场景下撑破布局
+- 同步忽略本地 `cachePath/` 调试产物
+
+## 4.5.10
+fix: slider 支持自定义模式小数步长
+
+- 同步 uview-plus：Vue / uvue 自定义 slider 的 `step` 支持 `0.1`、`0.5` 等小数和字符串数字，避免旧逻辑将小数步长格式化为 `NaN`
+- 普通滑块和区间双滑块统一按 `min + n * step` 对齐步进值
+- `useNative=true` 仍透传给 uni-app 原生 slider，具体小数表现取决于目标平台
+
+## 4.5.9
+feat!: i18n 语言包按需注册，默认仅内置 zh-Hans（#908）
+
+- 重大变更：默认不再打包 en/es/fr/de/ko/ja/ru/zh-Hant 等语言包
+- JS/UTS 支持 registerLocale/hasLocale/getLocale/setLocale
+- 包入口导出 en/ja/.../allLocales，可用 allLocales 一键恢复旧行为
+- 未注册语言回退 zh-Hans；组件 t() 与 underscore key 变换保持不变
+
+## 4.5.8
+feat: cropper 支持并文档化 inner 限制裁剪框在图片内
+
+- 同步 uview-plus #921：暴露 `inner` 属性，开启后拖动/缩放保持裁剪框在图片内，并禁用旋转
+- 修复 `chooseImage` 开启 `inner` 时未同步禁用旋转的问题
+- `inner + canChangeSize` 时调整裁剪框也限制在图片显示范围内（vue/uvue）
+- 补充组件示例与文档说明
+
+## 4.5.7
+fix: App 端内置图标字体改为包内本地加载
+
+- 同步 uview-plus #1044：App / App-nvue 内置 up-icon 字体改为从包内 upicon.ttf 加载，不再依赖 alicdn 网络请求
+- 使用 upicon.ttf?url 由构建产物发射本地字体资源，配合 uni.loadFontFace / weex addRule，避免弱网阻塞页面渲染
+- 无需手动拷贝到 static；Vue 入口导出 fontUtil 便于可选手动加载
+
+## 4.5.6
+fix: 同步修复 swipeAction 关闭态右侧删除按钮露边
+
+- 同步 uview-plus #843：H5 关闭态内容层与容器 1px 亚像素缝隙导致删除按钮露边
+- vue/uvue 同步补齐内容层覆盖、box-shadow 封边与容器合成层裁剪
+
+## 4.5.5
+feat: 发布 uview-ultra 4.5.5，Vue 组件全面 script setup 化
+
+- 143 个 Vue `.vue` 组件迁移为 true `<script setup>`，新增 `useUltraUI.js` 替代运行时 mixin 能力
+- 移除 Vue 侧遗留 `libs/mixin` 与全局 `Vue.mixin` 注册；公共 props/方法改为组件显式接入
+- 修复 up-swipe-action-item 关闭态右侧删除按钮 H5 亚像素露边（同步 uview-plus #843，vue/uvue）
+- 保留 APP-NVUE 条件编译与 proxy/$refs 适配；calendar popup 透传与 navbar interceptor 已对齐
+
+## 4.5.4
+feat: 适配蒸汽模式与 BEM 样式，兼容样式隔离 2.0
+
+- 多组件 uvue/vue 样式改为 BEM，减少深层选择器，适配蒸汽模式（Vapor）与 HBuilderX 样式隔离 2.0
+- 涉及 button、card、choose、select、table2、tree、coupon、dragsort、pagination、scroll-list、swiper-indicator 等组件
+- 若业务侧有自定义样式覆盖内部 class，请按 BEM 命名同步调整
+- 补充 AGEMTS 变更日志同步规则：用户可感知变更后同步写入 uview-plus-doc4 changelog
+
+## 4.5.3
+适配 HBuilderX 5.0+ 样式隔离策略 2.0 向下兼容：
+1. 开启 styleIsolationVersion=2
+2. 组件/页面 uvue 统一 styleIsolation=app-and-page，允许全局与页面 class 影响组件
+3. 修复 defineOptions 尾逗号导致 UTS 编译失败的问题
+4. Android UTS 编译校验通过
+
+## 4.5.2
+fix: 发布 uview-ultra 4.5.2，修复拖拽层级并清理 UTS mixin
+
+- 修复 up-dragsort 向上拖拽只能移动一层的问题，调整拖拽排序计算与示例页联动。
+- 清理 UTS 版本遗留 mixin 与无用 composable，移除全局 mixin 注册，组件改为显式公共 props，action-sheet 保留 button/openType 事件转发。
+- up-calendar 新增 closeable、closeIconPos、zoom 透传，pageInline 场景列表高度不再保留底部弹层占位。
+- 补充 Vue runtime parity 后续实施计划，并忽略本地生成调试产物。
+
+## 4.5.1
+fix: 修复日历组件透传弹层属性
+
+- up-calendar 主弹层透传 overlay、duration、overlayStyle、overlayOpacity、zIndex、safeAreaInsetBottom、safeAreaInsetTop、bgColor 等 up-popup 配置。
+- 支持在 pageInline 页面内嵌场景通过 safeAreaInsetBottom=false 关闭底部安全区占位。
+- 同步补齐 Vue、UVue 默认值、props 与类型声明，并对齐 uview-plus 的日历弹层透传实现。
+
+## 4.5.0
+feat: 发布 4.5.0，完成 uvue Composition API 与 Android UTS 兼容性升级
+
+本版本重点提升 uni-app x / Android 端的 uvue 组件可编译性、运行稳定性和组件示例可用性，是一次面向 v4 主线的兼容性增强版本。
+
+主要更新：
+- 大规模推进 uvue 组件 Composition API 化，统一使用 `<script setup lang="uts">`、`defineProps`、`defineEmits`、`defineExpose`、`computed`、`watch`、生命周期 hooks 等写法，降低 Options API、mixin 和 UTS 编译限制之间的冲突。
+- 补齐组件间父子通信与实例暴露能力，多个组件改为通过组合式工具维护 parentData、getProps、getRefs、setStatus、open/close、初始化和测量方法，保持既有组件 API 与示例调用方式兼容。
+- 修复 Android UTS 编译中的严格比较、空数组判断、字符串长度判断、平台条件样式等兼容性问题，减少 HBuilderX / uni-app x 编译期 warning 和潜在运行期阻塞。
+- 优化 swipe-action-item 在 Android / iOS app 端的样式条件编译，避免 `touch-action` 在 app-uvue-css 下产生非标准属性警告，同时保留 Web/小程序侧滚动手势兼容处理。
+- 修复 tabs、text 等组件在 UTS 编译场景中的比较表达式兼容问题，避免 Android class 编译阶段因类型推断差异产生 warning。
+- 同步调整大量示例页与组件页的 uvue 写法，提升 Android 调试基座中组件列表、基础组件、表单组件、数据组件和模板页的加载稳定性。
+- 保持现有 `up-*` 组件命名、属性、事件与插槽使用方式不变，升级后无需调整已有业务调用。
+
+验证结果：
+- 使用 HBuilderX 5.07 与 MuMu Android 模拟器 `emulator-5554` 完成 uni-app x Android 编译与运行验证。
+- Android 端已成功启动 `uview-plus4`，日志显示 `UTS编译完毕`、`App Launch`、`应用【uview-plus4】已启动`。
+- 已检查运行期日志，未发现项目级 `FATAL EXCEPTION`、`AndroidRuntime`、`ReferenceError`、`TypeError`、`SyntaxError`、`app-service.js` 错误。
+- 已截图检查组件首页显示，组件列表正常渲染，无白屏、崩溃页或明显布局缺失。
+
+兼容性说明：
+- 本版本聚焦 uview-ultra v4 在 uni-app x / Android UTS 下的兼容性与运行稳定性。
+- 既有 Vue3、uni-app、uni-app x 使用入口保持不变。
+- 发布包继续保持免费源码插件形式，适配平台声明不变。
+
+## 4.4.21
+fix: 修复navbar全局左侧点击拦截上下文
+
+## 4.4.20
+fix(action-sheet): 修复 description 上下间距不生效
+
+## 4.4.19
+fix: 修复日历打开卡顿与底部确定按钮不显示
+
+- 恢复 uvue 端日历确认按钮渲染
+- 避免打开/选择日期时重复全量生成月份数据
+- 缓存区间中间态颜色，降低 range 选择卡顿
+- 同步 pageInline 场景 none 过渡修复
+
+## 4.4.18
+fix: 修复日历打开卡顿与底部确定按钮不显示
+
+- 恢复 uvue 端日历确认按钮渲染
+- 避免打开/选择日期时重复全量生成月份数据
+- 缓存区间中间态颜色，降低 range 选择卡顿
+- 同步 pageInline 场景 none 过渡修复
+
+## 4.4.17
+fix: 修复日历打开卡顿与底部确定按钮不显示
+
+- 恢复 uvue 端日历确认按钮渲染
+- 避免打开/选择日期时重复全量生成月份数据
+- 缓存区间中间态颜色，降低 range 选择卡顿
+- 同步 pageInline 场景 none 过渡修复
+
+## 4.4.16
+fix: 修复日历打开卡顿与底部确定按钮不显示
+
+- 恢复 uvue 端日历确认按钮渲染
+- 避免打开/选择日期时重复全量生成月份数据
+- 缓存区间中间态颜色，降低 range 选择卡顿
+- 同步 pageInline 场景 none 过渡修复
+
+## 4.4.15
+fix(number-box): integer=false 时改用 digit 键盘，支持输入小数
+
+## 4.4.14
+fix(calendar): 修复真机 UTS 下 Number 构造导致的编译错误
+fix(lazy-load,swipe-action-item): 修复 Android UTS 编译阻塞问题
+
+## 4.4.13
+fix(calendar): 修复真机 UTS 下 Number 构造导致的编译错误
+fix(lazy-load,swipe-action-item): 修复 Android UTS 编译阻塞问题
+
+## 4.4.12
+fix(up-textarea): 修复 count 开启时 v-model 为空导致字数统计报错，vue/uvue 同步处理
+
+## 4.4.11
+chore: 给radio和checkbox组件添加选中样式名及插槽变量
+
+## 4.4.10（2026-06-11）
+fix(calendar): 修复今天按钮点击后未选中日期的问题
+
+今天按钮在跳转到今天所在月份后，会复用日历原有日期点击逻辑选中今天，并按 showConfirm 配置保持确认行为一致；同步覆盖 vue 与 uvue 实现。
+
+## 4.4.9（2026-06-08）
+feat: add UTS version of luch-request for UniApp X compatibility
+
+- 创建完整的 UTS 版本实现，支持 UniApp X 项目
+- 保持与原 JavaScript 版本完全相同的 API 接口
+- 针对 UTS 限制进行适配：
+  * 移除 arguments 对象，使用 rest 参数
+  * 移除 delete 操作符，使用对象重建
+  * 移除 prototype 操作，使用标准 class 语法
+  * 简化 clone 函数，移除 Buffer/Map/Set/RegExp 处理
+  * 移除 for...in 循环，使用 Object.keys()
+  * 移除 URLSearchParams 支持
+  * 添加完整的 TypeScript 类型注解
+
+## 4.4.8（2026-06-05）
+fix(radio,subsection): 修复 issue#850 两个类型/行为不一致问题
+
+- up-radio.vue / up-radio.uvue: 补充 label 具名插槽实现，与 .d.ts 中
+  RadioSlots['label'] 声明保持一致（原来 label 仅通过 prop 渲染，无插槽）
+- up-subsection/subsection.js: 补全 disabled/activeColorKeyName/
+  inactiveColorKeyName 默认值，修复 disabled 默认值为 undefined 的问题
+
+## 4.4.7（2026-06-04）
+feat(calendar): 日历顶部增加时分秒选择能力
+
+- 新增 enableTime、timePrecision、defaultTime 配置，支持单选与区间首尾模式在顶部点击时间区域后弹出居中 picker 进行时间编辑。
+-确认返回仍为字符串数组：单选与区间首尾模式返回日期时间字符串；区间 all 模式按约定不展示时间选择并保持原日期数组返回；同日区间增加结束时间不能早于开始时间的校验。
+
+## 4.4.6（2026-06-03）
+fix(table2): 修复微信小程序中重复 slot name="cell" 导致的报错 (#839)
+
+在固定列浮动视图（up-table-fixed-shadow）的 MP-WEIXIN 条件编译块中，
+将 <slot name="cell"> 改为直接内联渲染，消除同组件内同名 slot 的冲突。
+
+- up-table2.vue：固定列浮动区 #ifdef MP-WEIXIN 分支移除重复 slot，改为
+  直接渲染 item.row[col.key]
+- up-table2.uvue：固定列浮动区同样移除重复 slot，改为直接渲染
+  getCellText() 的结果
+
+## 4.4.5（2026-06-02）
+fix(picker): 修复异步columns加载时defaultIndex位置不更新的问题 (#841)
+
+问题：当columns从接口动态返回时（初始为空数组，延迟后赋值），
+defaultIndex已提前设置好innerIndex，columns变化时innerIndex值未改变，
+picker-view的:value绑定不触发重新渲染，导致滚动位置停留在第0项。
+
+修复：在setColumns中检测是否有列从空变为有数据，若是则先清空innerIndex，
+再在$nextTick中恢复目标值，强制picker-view重新滚动到defaultIndex指定位置。
+同步修复vue和uvue两个版本。
+
+## 4.4.4（2026-06-01）
+fix(calendar): 修复隐藏挂载场景首日偏移异常
+
+问题原因：日历在容器隐藏时初始化可能拿到宽度 0，导致首日 margin-left 计算异常。
+改动范围：
+1) month.vue：为宽度计算增加 windowWidth 兜底，并在非 APP-NVUE 使用百分比首日偏移。
+2) month.uvue：首日偏移改为百分比计算，同时保留宽度查询兜底。
+影响说明：仅调整日历首日布局偏移，不改变日期选择与事件回调逻辑。
+
+## 4.4.3（2026-05-31）
+扩展 up-datetime-picker 支持小时与秒级选择
+
+- 在 uvue 实现中新增 datehour、timesecond、datetimesecond 模式处理逻辑
+- 增加 minSecond/maxSecond 秒级边界并补齐列生成、回显与变更计算
+- 同步更新 TypeScript 类型定义，确保模式与新属性可被正确提示和约束
+
+## 4.4.2（2026-05-30）
+feat: add pageInline prop to up-popup, up-picker, up-datetime-picker
+
+When pageInline=true the picker renders inline on the page rather than
+as a floating popup — fixes scroll-to-default-value issue on Android/
+HarmonyOS (issue #941 equivalent) and enables always-visible inline
+datetime/picker use cases.
+
+## 4.4.1（2026-05-29）
+fix(avatar): 修复 uvue 头像 src 监听导致默认图覆盖问题
+
+- up-avatar.uvue: 仅在 src 为空/空白时触发 errorHandler
+- up-avatar.uvue: 移除 onMounted 中对 avatarUrl 的二次重置，避免覆盖回退结果
+
+## 4.4.0（2026-05-27）
+feat: 新增更多组件与示例页，修复多平台兼容问题
+
+新增安卓演示组件（25 个）：
+- up-popover, up-pagination, up-agreement, up-float-button
+- up-coupon, up-select, up-dragsort, up-signature, up-color-picker
+- up-cascader, up-tree, up-choose, up-virtual-list, up-pull-refresh
+- up-refresh-virtual-list, up-city-locate, up-goods-sku, up-pdf-reader
+- up-markdown, up-short-video, up-barcode, up-poster, up-cropper
+- up-lazy-load, up-qrcode
+
+新增安卓基础/兼容组件（4 个）：
+- up-canvas, up-cate-tab, up-view, up-message-input
+
+新增数据组件（2 个）：
+- up-action-sheet-data, up-picker-data
+
+恢复/补齐安卓端功能（18 处）：
+- up-cascader 多级联动、up-color-picker 调色、up-cate-tab 联动滚动
+- up-poster 二维码和渐变绘制、up-cropper 裁剪交互
+- up-signature 多语言文案、up-barcode/up-qrcode 图片导出
+- up-waterfall 列间距和自适应列数、up-loading-icon 旋转动画
+- up-code-input 光标闪烁、up-checkbox 表单校验联动
+- up-notify/up-toast 完成回调、up-index-list 对象索引项支持
+- up-upload 读取回调/确认事件/自动上传/文件选择结果返回
+- up-line-progress 安卓实现
+
+修复安卓端崩溃与异常（12 处）：
+- up-col Promise 强转 number 导致 ClassCastException
+- up-rate NullPointerException
+- up-number-box Integer 强转 String 的 ClassCastException（2 处）
+- up-pagination NPE 及 block 组件不识别
+- up-select data() 中访问 props 导致 NPE
+- up-picker 数组越界 IndexOutOfBoundsException
+- up-calendar selected 数组越界
+- up-popup 内容被遮罩层遮挡
+- up-count-down/up-datetime-picker/up-skeleton/up-subsection 数值比较
+- up-notify 顶部判断、up-popup 布尔比较
+
+修复跨平台与 UI 问题（10 处）：
+- up-cell 自定义图标 H5 不显示及安卓图片过大
+- up-calendar 默认显示 2000-01、打开卡顿（延迟初始化优化）
+- up-select 箭头跑到文字下方
+- up-slider 滑块无法显示及区间数值重叠
+- up-table2 合并单元格文字遮挡及 H5 横向滚动
+- up-barcode EAN/UPC 格式无法显示
+- up-parse 安卓富文本渲染、up-markdown 安卓渲染能力
+- up-qrcode 安卓画布绘制尺寸与显示、新增静区配置
+- navbar/messageInput/readMore/floatButton/dragsort 多个问题
+- 过渡组件方向动画
+
+补充示例与资源：
+- up-tooltip/up-title/up-copy/up-tabbar/up-index-list 演示入口
+- up-section 默认配置、组件 D 示例页滚动容器
+- swipeAction/tooltip 注册到 pages.json
+- 模板示例页、公共数据、静态资源、pdfjs 资源
+
+
+## 4.3.33（2026-05-26）
+style: 统一剩余组件示例页标题 DOM 结构并发布
+
+## 4.3.32（2026-05-19）
+feat: 日历组件新增今天快捷按钮并支持回到当月
+
+本次在 up-calendar 的 vue/uvue 实现中增加 showToday 配置与今天按钮交互，点击后可快速定位到今天所在月份，并对今天日期做独立高亮（不覆盖现有选中态）。同时补充 js/uts 多语言键 up_calendar_today 及类型声明，确保各端行为一致。
+## 4.3.31（2026-05-15）
+style: 统一组件示例页标题 DOM 结构
+
+- 将示例区块标题外层标签由 text 替换为 view 包裹结构
+- 内部文本 class 统一调整为 text，优化样式作用域与布局兼容性
+- 同步更新 alert、badge 及 code 组件的演示页面
+
+## 4.3.30（2026-05-14）
+refactor: 统一调整组件示例页标题DOM结构
+
+- 将 loadmore 与 scrollList 示例页标题外层标签由 text 替换为 view 包裹结构
+- 优化标题容器布局能力，便于后续统一样式管理与对齐处理
+
+## 4.3.29（2026-05-13）
+refactor: 统一调整组件示例页标题DOM结构
+
+- 将 radio、sticky、swipeAction 示例页中的标题元素由 `<text>` 替换为 `<view>` 包裹 `<text>` 的结构
+- 优化标题容器布局能力，便于后续统一添加样式或对齐处理
+- 保持原有文本内容与类名逻辑不变，仅调整外层容器标签
+
+## 4.3.28（2026-05-11）
+style: 统一组件示例页标题结构以优化样式布局
+
+- 将 image、line、link 及 loading-icon 示例页的标题外层标签由 text 替换为 view
+- 内部文本节点统一追加 text 类名以适配最新样式规范
+- 优化演示区块 DOM 结构，提升多端布局一致性与渲染兼容性
+
+## 4.3.27（2026-05-11）
+refactor: 迁移示例页至组合式API并新增表格演示
+
+- 将 card、form、countDown 等示例页的 Options API 迁移至 <script setup> 组合式语法
+- 统一替换 $refs 方法调用为 $callMethod 配合类型断言，适配 UTS/TS 强类型环境
+- 新增 table2 组件演示页，覆盖基础渲染、排序筛选、固定列、树形结构及单元格合并等场景
+- calendar 示例页补充单月切换模式下的单选、区间与多选日期用例
+- 调整 grid、skeleton 等页面的标题 DOM 结构，统一外层包裹 view 容器
+- 修正 card 示例页的样式类名前缀并更新部分静态资源链接
+
+## 4.3.26（2026-05-09）
+style: 调整 gap 示例页标题 DOM 结构
+
+- 使用 view 容器包裹原有 text 标题节点
+- 为内部 text 元素添加 text 类名以支持样式定制
+- 统一修改基本案例、自定义颜色、高度及边距四个模块的标题结构
+
+## 4.3.25（2026-05-08）
+chore: 更新 empty 组件演示页资源链接与图片格式
+
+- 将静态资源基础域名从旧 CDN 迁移至新域名并启用 HTTPS
+- 统一将示例图片文件后缀由 png 更改为 jpg
+- 调整演示效果标题的 DOM 结构，外层增加 view 容器包裹
+
+## 4.3.24（2026-05-07）
+style: 优化 divider 示例页标题结构
+
+- 将各示例区块的标题 text 标签改为 view 包裹 text 结构，并统一 class 为 text
+- 调整 DOM 层级以适配新样式规范，解决原有 text 标签直接作为容器可能引发的布局问题
+- 覆盖基本案例、虚线、细线、点代替文字、文本左右对齐及自定义颜色等全部演示模块
+
+## 4.3.23（2026-05-06）
+fix: 修复复选框示例数据绑定并优化标题布局结构
+
+- 将各组件示例页的标题文本统一包裹至 view 容器并添加 text 类名
+- 修正 checkbox 示例中 label 属性绑定错误，恢复为 item['name']
+- 调整 checkboxChange 方法签名，增加 name 参数并启用控制台日志
+- 统一代码缩进与换行格式，提升示例页代码可读性
+
+## 4.3.22（2026-04-30）
+feat: 新增 subsection 禁用与动态颜色及 swiper 纵向滑动支持
+
+- up-subsection 新增 disabled 属性，禁用时拦截点击事件并应用置灰样式
+- up-subsection 新增 activeColorKeyName 与 inactiveColorKeyName，支持从列表数据动态读取颜色
+- up-swiper 新增 vertical 属性，支持配置轮播图滑动方向为纵向
+- up-transition 移除根节点 touchmove 事件监听，优化页面滚动交互体验
+
+## 4.3.21（2026-04-29）
+fix: 优化数字输入框清空与失焦边界校验逻辑
+
+- 输入过程中允许临时清空，不再立即回退至最小值
+- 将边界值修正与值变更触发逻辑统一移至失焦事件处理
+- 同步修复 .vue 与 .uvue 双端组件的输入交互逻辑
+
+## 4.3.20（2026-04-28）
+fix: 修复微信小程序中交叉观察器上下文触发 Vue 告警
+
+- 将交叉观察器创建方法的上下文参数替换为 this.$scope 优先回退至 this
+- 避免在微信小程序环境下传入组件代理实例时触发 Vue 的 keys 枚举告警
+- 补充组件样式文件末尾缺失的换行符
+
+## 4.3.19（2026-04-28）
+refactor: 重构 empty 组件并增强 tabbar-item 路由同步
+
+- 将 up-empty 迁移至 `<script setup>` 语法，使用 `computed` 与 `defineProps` 重构响应式逻辑
+- up-empty 图标提示文案全面接入 `t()` 国际化函数，移除硬编码文本并修正模板样式合并方式
+- up-tabbar-item 新增基于页面路由的激活状态同步机制，支持通过 `name` 路径自动匹配高亮
+- up-tabbar-item 引入定时器轮询路由变化，并完善组件挂载与卸载时的生命周期清理逻辑
+- up-grid-item 注释废弃的 `$upGridItem` 全局事件监听代码，移除冗余逻辑
+
+## 4.3.18（2026-04-27）
+refactor: 重构评分组件逻辑并增强数值与边界处理
+
+- 统一 Vue2/Vue3 的 activeIndex 初始化与监听逻辑，移除条件编译分支
+- 新增 normalizeActiveIndex 等辅助方法，安全解析 props 并限制数值范围
+- 引入 ensureRateMetrics 校验布局尺寸，避免 rateWidth 为 NaN 导致计算异常
+- 在触摸与点击事件处理前增加边界守卫，拦截无效坐标与未初始化状态
+- 规范化 emitEvent 输出值，确保 change 事件与双向绑定数据一致性
+- 调整示例页标题 DOM 结构，优化样式兼容性
+
+## 4.3.17（2026-04-26）
+feat: 新增 up-table2 高级表格组件及路由配置
+
+- 新增 up-table2 主组件及 tableRow 递归行组件，提供 Vue 与 UVue 双版本实现
+- 内置树形数据展开、单元格合并、列排序、数据过滤、行多选及固定列等高级功能
+- 优化表头固定与横向滚动交互，支持滚动阴影提示与斑马纹/高亮行样式
+- 更新页面路由配置与示例组件菜单，新增 Table2 演示入口并移除 Form 适配中标识
+- 补充表格组件演示所需的静态图标资源
+
+## 4.3.16（2026-04-24）
+fix: 优化 datetime-picker 同步逻辑并补充多组件类型定义
+
+- 重构 up-datetime-picker 列构建逻辑，抽离 buildColumns 方法
+- 新增 columnsEqual 对比函数，避免列数据未变化时重复渲染
+- 引入 syncColumnsAfterChange 延迟更新选中索引，修复列数据变更时的索引错位问题
+- 补充 album 组件 onPreview 事件与 stop 属性类型
+- 修正 radio 组件插槽定义，区分 icon 与 label 插槽
+- 新增 subsection 组件动态颜色字段键名及 disabled 属性类型
+- 补充 swiper 组件 vertical 纵向滑动属性类型
+
+## 4.3.15（2026-04-24）
+feat: 日历组件新增单月切换模式并修复日期计算逻辑
+
+- 新增 monthSwitch 属性，支持非滚动的单月切换交互模式
+- 头部组件新增年月切换按钮及禁用状态控制，适配新交互
+- 恢复并修正 month 组件的日期宽度计算与首行偏移样式逻辑
+- 修正默认日期判空条件及选中数组克隆方式，避免数据引用污染
+
+## 4.3.14（2026-04-22）
+refactor: 下拉菜单组件重构为 Vue3 script setup 语法
+
+- 将 Options API 全面替换为 Composition API 语法结构
+- 使用 defineProps/defineEmits/ref/computed/watch 替代原有选项式写法
+- 引入 useUltraUI 组合式函数管理父子实例通信，移除 $parent 直接调用
+- 模板绑定统一改为 props.xxx 访问，并适配 $up.addUnit 工具方法
+- 增加 Vue2/Vue3 条件编译以兼容 v-model 属性与事件触发逻辑
+- 通过 defineExpose 显式暴露 init/close/setActive 等核心方法
+
+## 4.3.13（2026-04-21）
+refactor: 将 up-divider 组件重构为 setup 语法
+
+- 模板样式绑定调整为调用全局 $up.addStyle 方法
+- 脚本逻辑由 Options API 迁移至 <script setup> 组合式语法
+- 使用 defineProps 内联声明属性并对接默认配置，移除原有 mixin 依赖
+- 计算属性与事件处理函数改为直接声明，清理冗余注释
+
+## 4.3.12（2026-04-20）
+fix: 修复 NVUE 环境下折叠面板高度计算异常
+
+- 优化 APP-NVUE 条件下 getComponentRect 回调的返回值处理逻辑
+- 增加空值保护并显式将 height 设为 auto，避免布局渲染异常
+
+## 4.3.11（2026-04-20）
+feat: up-album 新增 stop 属性与 preview 事件
+
+- 新增 stop 布尔属性，支持在触发内置预览时阻止点击事件冒泡
+- 新增 preview 事件，当关闭内置预览时向外抛出图片列表与当前索引
+- 重构 onPreviewTap 方法，统一接收事件对象并拆分内置与自定义预览逻辑
+- 同步更新多端文件的默认配置、Props 定义与 Emits 声明
+
+## 4.3.10（2026-04-19）
+refactor: 迁移 count-to 至 setup 语法并增强 picker 滚动稳定性及datetime-picker快速滚动优化
+
+- 将 count-to 组件全面迁移至组合式 API，合并动画帧与计数逻辑以提升可维护性
+- 为 datetime-picker 新增安全取值与类型转换辅助函数，解决快速滚动时的越界与空值异常
+- 优化日期边界计算与正则解析逻辑，增加非法日期兜底、范围校验及 NaN 防护
+- 完善 show 状态监听与 close 交互逻辑，确保输入框模式下的面板显隐状态严格同步
+
+## 4.3.9（2026-04-17）
+refactor: 将 up-copy 与 up-count-down 迁移至 script setup 语法
+
+- 将组件逻辑从 Options API 迁移至 <script setup lang="uts"> 组合式 API
+- 使用 defineProps 与 defineEmits 替代原有配置，移除 mixin 混入依赖
+- 采用 ref 管理内部状态，配合 watch 与生命周期钩子处理副作用与清理
+- 通过 defineExpose 显式暴露倒计时控制方法，规范外部调用接口
+- 调整倒计时递归函数声明方式以兼容 app-android 平台，并统一接入默认配置
+
+## 4.3.8（2026-04-16）
+fix: 修复栅格样式合并问题并增强折叠面板类型安全
+
+- 修正 up-col 组件样式合并逻辑，移除冗余的 deepMerge 调用，确保 customStyle 正确生效
+- 为 up-collapse-item 的 accordion 属性增加空值判断，避免未定义时触发类型断言异常
+- 在 up-collapse 组件中为 expanded 状态补充 as boolean 类型断言，提升 UTS 环境下的类型安全性
+- 新增 AI 调试与验证规范文档，明确 HBuilderX CLI 编译校验流程及提交前强制验证规则
+
+## 4.3.7（2026-04-16）
+fix: 修正 checkbox 事件传参顺序并清理冗余逻辑
+
+- 移除单元格分组组件中重复定义的 border 属性
+- 调整 change 事件触发时机至 v-model 更新后，确保状态同步
+- 为 change 事件补充第二参数，返回当前操作复选框的选中状态与 name 值
+- 简化复选框组件中 disabled 与 labelDisabled 的空值判断逻辑
+- 增加 borderBottom 属性读取前的非空校验，防止潜在报错
+
+## 4.3.6（2026-04-16）
+fix: 修正 checkbox 事件传参顺序并清理冗余逻辑
+
+- 移除单元格分组组件中重复定义的 border 属性
+- 调整 change 事件触发时机至 v-model 更新后，确保状态同步
+- 为 change 事件补充第二参数，返回当前操作复选框的选中状态与 name 值
+- 简化复选框组件中 disabled 与 labelDisabled 的空值判断逻辑
+- 增加 borderBottom 属性读取前的非空校验，防止潜在报错
+
+## 4.3.5（2026-04-15）
+refactor: 提取日历公共类型并清理组件冗余代码
+
+- 将日历月份组件的日期类型抽离至独立 types.uts 文件，并重命名为 UPCalendarMonthsItemDate 实现跨组件复用
+- 同步更新日历主组件与月份组件的类型引用、函数参数标注及数组声明，修正 Number 为 number
+- 移除头像组件中冗余的 customStyle 属性定义
+- 为操作面板的 select 事件参数补充 UTSJSONObject 类型断言以通过 UTS 类型检查
+- 统一日历组件中部分模式判断与数组长度比较的运算符为 ==
+
+## 4.3.4（2026-04-15）
+refactor: 优化核心工具函数类型定义与空值处理逻辑
+
+- 优化 timeFormat 与 toast 函数参数类型，增加空值拦截逻辑避免运行时异常
+- 重构 getProperty 嵌套属性获取逻辑，补充中间节点类型校验并简化遍历流程
+- 放宽 setProperty 赋值参数类型限制以支持任意数据类型写入
+- 移除配置模块中残留的调试打印语句
+- 调整多行文本省略样式中 CSS 属性声明顺序，提升跨端渲染兼容性
+## 4.3.3（2026-04-14）
+fix: 修复 useUltraUI 中父组件属性与 refs 的键值判断逻辑
+
+- 将 propsData 与 refsData 的键值检查改为 UTSJSONObject.keys().includes()
+- 提升键存在性判断的准确性，避免直接访问可能引发的空值或类型异常
+- 确保仅当父组件明确传递对应字段时才同步数据至 parentData
+## 4.3.2（2026-04-14）
+refactor: 重写 async-validator 适配 UTS 环境
+
+- 移除旧版 JS 兼容代码与冗余校验函数，全面采用 UTS 类型系统重写核心逻辑
+- 重构 Schema 类，使用 Promise 递归调用替代原有回调与 asyncMap 机制实现串行校验
+- 新增 normalizeRuleObject 统一处理规则对象，严格适配 UPFormRuleItem 类型定义
+- 简化内置校验器实现，移除深层对象嵌套校验与复杂异步并行映射逻辑
+- 标记消息模板替换、正则模式匹配及异步验证器 Promise 处理为待完善项
+
+## 4.3.1（2026-04-14）
+fix(i18n): 修复新版本HBuilderX下多语言报错
+
+- 将 `uni_modules/uview-ultra/libs/i18n/locales` 下多语言资源从 `*.json` 调整为 `*.js`（保留原内容）
+- 新增各语言 `*.uts` 资源文件，补齐 uni-app x/UTS 侧可直接导入的本地化模块
+- 更新 `libs/i18n/index.js` 与 `libs/i18n/index.uts` 的导入路径，分别指向对应平台资源
+- 调整 `components/page-nav/page-nav.vue` 为 `script setup` 写法，保持原有展示与跳转逻辑
+
+## 4.3.0（2026-04-14）
+add(form): 新增 uni-app x 表单校验支持及 Android 兼容问题
+
+- 重构 `up-form`/`up-form-item` 为 `script setup`，统一通过 `defineExpose + $callMethod` 交互，移除对子组件 `$data` 的直接访问
+- 修复表单校验链路：规则读取、触发器过滤、字段消息回写、Promise 回调处理，避免校验结果丢失
+- 增加 `UPFormRuleItem` 类型定义并在 `types/index.uts` 导出，统一表单规则结构
+- 修复 async-validator 在 uni-app x Android 的多处兼容问题（空值强转、函数调用、first 选项判空、字段聚合 NPE）
+- 调整 `up-form-item` 默认 `rules` 结构与取值逻辑，保证规则在 UTS 下可稳定识别
+- 重新启用 `pages/componentsC/form/form` 页面路由并同步相关配置格式
+
+## 4.2.60（2026-03-08）
+refactor: 【组合式API重构】 up-gap组件（uni-app-x）
+
+## 4.2.59（2026-03-07）
+refactor: 【组合式API重构】 优化up-loading-icon、up-index-anchor等（uni-app-x）
+
+## 4.2.58（2026-03-07）
+refactor: 【组合式API重构】 优化up-td、up-row等（uni-app-x）
+
+## 4.2.57（2026-03-06）
+refactor: 【组合式API重构】 优化up-waterfall（uni-app-x）
+
+## 4.2.56（2026-03-05）
+refactor: 【组合式API重构】 优化getParent（uni-app-x）
+
+## 4.2.55（2026-03-05）
+refactor: 【组合式API重构】 优化colorGradent支持常用名称颜色（uni-app-x）
+
+## 4.2.54（2026-03-04）
+refactor: 【组合式API重构】 优化index.uts（uni-app-x）
+
+## 4.2.53（2026-03-02）
+refactor: 【组合式API重构】 up-column-notice组件（uni-app-x）
+
+## 4.2.52（2026-02-27）
+refactor: 【组合式API重构】 up-car-keyboard组件（uni-app-x）
+
+## 4.2.51（2026-02-26）
+refactor: 【组合式API重构】 up-button组件（uni-app-x）
+
+## 4.2.50（2026-02-26）
+refactor: 【组合式API重构】 up-icon组件（uni-app-x）
+
+## 4.2.49（2026-02-25）
+refactor: 【组合式API重构】 up-image组件（uni-app-x）
+
+## 4.2.48（2026-02-23）
+refactor: 【组合式API重构】 up-input输入框组件（uni-app-x）
+
+## 4.2.47（2026-02-14）
+refactor: 【组合式API重构】 up-grid宫格组件（uni-app-x）
+
+## 4.2.46（2026-02-13）
+refactor: 【组合式API重构】 up-index-list索引列表组件（uni-app-x）
+
+## 4.2.45（2026-02-12）
+refactor: 【组合式API重构】 修复up-row-notice组件在app-android箭头函数导致递归报错（uni-app-x）
+
+## 4.2.44（2026-02-12）
+refactor: 【组合式API重构】 up-datetime-picker组件（uni-app-x）
+
+## 4.2.43（2026-02-09）
+refactor: 【组合式API重构】 up-row-notice组件（uni-app-x）
+
+## 4.2.42（2026-02-07）
+refactor: 【组合式API重构】 up-collapse组件（uni-app-x）
+
+## 4.2.41（2026-02-07）
+refactor: 【组合式API重构】 优化up-action-sheet组件（uni-app-x）
+
+## 4.2.40（2026-02-06）
+refactor: 【组合式API重构】 修复up-cell组件（uni-app-x）
+
+## 4.2.39（2026-02-06）
+improvment: 优化mixin等
+
+## 4.2.38（2026-02-05）
+refactor: 【组合式API重构】 支持template中使用$u.addUnit $u.addStyle $u.timeFormat（uni-app-x）
+
+## 4.2.37（2026-02-05）
+refactor: 【组合式API重构】 新增up-title组件（uni-app-x）
+
+## 4.2.36（2026-02-05）
+refactor: 【组合式API重构】 up-card组件（uni-app-x）
+
+## 4.2.35（2026-02-04）
+refactor: 【组合式API重构】 up-cell组件（uni-app-x）
+
+## 4.2.34（2026-02-03）
+refactor: 【组合式API重构】 up-cell-group组件（uni-app-x）
+
+## 4.2.33（2026-02-03）
+refactor: 【组合式API重构】 up-box组件（uni-app-x）
+
+## 4.2.32（2026-02-02）
+refactor: 【组合式API重构】 优化up-avatar组件（uni-app-x）
+
+## 4.2.31（2026-02-02）
+refactor: 【组合式API重构】 优化up-col组件（uni-app-x）
+
+## 4.2.30（2026-02-02）
+refactor: 【组合式API重构】 修复up-number-box组件（uni-app-x）
+
+## 4.2.29（2026-01-31）
+refactor: 【组合式API重构】 修复up-col组件（uni-app-x）
+
+## 4.2.28（2026-01-31）
+refactor: 【组合式API重构】 steps示例优化warning（uni-app-x）
+
+## 4.2.27（2026-01-30）
+refactor: 【组合式API重构】 subsection示例优化warning（uni-app-x）
+
+## 4.2.26（2026-01-30）
+refactor: 【组合式API重构】 swiper示例优化warning（uni-app-x）
+
+## 4.2.25（2026-01-30）
+refactor: 【组合式API重构】 tabs示例优化warning（uni-app-x）
+
+## 4.2.24（2026-01-29）
+refactor: 【组合式API重构】 text示例优化warning（uni-app-x）
+
+## 4.2.23（2026-01-29）
+refactor: 【组合式API重构】 textarea示例优化warning（uni-app-x）
+
+## 4.2.22（2026-01-29）
+refactor: 【组合式API重构】 tooltip示例优化warning（uni-app-x）
+
+## 4.2.21（2026-01-28）
+refactor: 【组合式API重构】 up-count-downr优化（uni-app-x）
+
+## 4.2.20（2026-01-28）
+refactor: 【组合式API重构】 up- picker优化（uni-app-x）
+
+## 4.2.19（2026-01-28）
+refactor: 【组合式API重构】 up-item-steps优化（uni-app-x）
+
+## 4.2.18（2026-01-28）
+refactor: 【组合式API重构】 up-subsection优化（uni-app-x）
+
+## 4.2.17（2026-01-28）
+refactor: 【组合式API重构】 up-textarea优化（uni-app-x）
+
+## 4.2.16（2026-01-28）
+refactor: 【组合式API重构】 up-checkbox-group组件与up-collapse-item优化（uni-app-x）
+
+## 4.2.15（2026-01-27）
+fix: 修复refactor: 【组合式API重构】 up-badge组件（uni-app-x）
+
+## 4.2.14（2026-01-27）
+fix: 修复refactor: 【组合式API重构】 up-badge组件（uni-app-x）
+
+## 4.2.13（2026-01-27）
+fix: 修复refactor: 【组合式API重构】 up-code-input组件（uni-app-x）
+
+## 4.2.12（2026-01-27）
+fix: 修复refactor: 【组合式API重构】 up-col组件（uni-app-x）
+
+## 4.2.11（2026-01-27）
+fix: 修复refactor: 【组合式API重构】 up-row组件（uni-app-x）
+
+## 4.2.10（2026-01-27）
+refactor: 【组合式API重构】 up-upload组件优化（uni-app-x）
+
+## 4.2.9（2026-01-27）
+refactor: 【组合式API重构】 up-checkbox组件优化（uni-app-x）
+
+## 4.2.8（2026-01-26）
+refactor: 【组合式API重构】 up-table组件（uni-app-x）
+
+## 4.2.7（2026-01-26）
+refactor: 【组合式API重构】 up-td组件（uni-app-x）
+
+## 4.2.6（2026-01-26）
+refactor: 【组合式API重构】 up-th组件（uni-app-x）
+
+## 4.2.5（2026-01-26）
+refactor: 【组合式API重构】 up-tr组件（uni-app-x）
+
+## 4.2.4（2026-01-26）
+refactor: 【组合式API重构】 优化完善组件父子关系管理组合式函数（uni-app-x）
+
+## 4.2.3（2026-01-25）
+refactor: 【组合式API重构】 修复addUnit错误返回auto导致样式异常（uni-app-x）
+
+## 4.2.2（2026-01-24）
+refactor: 【组合式API重构】 up-code组件（uni-app-x）
+
+## 4.2.1（2026-01-24）
+fix: 修复upload类型报错
+
+## 4.2.0（2026-01-24）
+fix: 处理H5端编译大量warning
+
+change: LICENSE协议变更
+
+## 4.1.29（2026-01-24）
+refactor: 【组合式API重构】 父子组件架构支持组合式函数hooks方式（uni-app-x）
+
+refactor: 【组合式API重构】 up-checkbox组件（uni-app-x）
+
+refactor: 【组合式API重构】 up-checkbox-group组件（uni-app-x）
+
+## 4.1.28（2026-01-23）
+refactor: 【组合式API重构】 back-top组件（uni-app-x）
+
+## 4.1.27（2026-01-23）
+fix: 修复index.uts
+
+## 4.1.26（2026-01-23）
+fix: 修复input组件warning
+
+## 4.1.25（2026-01-23）
+fix: 优化up-tabbar组件change事件（uni-app-x）
+
+## 4.1.24（2026-01-23）
+fix: 修复throttle方法及up-button点击事件不触发问题（uni-app-x）
+
+## 4.1.23（2026-01-23）
+fix: up-picker组件warning处理
+
+## 4.1.22（2026-01-22）
+fix: code-input组件warning处理
+
+## 4.1.21（2026-01-22）
+refactor: 【组合式API重构】 avatar-group组件（uni-app-x）
+
+## 4.1.20（2026-01-22）
+refactor: 【组合式API重构】avatar组件（uni-app-x）
+
+## 4.1.19（2026-01-22）
+fix: 完善up-code组件
+
+## 4.1.18（2026-01-21）
+improvment: 优化inedx.uts导出
+
+## 4.1.17（2026-01-21）
+refactor: 【组合式API重构】 up-alert组件（uni-app-x）
+
+## 4.1.16（2026-01-21）
+fix: 修复checkbox组件warning
+
+## 4.1.15（2026-01-21）
+fix: 修复action-sheet组件warning
+
+## 4.1.14（2026-01-21）
+fix: 修复calendar组件warning
+
+## 4.1.13（2026-01-21）
+fix: 修复datetimepicker组件warning
+
+## 4.1.12（2026-01-21）
+fix: 修复picker组件warning
+
+## 4.1.11（2026-01-20）
+fix: 修复scroll-list组件warning
+
+## 4.1.10（2026-01-20）
+fix: 修复avatar组件warning
+
+## 4.1.9（2026-01-20）
+add: 在template中无法使用addStyle所以新增内置$upAddStyle支持
+
+## 4.1.8（2026-01-20）
+add: 在template中无法使用addUnit所以新增内置$upAddUnit支持
+
+## 4.1.7（2026-01-20）
+fix: 修复完善up-collapse-item子组件
+
+## 4.1.6（2026-01-20）
+refactor: 【组合式API重构】 常用方法优化（uni-app-x）
+
+## 4.1.5（2026-01-20）
+fix: 修复up-count-to组件语法（uni-app-x）
+
+## 4.1.4（2026-01-20）
+fix: 修复touch.uts语法（uni-app-x）
+
+## 4.1.3（2026-01-19）
+refactor: 【组合式API重构】album组件和action-sheet组件（uni-app-x）
+
+## 4.1.2（2026-01-19）
+refactor: 【组合式API重构】album组件（uni-app-x）
+
+## 4.1.1（2026-01-19）
+refactor: 组合式API重构之全局mixin转为组合式API（uni-app-x）
+
+## 4.1.0（2026-01-19）
+refactor: 【组合式API重构】action-sheet组件（uni-app-x）
+
+## 4.0.146（2026-01-17）
+fix: 修复radio组件props类型转换
+
+## 4.0.145（2026-01-16）
+fix: 修复radio组件props报warning
+
+## 4.0.144（2026-01-16）
+fix: 修复count-to组件props报warning
+
+## 4.0.143（2026-01-16）
+​fix: 修复grid-item报wanning Object is possibly 'null'​
+
+## 4.0.142（2026-01-15）
+fix: 修复bem方法冗余语句
+
+## 4.0.141（2026-01-15）
+fix: 修复radio组件使用size参数warning
+
+## 4.0.140（2026-01-15）
+fix: 修复throttle方法Function类型
+
+## 4.0.139（2026-01-15）
+fix: 修复throttle方法Function类型
+
+## 4.0.138（2026-01-15）
+fix: warning: Identity equality for arguments of types 'Number' and 'Int' can be unstable because of implicit boxing
+
+## 4.0.137（2026-01-15）
+fix: 修复button和avatar-group语法
+
+## 4.0.136（2026-01-15）
+fix: 修复button组件warning: Type 'String' is not assignable to type 'string'
+
+## 4.0.135（2026-01-15）
+fix: 修复badge组件value参数warning
+
+## 4.0.134（2026-01-15）
+fix: 修复avatar-group组件warning
+
+## 4.0.133（2026-01-15）
+fix: 修复parse组件props缺少)（uni-app）
+
+## 4.0.132（2026-01-15）
+improvment: upGetRect方法从mixin迁移至function为组合式API适配（uni-app-x）
+
+## 4.0.131（2026-01-15）
+improvment: bem方法迁移至function工具中（uni-app-x）
+
+## 4.0.130（2026-01-14）
+fix：恢复code组件props类型
+
+## 4.0.129（2026-01-14）
+fix: 优化digit工具方法（uni-app-x)
+
+## 4.0.128（2026-01-14）
+fix: 修复tabs组建warning
+
+## 4.0.127（2026-01-13）
+fix: 修复list组件在支付宝小程序下scrolltolower无法触发（uni-app、uni-app-x） #422
+
+## 4.0.126（2026-01-13）
+fix: 修复throttle
+
+## 4.0.125（2026-01-13）
+fix: 修复upload组件类型转换问题
+
+## 4.0.124（2026-01-13）
+fix: 修复icon组件报错
+
+## 4.0.123（2026-01-13）
+fix: 修复icon组件warning
+
+## 4.0.122（2026-01-12）
+fix: 修复swiper-action组件warning
+
+## 4.0.121（2026-01-12）
+fix: 修复sticky组件warning
+
+## 4.0.120（2026-01-12）
+fix: 修复mixin语法问题（uin-app-x）
+
+## 4.0.119（2026-01-10）
+improvment: dropdown组建warning修复
+
+## 4.0.118（2026-01-10）
+improvment: 内置dayjs防止未安装依赖（uni-app）
+
+## 4.0.117（2026-01-09）
+fix: 修复tabs组件props使用相关warning
+
+## 4.0.116（2026-01-09）
+fix: 修复loading-icon组件toString使用warning
+
+## 4.0.115（2026-01-09）
+improvment: 优化getParent方法warning
+
+## 4.0.114（2026-01-09）
+improvment: 修复tag组件warning(uni-app-x)
+
+## 4.0.113（2026-01-08）
+fix: 修复code-input组件animation样式warning
+
+## 4.0.112（2026-01-08）
+fix:  修复count-down数值对比warning
+
+## 4.0.111（2026-01-08）
+fix: 修复loading-icon样式warning
+
+## 4.0.110（2026-01-08）
+fix: 修复qrcode组件在App不显示logo(uni-app)
+
+improvment: qrcode逻辑优化封装(uni-app)
+
+fix: nvue下采用webview支持二维码显示logo(因为gcanvas不支持图片渲染)(uni-app)
+
+## 4.0.109（2026-01-08）
+improvment: 使用官方已经支持的uni.setClipboardData代替三方插件
+
+## 4.0.108（2026-01-07）
+fix: 优化多个组件props增强鸿蒙兼容性
+
+## 4.0.107（2026-01-07）
+fix: 修复count-to组件warning
+
+## 4.0.106（2026-01-07）
+fix: 修复upload组件warning
+
+## 4.0.105（2026-01-07）
+fix: 临时去除qrcode引起报错
+
+## 4.0.104（2026-01-07）
+fix: 修复fles.scss样式兼容性warning
+
+## 4.0.103（2026-01-06）
+fix: 修复--uni-safe-area-inset缺少var
+
+## 4.0.102（2026-01-06）
+fix: 修复i18n的warning
+
+## 4.0.101（2026-01-06）
+fix: property value `inherit` is not supported for `line-height`
+
+## 4.0.100（2026-01-06）
+fix: 修复loading-icon组件颜色样式默认值
+
+## 4.0.99（2026-01-06）
+fix: 修复number-box样式warning
+
+## 4.0.98（2026-01-05）
+fix: 修复loading-page样式warning
+
+## 4.0.97（2026-01-05）
+fix: uni-app-x下安全区域使用--uni-safe-area-inset
+
+## 4.0.96（2026-01-05）
+fix: 修复digit工具方法
+
+## 4.0.95（2026-01-05）
+fix: 修复icon组件部分warning
+
+## 4.0.94（2026-01-04）
+improvment: 修复transition组件warning
+
+## 4.0.93（2026-01-04）
+improvment: 修复tabs组件css警告
+
+## 4.0.92（2026-01-04）
+fix: 修复演示首页图标不显示
+
+fix: list-item等组件报错
+
+## 4.0.91（2026-01-04）
+更新Readme
+
+## 4.0.90（2026-01-03）
+fix: 修复box组件示例sass变量前缀
+
+## 4.0.89（2025-12-31）
+improvment: number-box等组件warning处理
+
+## 4.0.8（2025-12-30）
+fix: 修复 transition组件适配后warning
+
+## 4.0.7（2025-12-29）
+fix: 修复list-item组件warning
+
+## 4.0.6（2025-12-29）
+fix: transition动画warning修复
+
+## 4.0.5（2025-12-29）
+fix:  修复Readme标签内容
+
+## 4.0.4（2025-12-29）
+fix: colorGradient方法适配uts
+
+## 4.0.3（2025-12-27）
+fix: 增加uni_modules插件依赖
+
+## 4.0.2（2025-12-26）
+LICENSE更新
+
+## 4.0.1（2025-12-26）
+fix: 修复文档网址
+
+## 4.0.0（2025-12-26）
+初步发布uni-app-x版本

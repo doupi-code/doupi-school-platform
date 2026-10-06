@@ -1,0 +1,36 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="card tab-card-wrap">
+      <view class="tab-row">
+        <view
+          class="tab-chip {{activeTab === item.key ? 'active' : ''}}"
+          wx:for="{{configTabs}}"
+          wx:key="key"
+          data-key="{{item.key}}"
+          bindtap="switchTab"
+        >
+          <t-icon name="{{item.icon}}" size="28rpx" color="{{activeTab === item.key ? '#3088F4' : '#666'}}"></t-icon>
+          <text class="tab-chip-text">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="editor-toolbar">
+        <view class="toolbar-btn" data-type="bold" bindtap="formatRichText">加粗</view>
+        <view class="toolbar-btn" data-type="italic" bindtap="formatRichText">斜体</view>
+        <view class="toolbar-btn" data-type="underline" bindtap="formatRichText">下划线</view>
+        <view class="toolbar-btn" data-type="list" bindtap="formatRichText">列表</view>
+      </view>
+      <editor wx:if="{{activeTab === 'appointmentNotice'}}" id="editor-appointmentNotice" class="editor" placeholder="请输入预约须知" data-key="appointmentNotice" bindready="onEditorReady" bindinput="onEditorInput"></editor>
+      <editor wx:if="{{activeTab === 'privacyPolicy'}}" id="editor-privacyPolicy" class="editor" placeholder="请输入隐私政策" data-key="privacyPolicy" bindready="onEditorReady" bindinput="onEditorInput"></editor>
+      <editor wx:if="{{activeTab === 'userAgreement'}}" id="editor-userAgreement" class="editor" placeholder="请输入用户协议" data-key="userAgreement" bindready="onEditorReady" bindinput="onEditorInput"></editor>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <view class="bottom-area">
+    <button class="save-btn {{saving ? 'disabled' : ''}}" bindtap="saveConfig" disabled="{{saving}}">{{saving ? '保存中...' : '保存配置'}}</button>
+  </view>
+</view>

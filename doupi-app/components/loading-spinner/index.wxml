@@ -1,0 +1,32 @@
+<view class="loading-spinner {{fullscreen ? 'loading-spinner--fullscreen' : ''}} {{transparent ? 'loading-spinner--transparent' : ''}}">
+  <!-- 旋转加载 -->
+  <view wx:if="{{type === 'spinner'}}" class="loading-spinner__container">
+    <view
+      class="loading-spinner__spinner loading-spinner__spinner--{{size}}"
+      style="border-top-color: {{color || '#3088F4'}}; border-right-color: {{color || '#3088F4'}};"
+    ></view>
+    <text wx:if="{{text}}" class="loading-spinner__text">{{text}}</text>
+  </view>
+
+  <!-- 点状加载 -->
+  <view wx:elif="{{type === 'dots'}}" class="loading-spinner__container">
+    <view class="loading-spinner__dots">
+      <view
+        class="loading-spinner__dot"
+        wx:for="{{3}}"
+        wx:key="index"
+        style="background-color: {{color || '#3088F4'}}; animation-delay: {{index * 0.16}}s;"
+      ></view>
+    </view>
+    <text wx:if="{{text}}" class="loading-spinner__text">{{text}}</text>
+  </view>
+
+  <!-- 骨架屏 -->
+  <view wx:elif="{{type === 'skeleton'}}" class="loading-spinner__skeleton">
+    <view class="loading-spinner__skeleton-line loading-spinner__skeleton-line--title"></view>
+    <view class="loading-spinner__skeleton-line"></view>
+    <view class="loading-spinner__skeleton-line loading-spinner__skeleton-line--short"></view>
+    <view class="loading-spinner__skeleton-line"></view>
+    <view class="loading-spinner__skeleton-line loading-spinner__skeleton-line--medium"></view>
+  </view>
+</view>

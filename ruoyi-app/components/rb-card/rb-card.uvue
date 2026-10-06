@@ -1,0 +1,60 @@
+<template>
+  <view class="rb-card">
+    <view class="rb-card-header" v-if="title != '' || extra != ''">
+      <text class="title">{{ title }}</text>
+      <text class="extra">{{ extra }}</text>
+    </view>
+    <view class="rb-card-body">
+      <slot></slot>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'rb-card',
+  props: {
+    title: {
+      type: String,
+      default: ''
+    },
+    extra: {
+      type: String,
+      default: ''
+    }
+  }
+}
+</script>
+
+<style>
+.rb-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
+}
+.rb-card-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #f2f3f5;
+  margin-bottom: 12px;
+}
+.title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1d2129;
+}
+.extra {
+  font-size: 12px;
+  color: #86909c;
+}
+.rb-card-body {
+  flex-direction: column;
+}
+</style>

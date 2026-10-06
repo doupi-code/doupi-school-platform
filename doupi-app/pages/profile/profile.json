@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "我的",
+  "usingComponents": {
+    "status-tag": "/components/status-tag/index",
+    "profile-edit-modal": "/components/profile-edit-modal/index",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-dialog": "tdesign-miniprogram/dialog/dialog"
+  }
+}

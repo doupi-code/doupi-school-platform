@@ -1,0 +1,115 @@
+<template>
+  <view :class="['ui-card', shadow ? 'ui-card--shadow' : '']">
+    <!-- 卡片头部 (可选) -->
+    <view v-if="title != '' || extra != ''" class="ui-card__header">
+      <view class="ui-card__title-box">
+        <image v-if="icon != ''" class="ui-card__icon" :src="icon" mode="aspectFit"></image>
+        <text class="ui-card__title">{{ title }}</text>
+      </view>
+      <text v-if="extra != ''" class="ui-card__extra" @click="handleExtraClick">{{ extra }}</text>
+    </view>
+
+    <!-- 卡片内容体 -->
+    <view class="ui-card__body">
+      <slot></slot>
+    </view>
+
+    <!-- 卡片底部 (可选) -->
+    <view v-if="$slots['footer'] != null" class="ui-card__footer">
+      <slot name="footer"></slot>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiCard',
+  props: {
+    title: {
+      type: String,
+      default: ''
+    },
+    extra: {
+      type: String,
+      default: ''
+    },
+    icon: {
+      type: String,
+      default: ''
+    },
+    shadow: {
+      type: Boolean,
+      default: true
+    }
+  },
+  emits: ['extraClick'],
+  methods: {
+    handleExtraClick(event: any) {
+      this.$emit('extraClick', event)
+    }
+  }
+}
+</script>
+
+<style>
+.ui-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  flex-direction: column;
+}
+
+.ui-card--shadow {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.ui-card__header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F2F3F5;
+  margin-bottom: 12px;
+}
+
+.ui-card__title-box {
+  flex-direction: row;
+  align-items: center;
+}
+
+.ui-card__icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+.ui-card__title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.ui-card__extra {
+  font-size: 13px;
+  color: #165DFF;
+  font-weight: 500;
+}
+
+.ui-card__body {
+  flex-direction: column;
+}
+
+.ui-card__footer {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #F2F3F5;
+  padding-top: 12px;
+  margin-top: 12px;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+}
+</style>

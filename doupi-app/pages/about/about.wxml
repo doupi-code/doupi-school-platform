@@ -1,0 +1,45 @@
+<view class="about-page">
+  <scroll-view scroll-y class="content" enhanced>
+    <view class="card">
+      <text class="card-title">学校简介</text>
+      <image class="intro-image" src="{{campusImage}}" mode="aspectFill"></image>
+      <text class="card-text">{{intro}}</text>
+    </view>
+
+    <view class="card">
+      <text class="card-title">联系方式</text>
+      <view class="contact-item" bindtap="makeCall">
+        <view class="contact-icon blue"><image class="contact-icon-image" src="/images/icons/about-phone.svg" mode="aspectFit" /></view>
+        <view class="contact-main">
+          <text class="contact-label">招生热线</text>
+          <text class="contact-value">{{contactPhone}}</text>
+        </view>
+      </view>
+      <view class="contact-item">
+        <view class="contact-icon orange"><image class="contact-icon-image" src="/images/icons/about-mail.svg" mode="aspectFit" /></view>
+        <view class="contact-main">
+          <text class="contact-label">电子邮箱</text>
+          <text class="contact-value">{{contactEmail}}</text>
+        </view>
+      </view>
+      <view class="contact-item">
+        <view class="contact-icon green"><image class="contact-icon-image" src="/images/icons/about-location.svg" mode="aspectFit" /></view>
+        <view class="contact-main">
+          <text class="contact-label">学校地址</text>
+          <text class="contact-value">{{address}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">办公时间</text>
+      <block wx:for="{{officeHours}}" wx:key="label">
+        <view class="time-item">
+          <text>{{item.label}}</text>
+          <text class="{{item.value === '休息' ? 'rest' : ''}}">{{item.value}}</text>
+        </view>
+        <view class="time-divider" wx:if="{{index < officeHours.length - 1}}"></view>
+      </block>
+    </view>
+  </scroll-view>
+</view>

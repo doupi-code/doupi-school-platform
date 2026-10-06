@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "老师排行",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

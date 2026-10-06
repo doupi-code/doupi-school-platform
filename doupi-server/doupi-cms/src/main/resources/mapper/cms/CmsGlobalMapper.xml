@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsGlobalMapper">
+    
+    <resultMap type="com.doupi.cms.domain.CmsGlobal" id="CmsGlobalResult">
+        <id     property="id"            column="id"             />
+        <result property="category"      column="category"       />
+        <result property="configContent" column="config_content" />
+        <result property="remark"        column="remark"         />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectGlobalVo">
+        select id, category, config_content, remark, create_time, update_time
+        from doupi_cms_global
+    </sql>
+
+    <select id="selectGlobalByCategory" parameterType="String" resultMap="CmsGlobalResult">
+        <include refid="selectGlobalVo"/>
+        where category = #{category}
+        limit 1
+    </select>
+
+    <select id="selectAllGlobals" resultMap="CmsGlobalResult">
+        <include refid="selectGlobalVo"/>
+    </select>
+
+    <insert id="upsertGlobal" parameterType="com.doupi.cms.domain.CmsGlobal" useGeneratedKeys="true" keyProperty="id">
+        insert into doupi_cms_global (category, config_content, remark, update_time)
+        values (#{category}, #{configContent}, #{remark}, sysdate())
+        on duplicate key update 
+            config_content = values(config_content),
+            remark = values(remark),
+            update_time = sysdate()
+    </insert>
+
+</mapper>

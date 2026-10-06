@@ -1,0 +1,16 @@
+.page { height: 100vh; background: #F5F6F8; position: relative; }
+.content { height: 100vh; padding: 20rpx 24rpx calc(110rpx + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.card { background: #fff; border-radius: 20rpx; padding: 20rpx; margin-bottom: 20rpx; }
+.tab-card-wrap { padding: 14rpx; }
+.tab-row { display: flex; gap: 14rpx; }
+.tab-chip { flex: 1; height: 72rpx; border-radius: 16rpx; background: #F8F9FA; display: flex; align-items: center; justify-content: center; gap: 10rpx; border: 2rpx solid transparent; }
+.tab-chip.active { background: #E8F2FE; border-color: rgba(48, 136, 244, 0.35); }
+.tab-chip-text { font-size: 26rpx; color: #666; font-weight: 600; }
+.tab-chip.active .tab-chip-text { color: #3088F4; }
+.editor-toolbar { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 16rpx; }
+.toolbar-btn { padding: 8rpx 14rpx; background: #F5F6F8; border-radius: 8rpx; font-size: 24rpx; color: #666; }
+.editor { min-height: 760rpx; border: 1rpx solid #E6E8EB; border-radius: 12rpx; padding: 16rpx; background: #fff; }
+.bottom-spacer { height: 0; }
+.bottom-area { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; padding: 10rpx 16rpx calc(10rpx + env(safe-area-inset-bottom)); box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05); z-index: 90; }
+.save-btn { width: 100%; height: 72rpx; line-height: 72rpx; border: none; border-radius: 36rpx; background: #3088F4; color: #fff; font-size: 28rpx; }
+.save-btn.disabled { background: #B3CDE8; }

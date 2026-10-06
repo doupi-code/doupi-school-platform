@@ -1,0 +1,34 @@
+import { request } from '@/utils/request'
+
+/**
+ * 查询后勤物资库存列表
+ */
+export function listStockGoods(query: any): Promise<any> {
+  return request({
+    url: '/stock/goods/list',
+    method: 'GET',
+    data: query
+  })
+}
+
+/**
+ * 查询出库单/领料申请列表
+ */
+export function listStockOut(query: any): Promise<any> {
+  return request({
+    url: '/stock/out/list',
+    method: 'GET',
+    data: query
+  })
+}
+
+/**
+ * 提交出库领料申请
+ */
+export function addStockOut(data: any): Promise<any> {
+  return request({
+    url: '/stock/out',
+    method: 'POST',
+    data: data
+  })
+}

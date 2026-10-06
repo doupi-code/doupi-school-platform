@@ -1,0 +1,124 @@
+<view class="appointment-page">
+  <t-loading wx:if="{{pageLoading}}" theme="circular" size="50rpx" text="加载中..." />
+
+  <scroll-view wx:else class="appointment-scroll" scroll-y="{{true}}">
+    <view class="form-section">
+      <view class="section-title">学生信息</view>
+      <view class="field-wrap">
+        <view class="field-label">学生姓名<text class="required">*</text></view>
+        <t-input value="{{formData.studentName}}" placeholder="请输入学生姓名" data-field="studentName" bind:change="handleInputChange" bind:blur="handleInputBlur" />
+        <view wx:if="{{errors.studentName}}" class="error-text">{{errors.studentName}}</view>
+      </view>
+      <view class="field-wrap">
+        <view class="field-label">身份证号<text class="required">*</text></view>
+        <t-input value="{{formData.idCard}}" placeholder="请输入身份证号" data-field="idCard" maxlength="18" bind:change="handleInputChange" bind:blur="handleInputBlur" />
+        <view wx:if="{{errors.idCard}}" class="error-text">{{errors.idCard}}</view>
+      </view>
+      <view class="field-wrap">
+        <view class="field-label">目前就读学校</view>
+        <t-input value="{{formData.currentSchool}}" placeholder="请输入目前就读学校（选填）" data-field="currentSchool" bind:change="handleInputChange" />
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">家长信息</view>
+      <view class="field-wrap">
+        <view class="field-label">家长姓名<text class="required">*</text></view>
+        <t-input value="{{formData.parentName}}" placeholder="请输入家长姓名" data-field="parentName" bind:change="handleInputChange" bind:blur="handleInputBlur" />
+        <view wx:if="{{errors.parentName}}" class="error-text">{{errors.parentName}}</view>
+      </view>
+      <view class="field-wrap">
+        <view class="field-label">联系电话<text class="required">*</text></view>
+        <t-input value="{{formData.parentPhone}}" maxlength="11" placeholder="请输入手机号" data-field="parentPhone" bind:change="handleInputChange" bind:blur="handleInputBlur" />
+        <view wx:if="{{errors.parentPhone}}" class="error-text">{{errors.parentPhone}}</view>
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">预约信息</view>
+      <view class="field-wrap">
+        <view class="field-label">预约日期<text class="required">*</text></view>
+        <view class="picker-trigger {{formData.visitDate ? '' : 'picker-placeholder'}}" bindtap="openDatePicker">
+          <text>{{visitDateLabel || formData.visitDate || '请选择日期'}}</text>
+        </view>
+        <view wx:if="{{errors.visitDate}}" class="error-text">{{errors.visitDate}}</view>
+      </view>
+      <view class="field-wrap">
+        <view class="field-label">预约时段<text class="required">*</text></view>
+        <view class="picker-trigger {{formData.visitTime ? '' : 'picker-placeholder'}}" bindtap="openTimePicker">
+          <text>{{formData.visitTime || '请选择时段'}}</text>
+        </view>
+        <view wx:if="{{errors.visitTime}}" class="error-text">{{errors.visitTime}}</view>
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">其他信息</view>
+      <view class="field-wrap">
+        <view class="field-label">备注</view>
+        <textarea
+          class="remark-box"
+          value="{{formData.remark}}"
+          placeholder="请输入备注信息（选填）"
+          data-field="remark"
+          maxlength="200"
+          auto-height
+          bindinput="handleInputChange"
+        ></textarea>
+      </view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-row" bindtap="toggleAgreement">
+        <t-checkbox
+          checked="{{formData.agreed}}"
+          icon="circle"
+          t-class-icon="agreement-checkbox-icon"
+          catchtap="onCheckboxTap"
+          bind:change="handleAgreedChange"
+        />
+        <view class="agreement-text">
+          我已阅读并同意
+          <text class="link {{agreementRead.privacy ? 'link-read' : ''}}" catchtap="goToPrivacy">《隐私政策》</text>
+          和
+          <text class="link {{agreementRead.notice ? 'link-read' : ''}}" catchtap="goToBookingNotice">《预约须知》</text>
+        </view>
+      </view>
+      <view wx:if="{{errors.agreed}}" class="error-text">{{errors.agreed}}</view>
+    </view>
+    <t-button class="submit-btn" block theme="primary" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">{{submitting ? '提交中...' : '提交预约'}}</t-button>
+    <view class="submit-bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- 时段选择器（TDesign 正确用法：t-picker + t-picker-item） -->
+  <t-calendar
+    usePopup
+    visible="{{showDatePicker}}"
+    type="single"
+    value="{{dateCalendarValue}}"
+    minDate="{{minDateTs}}"
+    maxDate="{{maxDateTs}}"
+    title="选择日期"
+    bind:confirm="handleDateConfirm"
+    bind:close="closeDatePicker"
+  />
+
+  <!-- 时段选择器（TDesign 正确用法：t-picker + t-picker-item） -->
+  <t-picker
+    visible="{{showTimePicker}}"
+    title="选择时段"
+    value="{{timeIndex}}"
+    bind:confirm="handleTimeConfirm"
+    bind:cancel="closeTimePicker"
+    bind:close="closeTimePicker"
+  >
+    <t-picker-item options="{{timeOptions}}" />
+  </t-picker>
+
+  <t-dialog visible="{{showSuccess}}" title="预约成功" confirmBtn="确定" bind:confirm="handleComplete">
+    <view slot="content" class="success-card">
+      <view class="success-title">预约已提交</view>
+      <view class="success-info">预约编号：{{appointmentNumber}}</view>
+    </view>
+  </t-dialog>
+</view>

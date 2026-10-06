@@ -1,0 +1,829 @@
+<template>
+	<up-popup
+		:show="show"
+		mode="bottom"
+		:overlay="overlay"
+		:duration="duration"
+		:overlayStyle="overlayStyle"
+		:overlayOpacity="overlayOpacity"
+		:zIndex="zIndex"
+		:safeAreaInsetBottom="safeAreaInsetBottom"
+		:safeAreaInsetTop="safeAreaInsetTop"
+		:bgColor="bgColor"
+		:closeable="calendarCloseable"
+		:closeIconPos="closeIconPos"
+		:pageInline="pageInline"
+		@close="close"
+		@closed="closedHandler"
+		:round="round"
+		:closeOnClickOverlay="closeOnClickOverlay"
+		:zoom="zoom"
+	>
+		<view class="up-calendar">
+			<uHeader
+				:title="title"
+				:subtitle="subtitle"
+				:showSubtitle="showSubtitle"
+				:showTitle="showTitle"
+				:showSwitch="monthSwitch"
+				:showToday="showToday"
+				:todayText="todayText"
+				:todayDisabled="todayDisabled"
+				:prevDisabled="switchPrevDisabled"
+				:nextDisabled="switchNextDisabled"
+				:prevYearDisabled="switchPrevYearDisabled"
+				:nextYearDisabled="switchNextYearDisabled"
+				@prev="prevMonth"
+				@next="nextMonth"
+				@prevYear="prevYear"
+				@nextYear="nextYear"
+				@today="jumpToToday"
+			></uHeader>
+			<view v-if="showTimePanel" class="up-calendar__time-panel">
+				<view v-if="mode == 'single'" class="up-calendar__time-row">
+					<text class="up-calendar__time-date">{{ singleDateLabel }}</text>
+					<view class="up-calendar__time-trigger" @click="openTimePicker('single')">
+						<text class="up-calendar__time-text">{{ singleTime }}</text>
+					</view>
+				</view>
+				<view v-else-if="mode == 'range' && rangeResultMode == 'boundary'">
+					<view class="up-calendar__time-row">
+						<text class="up-calendar__time-date">{{ rangeStartDateLabel }}</text>
+						<view class="up-calendar__time-trigger" @click="openTimePicker('start')">
+							<text class="up-calendar__time-text">{{ rangeStartTime }}</text>
+						</view>
+					</view>
+					<view class="up-calendar__time-row">
+						<text class="up-calendar__time-date">{{ rangeEndDateLabel }}</text>
+						<view class="up-calendar__time-trigger" @click="openTimePicker('end')">
+							<text class="up-calendar__time-text">{{ rangeEndTime }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+			<scroll-view
+				v-if="!monthSwitch"
+				:style="{height: addUnit(listHeight)}"
+				direction="vertical"
+				@scroll="onScroll"
+				:scroll-top="scrollTop"
+				:scrollIntoView="scrollIntoView"
+			>
+				<uMonth
+					:color="color"
+					:rowHeight="rowHeight"
+					:showMark="showMark"
+					:months="months"
+					:mode="mode"
+					:maxCount="maxCount"
+					:startText="startText"
+					:endText="endText"
+					:defaultDate="defaultDate"
+					:minDate="innerMinDate"
+					:maxDate="innerMaxDate"
+					:maxMonth="monthNum"
+					:readonly="readonly"
+					:maxRange="maxRange"
+					:rangePrompt="rangePrompt"
+					:showRangePrompt="showRangePrompt"
+					:allowSameDay="allowSameDay"
+					:todayDate="todayDate"
+					:todayColor="todayColor"
+					ref="month"
+					@monthSelected="monthSelectedM"
+					@updateMonthTop="onUpdateMonthTopM"
+				></uMonth>
+			</scroll-view>
+			<view
+				v-else
+				:style="{height: addUnit(listHeight)}"
+			>
+				<uMonth
+					:color="color"
+					:rowHeight="rowHeight"
+					:showMark="showMark"
+					:months="currentMonths"
+					:mode="mode"
+					:maxCount="maxCount"
+					:startText="startText"
+					:endText="endText"
+					:defaultDate="defaultDate"
+					:minDate="innerMinDate"
+					:maxDate="innerMaxDate"
+					:maxMonth="monthNum"
+					:readonly="readonly"
+					:maxRange="maxRange"
+					:rangePrompt="rangePrompt"
+					:showRangePrompt="showRangePrompt"
+					:allowSameDay="allowSameDay"
+					:todayDate="todayDate"
+					:todayColor="todayColor"
+					ref="month"
+					@monthSelected="monthSelectedM"
+					@updateMonthTop="onUpdateMonthTopM"
+				></uMonth>
+			</view>
+			<slot name="footer" v-if="showConfirm">
+				<view class="up-calendar__confirm">
+					<!-- 默认确认按钮：uvue 端此前被注释导致底部确定不显示 -->
+					<view
+						class="up-calendar__confirm-btn"
+						:class="{ 'up-calendar__confirm-btn--disabled': buttonDisabled }"
+						:style="{ backgroundColor: color }"
+						@click="confirm"
+					>
+						<text class="up-calendar__confirm-btn__text">{{ buttonDisabled ? confirmDisabledText : confirmText }}</text>
+					</view>
+				</view>
+			</slot>
+		</view>
+	</up-popup>
+	<up-popup
+		:show="timePickerShow"
+		mode="center"
+		:round="8"
+		:closeOnClickOverlay="true"
+		@close="closeTimePicker"
+	>
+		<view class="up-calendar__time-picker">
+			<view class="up-calendar__time-picker__header">
+				<text class="up-calendar__time-picker__cancel" @click="closeTimePicker">取消</text>
+				<text class="up-calendar__time-picker__title">选择时间</text>
+				<text class="up-calendar__time-picker__confirm" @click="confirmTimePicker">确定</text>
+			</view>
+			<picker-view class="up-calendar__time-picker__body" :value="timePickerValue" @change="onTimePickerChange">
+				<picker-view-column>
+					<view v-for="(item, index) in hourOptions" :key="'h-' + index" class="up-calendar__time-picker__item">{{ item }}</view>
+				</picker-view-column>
+				<picker-view-column v-if="timePrecision != 'hour'">
+					<view v-for="(item, index) in minuteOptions" :key="'m-' + index" class="up-calendar__time-picker__item">{{ item }}</view>
+				</picker-view-column>
+				<picker-view-column v-if="timePrecision == 'second'">
+					<view v-for="(item, index) in secondOptions" :key="'s-' + index" class="up-calendar__time-picker__item">{{ item }}</view>
+				</picker-view-column>
+			</picker-view>
+		</view>
+	</up-popup>
+</template>
+
+<script setup lang="uts">
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
+import uHeader from './header.uvue'
+import { UPCalendarMonthsItemDate, UPCalendarMonthsItem } from './types.uts'
+import uMonth from './month.uvue'
+import { dayuts } from '@/uni_modules/lime-dayuts'
+import { t } from '../../libs/i18n/index.uts'
+import { addUnit as addUnitFn, range, error, padZero } from '../../libs/function/index.uts'
+import { number as testNumber, array as testArray } from '../../libs/function/test.uts'
+import defProps from './calendar.uts'
+
+function watchValueSignature(value: any | null): string {
+	if (value == null) {
+		return ''
+	}
+	return JSON.stringify(value)
+}
+
+defineOptions({
+	styleIsolation: 'app-and-page',
+	name: 'up-calendar'
+})
+
+const props = defineProps({
+	title: { type: String, default: (defProps['calendar'] as UTSJSONObject)['title'] },
+	showTitle: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showTitle'] },
+	showSubtitle: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showSubtitle'] },
+	mode: { type: String, default: (defProps['calendar'] as UTSJSONObject)['mode'] },
+	startText: { type: String, default: (defProps['calendar'] as UTSJSONObject)['startText'] },
+	endText: { type: String, default: (defProps['calendar'] as UTSJSONObject)['endText'] },
+	customList: { type: Array, default: (defProps['calendar'] as UTSJSONObject)['customList'] },
+	color: { type: String, default: (defProps['calendar'] as UTSJSONObject)['color'] },
+	minDate: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['minDate'] },
+	maxDate: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['maxDate'] },
+	defaultDate: { type: [Array, String, Date], default: (defProps['calendar'] as UTSJSONObject)['defaultDate'] },
+	maxCount: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['maxCount'] },
+	rowHeight: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['rowHeight'] },
+	formatter: { type: Function, default: (defProps['calendar'] as UTSJSONObject)['formatter'] },
+	showLunar: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showLunar'] },
+	showMark: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showMark'] },
+	confirmText: { type: String, default: (defProps['calendar'] as UTSJSONObject)['confirmText'] },
+	confirmDisabledText: { type: String, default: (defProps['calendar'] as UTSJSONObject)['confirmDisabledText'] },
+	show: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['show'] },
+	overlay: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['overlay'] },
+	duration: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['duration'] },
+	overlayStyle: { type: [Object, String], default: (defProps['calendar'] as UTSJSONObject)['overlayStyle'] },
+	overlayOpacity: { type: [Number, String], default: (defProps['calendar'] as UTSJSONObject)['overlayOpacity'] },
+	zIndex: { type: [String, Number], default: (defProps['calendar'] as UTSJSONObject)['zIndex'] },
+	safeAreaInsetBottom: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['safeAreaInsetBottom'] },
+	safeAreaInsetTop: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['safeAreaInsetTop'] },
+	bgColor: { type: String, default: (defProps['calendar'] as UTSJSONObject)['bgColor'] },
+	closeable: { type: [Boolean, String], default: (defProps['calendar'] as UTSJSONObject)['closeable'] },
+	closeIconPos: { type: String, default: (defProps['calendar'] as UTSJSONObject)['closeIconPos'] },
+	closeOnClickOverlay: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['closeOnClickOverlay'] },
+	zoom: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['zoom'] },
+	readonly: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['readonly'] },
+	showConfirm: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showConfirm'] },
+	maxRange: { type: [Number, String], default: (defProps['calendar'] as UTSJSONObject)['maxRange'] },
+	rangePrompt: { type: String, default: (defProps['calendar'] as UTSJSONObject)['rangePrompt'] },
+	showRangePrompt: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showRangePrompt'] },
+	allowSameDay: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['allowSameDay'] },
+	rangeResultMode: { type: String, default: (defProps['calendar'] as UTSJSONObject)['rangeResultMode'] },
+	enableTime: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['enableTime'] },
+	timePrecision: { type: String, default: (defProps['calendar'] as UTSJSONObject)['timePrecision'] },
+	defaultTime: { type: String, default: (defProps['calendar'] as UTSJSONObject)['defaultTime'] },
+	round: { type: [Boolean, String, Number], default: (defProps['calendar'] as UTSJSONObject)['round'] },
+	monthNum: { type: [Number, String], default: 3 },
+	monthSwitch: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['monthSwitch'] },
+	showToday: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['showToday'] },
+	todayColor: { type: String, default: (defProps['calendar'] as UTSJSONObject)['todayColor'] },
+	pageInline: { type: Boolean, default: (defProps['calendar'] as UTSJSONObject)['pageInline'] }
+})
+
+const emit = defineEmits(['confirm', 'close', 'closed'])
+const month = ref<ComponentPublicInstance | null>(null)
+const start = ref(0)
+const inited = ref(false)
+const months = ref([] as UPCalendarMonthsItem[])
+const monthIndex = ref(0)
+const listHeight = ref(0)
+const selected = ref([] as Array<string>)
+const scrollIntoView = ref('')
+const scrollIntoViewScroll = ref('')
+const scrollTop = ref(0)
+const timePickerShow = ref(false)
+const timePickerTarget = ref('single')
+const timePickerValue = ref([0, 0, 0] as Array<number>)
+const hourOptions = ref([] as Array<string>)
+const minuteOptions = ref([] as Array<string>)
+const secondOptions = ref([] as Array<string>)
+const singleTime = ref('00:00')
+const rangeStartTime = ref('00:00')
+const rangeEndTime = ref('00:00')
+const innerFormatter = ref((value: UPCalendarMonthsItemDate): UPCalendarMonthsItemDate => value)
+
+const addUnit = (e: any): string => addUnitFn(e)
+const innerMaxDate = computed((): string => props.maxDate == null ? '' : props.maxDate.toString())
+const innerMinDate = computed((): string => props.minDate == null ? '' : props.minDate.toString())
+const todayDate = computed((): string => dayuts().format('YYYY-MM-DD'))
+const todayText = computed((): string => t('up.calendar.today'))
+const todayDisabled = computed((): boolean => {
+	const today = dayuts(todayDate.value)
+	if (innerMinDate.value != '' && innerMinDate.value != '0' && today.isBefore(dayuts(innerMinDate.value), 'day')) return true
+	if (innerMaxDate.value != '' && innerMaxDate.value != '0' && today.isAfter(dayuts(innerMaxDate.value), 'day')) return true
+	return false
+})
+const selectedChange = computed((): Array<string> => [innerMinDate.value, innerMaxDate.value])
+const subtitle = computed((): string => {
+	if (months.value.length > 0) {
+		const current = months.value[monthIndex.value]
+		return `${current['year']}年${current['month']}月`
+	}
+	return ''
+})
+const currentMonths = computed((): Array<UPCalendarMonthsItem> => {
+	if (props.monthSwitch && months.value.length > 0) return [months.value[monthIndex.value] as UPCalendarMonthsItem]
+	return months.value as Array<UPCalendarMonthsItem>
+})
+const switchPrevDisabled = computed((): boolean => monthIndex.value <= 0)
+const switchNextDisabled = computed((): boolean => monthIndex.value >= months.value.length - 1)
+const switchPrevYearDisabled = computed((): boolean => monthIndex.value - 12 < 0)
+const switchNextYearDisabled = computed((): boolean => monthIndex.value + 12 > months.value.length - 1)
+const showTimePanel = computed((): boolean => {
+	if (!props.enableTime) return false
+	if (props.mode == 'single') return true
+	if (props.mode == 'range' && props.rangeResultMode == 'boundary') return true
+	return false
+})
+const singleDateLabel = computed((): string => selected.value.length > 0 ? selected.value[0] : '--')
+const rangeStartDateLabel = computed((): string => selected.value.length > 0 ? selected.value[0] : '--')
+const rangeEndDateLabel = computed((): string => selected.value.length > 1 ? selected.value[selected.value.length - 1] : '--')
+const buttonDisabled = computed((): boolean => props.mode === 'range' ? selected.value.length <= 1 : false)
+const calendarCloseable = computed((): boolean => {
+	if (props.closeable == null || props.closeable == '') return props.pageInline != true
+	return props.closeable == true || props.closeable == 'true'
+})
+
+const padTime = (num: number): string => {
+	const str = num.toString()
+	return str.length < 2 ? ('0' + str) : str
+}
+function toInt(value: any, fallback: number = 0): number {
+	if (value == null) return fallback
+	const parsed = parseInt(value.toString())
+	return isNaN(parsed) ? fallback : parsed
+}
+const initTimeOptions = (): void => {
+	hourOptions.value = [] as Array<string>
+	minuteOptions.value = [] as Array<string>
+	secondOptions.value = [] as Array<string>
+	for (let i = 0; i < 24; i++) hourOptions.value.push(padTime(i))
+	for (let i = 0; i < 60; i++) {
+		minuteOptions.value.push(padTime(i))
+		secondOptions.value.push(padTime(i))
+	}
+}
+const parseTimeValue = (value: string): Array<number> => {
+	const raw = value == null ? '' : value.toString()
+	const parts = raw.length > 0 ? raw.split(':') : []
+	let hour = parts.length > 0 ? toInt(parts[0], 0) : 0
+	let minute = parts.length > 1 ? toInt(parts[1], 0) : 0
+	let second = parts.length > 2 ? toInt(parts[2], 0) : 0
+	hour = Math.max(0, Math.min(23, hour))
+	minute = Math.max(0, Math.min(59, minute))
+	second = Math.max(0, Math.min(59, second))
+	return [hour, minute, second]
+}
+const getDefaultTimeValue = (): string => {
+	const parsed = parseTimeValue(props.defaultTime as string)
+	const hour = parsed[0]
+	const minute = parsed[1]
+	const second = parsed[2]
+	if (props.timePrecision == 'hour') return padTime(hour)
+	if (props.timePrecision == 'second') return `${padTime(hour)}:${padTime(minute)}:${padTime(second)}`
+	return `${padTime(hour)}:${padTime(minute)}`
+}
+const initTimeValues = (): void => {
+	const value = getDefaultTimeValue()
+	singleTime.value = value
+	rangeStartTime.value = value
+	rangeEndTime.value = value
+}
+const timeToPickerValue = (value: string): Array<number> => parseTimeValue(value)
+const pickerValueToTime = (value: Array<number>): string => {
+	const hour = value.length > 0 ? toInt(value[0], 0) : 0
+	const minute = value.length > 1 ? toInt(value[1], 0) : 0
+	const second = value.length > 2 ? toInt(value[2], 0) : 0
+	if (props.timePrecision == 'hour') return padTime(hour)
+	if (props.timePrecision == 'second') return `${padTime(hour)}:${padTime(minute)}:${padTime(second)}`
+	return `${padTime(hour)}:${padTime(minute)}`
+}
+const openTimePicker = (target: string): void => {
+	timePickerTarget.value = target
+	let currentValue = ''
+	if (target == 'single') currentValue = singleTime.value
+	if (target == 'start') currentValue = rangeStartTime.value
+	if (target == 'end') currentValue = rangeEndTime.value
+	timePickerValue.value = timeToPickerValue(currentValue.length > 0 ? currentValue : getDefaultTimeValue())
+	timePickerShow.value = true
+}
+const onTimePickerChange = (event: UniPickerViewChangeEvent): void => {
+	timePickerValue.value = event.detail.value as Array<number>
+}
+const closeTimePicker = (): void => {
+	timePickerShow.value = false
+}
+const confirmTimePicker = (): void => {
+	const value = pickerValueToTime(timePickerValue.value as Array<number>)
+	if (timePickerTarget.value == 'single') singleTime.value = value
+	if (timePickerTarget.value == 'start') rangeStartTime.value = value
+	if (timePickerTarget.value == 'end') rangeEndTime.value = value
+	timePickerShow.value = false
+}
+const timeToSecond = (value: string): number => {
+	const parsed = parseTimeValue(value)
+	return parsed[0] * 3600 + parsed[1] * 60 + parsed[2]
+}
+const validateSameDayRangeTime = (): boolean => {
+	if (!props.enableTime || props.mode != 'range' || props.rangeResultMode != 'boundary') return true
+	if (selected.value.length < 2) return true
+	const startDate = selected.value[0] as string
+	const endDate = selected.value[selected.value.length - 1] as string
+	if (startDate != endDate) return true
+	if (timeToSecond(rangeEndTime.value as string) < timeToSecond(rangeStartTime.value as string)) {
+		uni.showToast({ title: '结束时间不能早于开始时间', icon: 'none' })
+		return false
+	}
+	return true
+}
+const appendTime = (dateText: string, timeText: string): string => `${dateText} ${timeText}`
+function getConfirmValue(selectedValue: Array<string>): Array<string> {
+	let result = selectedValue
+	if (props.mode == 'range' && props.rangeResultMode == 'boundary' && selectedValue.length >= 2) {
+		result = [selectedValue[0], selectedValue[selectedValue.length - 1]]
+	}
+	if (!showTimePanel.value || !props.enableTime) return result
+	if (props.mode == 'single' && result.length >= 1) return [appendTime(result[0], singleTime.value as string)]
+	if (props.mode == 'range' && props.rangeResultMode == 'boundary' && result.length >= 2) {
+		return [appendTime(result[0], rangeStartTime.value as string), appendTime(result[1], rangeEndTime.value as string)]
+	}
+	return result
+}
+const setFormatter = (e: object): void => {
+	innerFormatter.value = e as ((val: UPCalendarMonthsItemDate) => UPCalendarMonthsItemDate)
+}
+const monthSelectedM = (e: Array<string>, scene: string): void => {
+	selected.value = e
+	if (!props.showConfirm) {
+		if (props.mode === 'multiple' || props.mode === 'single' || (props.mode === 'range' && selected.value.length >= 2)) {
+			if (scene === 'init') return
+			if (scene === 'tap') {
+				if (!validateSameDayRangeTime()) return
+				emit('confirm', getConfirmValue(selected.value as Array<string>))
+			}
+		}
+	}
+}
+const close = (): void => {
+	emit('close')
+}
+
+// 主体弹窗离场动画结束，透传给使用者。
+// 只接主体popup，关闭内部时间选择器不会误报日历已关闭
+const closedHandler = (): void => {
+	emit('closed')
+}
+const confirm = (): void => {
+	if (!buttonDisabled.value) {
+		if (!validateSameDayRangeTime()) return
+		emit('confirm', getConfirmValue(selected.value as Array<string>))
+	}
+}
+function getMonths(minDate: any, maxDate: any): number {
+	const minYear = dayuts(minDate).year()
+	const minMonth = dayuts(minDate).month() + 1
+	const maxYear = dayuts(maxDate).year()
+	const maxMonth = dayuts(maxDate).month() + 1
+	return (maxYear - minYear) * 12 + (maxMonth - minMonth) + 1
+}
+
+function getDefaultMonthIndex(): number {
+	let selectedMonth = dayuts().format('YYYY-MM')
+	if (props.defaultDate != null) {
+		if (!testArray(props.defaultDate)) {
+			selectedMonth = dayuts(props.defaultDate as any).format('YYYY-MM')
+		} else if ((props.defaultDate as Array<any>).length > 0) {
+			selectedMonth = dayuts((props.defaultDate as Array<any>)[0]).format('YYYY-MM')
+		}
+	}
+	const index = months.value.findIndex(({ year, month }): boolean => {
+		month = padZero(month)
+		return `${year}-${month}` === selectedMonth
+	})
+	return index == -1 ? 0 : index
+}
+
+function setMonth(): void {
+	const minDate: any = (innerMinDate.value != '' && innerMinDate.value != '0') ? innerMinDate.value : dayuts().valueOf()
+	const maxDate: any = (innerMaxDate.value != '' && innerMaxDate.value != '0') ? innerMaxDate.value : dayuts(minDate as any).add((props.monthNum as number) - 1, 'month').valueOf()
+	const monthCount = range(1, props.monthNum as number, getMonths(minDate, maxDate))
+	months.value = [] as UPCalendarMonthsItem[]
+	const minDateStr = dayuts(minDate as any).format('YYYY-MM-DD')
+	const maxDateStr = dayuts(maxDate as any).format('YYYY-MM-DD')
+	for (let i = 0; i < monthCount; i++) {
+		const monthBase = dayuts(minDate as any).add(i, 'month')
+		const daysInMonth = monthBase.daysInMonth()
+		const monthValue = monthBase.month() + 1
+		const yearValue = monthBase.year()
+		const cdate = [] as Array<UPCalendarMonthsItemDate>
+		for (let day = 1; day <= daysInMonth; day++) {
+			const dayBase = monthBase.date(day)
+			const date = dayBase.format('YYYY-MM-DD')
+			cdate.push({
+				day: day.toString(),
+				week: dayBase.day(),
+				disabled: date < minDateStr || date > maxDateStr,
+				date: new Date(date),
+				dateStr: date,
+				bottomInfo: '',
+				dot: false,
+				month: monthValue
+			} as UPCalendarMonthsItemDate)
+		}
+		months.value.push({
+			top: 0,
+			date: cdate,
+			month: monthValue.toString(),
+			year: yearValue.toString()
+		} as UPCalendarMonthsItem)
+	}
+	if (props.monthSwitch) {
+		monthIndex.value = getDefaultMonthIndex()
+	}
+}
+
+function init(): void {
+	if (innerMaxDate.value != '0' && innerMaxDate.value != '' && innerMinDate.value != '0' && innerMinDate.value != '' && new Date(innerMaxDate.value).getTime() < new Date(innerMinDate.value).getTime()) {
+		console.log(innerMaxDate.value)
+		error('maxDate不能小于minDate时间')
+		return
+	}
+	const bottomPadding = props.pageInline ? 0 : 30
+	listHeight.value = (props.rowHeight as number) * (props.monthSwitch ? 6 : 5) + bottomPadding
+	initTimeOptions()
+	initTimeValues()
+	setMonth()
+	inited.value = true
+}
+const prevMonth = (): void => {
+	if (!switchPrevDisabled.value) monthIndex.value -= 1
+}
+const nextMonth = (): void => {
+	if (!switchNextDisabled.value) monthIndex.value += 1
+}
+const prevYear = (): void => {
+	if (!switchPrevYearDisabled.value) monthIndex.value -= 12
+}
+const nextYear = (): void => {
+	if (!switchNextYearDisabled.value) monthIndex.value += 12
+}
+
+function scrollIntoDefaultMonth(selectedMonth: string): void {
+	const index = months.value.findIndex(({ year, month }): boolean => {
+		month = padZero(month)
+		return `${year}-${month}` === selectedMonth
+	})
+	if (index != -1) {
+		// 滚动位置是程序主动设置的，同步更新副标题指向的月份索引。
+		// 只依赖scroll事件的话，滚动位置没有真正变化时收不到事件，副标题就会停留在上一次的月份
+		monthIndex.value = index
+		// #ifndef MP-WEIXIN
+		nextTick(() => {
+			scrollIntoView.value = ''
+			scrollIntoView.value = `month-${index}`
+			scrollIntoViewScroll.value = scrollIntoView.value
+		})
+		// #endif
+		// #ifdef MP-WEIXIN
+		scrollTop.value = months.value[index].top || 0
+		// #endif
+	}
+}
+
+const jumpToToday = (): void => {
+	if (todayDisabled.value) return
+	const targetMonth = dayuts(todayDate.value).format('YYYY-MM')
+	const selectToday = (): void => {
+		if (props.mode == 'range') return
+		month.value?.$callMethod('selectDate', todayDate.value)
+	}
+	if (props.monthSwitch) {
+		const todayMonthIndex = months.value.findIndex(({ year, month }): boolean => {
+			month = padZero(month)
+			return `${year}-${month}` == targetMonth
+		})
+		if (todayMonthIndex != -1) {
+			monthIndex.value = todayMonthIndex
+			nextTick(selectToday)
+		}
+		return
+	}
+	scrollIntoDefaultMonth(targetMonth)
+	nextTick(selectToday)
+}
+const onScroll = (event: UniScrollEvent): void => {
+	const currentScrollTop = Math.max(0, event.detail.scrollTop)
+	// 月份的top值尚未测量出来时不做判断，否则所有月份的判断阈值相同(listHeight)，
+	// 会把副标题固定到最后一个月份上
+	let hasMeasured = false
+	for (let i = 0; i < months.value.length; i++) {
+		if (months.value[i].top > 0) {
+			hasMeasured = true
+			break
+		}
+	}
+	if (!hasMeasured) return
+	// 将当前滚动条数值，与各月份的top值比较，可以得出当前滚动到了哪一个月份的索引
+	let currentIndex = 0
+	for (let i = 0; i < months.value.length; i++) {
+		const top = months.value[i].top
+		// top尚未测量出来的月份跳过，等测量完成后自然会参与判断
+		if (top <= 0) continue
+		if (currentScrollTop >= top) {
+			currentIndex = i
+		} else {
+			break
+		}
+	}
+	monthIndex.value = currentIndex
+	scrollIntoViewScroll.value = `month-${currentIndex}`
+}
+function updateMonthTopM(topArr: Array<number>): void {
+	topArr.map((item: number, index: number) => {
+		months.value[index]['top'] = item
+	})
+	if (props.defaultDate == null) {
+		scrollIntoDefaultMonth(dayuts().format("YYYY-MM"))
+		return
+	}
+	let selectedMonth = dayuts().format("YYYY-MM")
+	if (!testArray(props.defaultDate)) {
+		selectedMonth = dayuts(props.defaultDate as any).format("YYYY-MM")
+	} else {
+		selectedMonth = dayuts((props.defaultDate as Array<any>)[0]).format("YYYY-MM")
+	}
+	scrollIntoDefaultMonth(selectedMonth)
+}
+const onUpdateMonthTopM = (topArr: Array<number>): void => {
+	if (props.monthSwitch) return
+	updateMonthTopM(topArr)
+}
+
+watch((): string => watchValueSignature(props.defaultDate), () => {
+	if (inited.value) setMonth()
+})
+watch(selectedChange, () => {
+	if (inited.value) setMonth()
+})
+watch((): string => props.timePrecision != null ? props.timePrecision : 'minute', () => {
+	initTimeOptions()
+	initTimeValues()
+})
+watch((): string => props.defaultTime != null ? props.defaultTime : '', () => {
+	initTimeValues()
+})
+watch((): boolean => props.show == true, (nval: boolean) => {
+	if (nval) {
+		if (!inited.value) init()
+		else if ((months.value as Array<UPCalendarMonthsItem>).length == 0) setMonth()
+	} else {
+		scrollIntoView.value = ''
+	}
+}, { immediate: true })
+
+onMounted(() => {
+	start.value = Date.now()
+})
+
+defineExpose({
+	month,
+	start,
+	inited,
+	months,
+	monthIndex,
+	listHeight,
+	selected,
+	scrollIntoView,
+	scrollIntoViewScroll,
+	scrollTop,
+	timePickerShow,
+	timePickerTarget,
+	timePickerValue,
+	hourOptions,
+	minuteOptions,
+	secondOptions,
+	singleTime,
+	rangeStartTime,
+	rangeEndTime,
+	innerFormatter,
+	addUnit,
+	innerMaxDate,
+	innerMinDate,
+	todayDate,
+	todayText,
+	todayDisabled,
+	selectedChange,
+	subtitle,
+	currentMonths,
+	switchPrevDisabled,
+	switchNextDisabled,
+	switchPrevYearDisabled,
+	switchNextYearDisabled,
+	showTimePanel,
+	singleDateLabel,
+	rangeStartDateLabel,
+	rangeEndDateLabel,
+	buttonDisabled,
+	calendarCloseable,
+	padTime,
+	toInt,
+	initTimeOptions,
+	parseTimeValue,
+	getDefaultTimeValue,
+	initTimeValues,
+	timeToPickerValue,
+	pickerValueToTime,
+	openTimePicker,
+	onTimePickerChange,
+	closeTimePicker,
+	confirmTimePicker,
+	timeToSecond,
+	validateSameDayRangeTime,
+	appendTime,
+	getConfirmValue,
+	setFormatter,
+	monthSelectedM,
+	init,
+	close,
+	closedHandler,
+	confirm,
+	getMonths,
+	setMonth,
+	getDefaultMonthIndex,
+	prevMonth,
+	nextMonth,
+	prevYear,
+	nextYear,
+	jumpToToday,
+	scrollIntoDefaultMonth,
+	onScroll,
+	onUpdateMonthTopM,
+	updateMonthTopM
+})
+</script>
+
+<style lang="scss" scoped>
+@import '../../libs/css/components.scss';
+
+.up-calendar {
+	&__time-panel {
+		padding: 8px 16px 0;
+	}
+
+	&__time-row {
+		height: 34px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 6px;
+	}
+
+	&__time-date {
+		font-size: 13px;
+		color: #303133;
+	}
+
+	&__time-trigger {
+		min-width: 92px;
+		height: 30px;
+		padding: 0 10px;
+		border-radius: 15px;
+		border: 1px solid #dcdfe6;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__time-text {
+		font-size: 14px;
+		color: #303133;
+	}
+
+	&__time-picker {
+		width: 320px;
+		background-color: #ffffff;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	&__time-picker__header {
+		height: 44px;
+		padding: 0 14px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1px solid #f0f0f0;
+	}
+
+	&__time-picker__cancel {
+		font-size: 14px;
+		color: #909399;
+	}
+
+	&__time-picker__title {
+		font-size: 15px;
+		color: #303133;
+		font-weight: 600;
+	}
+
+	&__time-picker__confirm {
+		font-size: 14px;
+		color: #3c9cff;
+	}
+
+	&__time-picker__body {
+		width: 320px;
+		height: 200px;
+	}
+
+	&__time-picker__item {
+		height: 40px;
+		line-height: 40px;
+		text-align: center;
+		font-size: 16px;
+		color: #303133;
+	}
+
+	&__confirm {
+		padding: 7px 18px;
+		flex-shrink: 0;
+	}
+
+	&__confirm-btn {
+		height: 40px;
+		border-radius: 100px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__confirm-btn--disabled {
+		opacity: 0.5;
+	}
+
+	&__confirm-btn__text {
+		color: #ffffff;
+		font-size: 15px;
+	}
+}
+</style>

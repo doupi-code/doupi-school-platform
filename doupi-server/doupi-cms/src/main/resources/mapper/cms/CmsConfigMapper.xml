@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsConfigMapper">
+    
+    <resultMap type="CmsConfig" id="CmsConfigResult">
+        <id     property="configId"      column="config_id"      />
+        <result property="configKey"     column="config_key"     />
+        <result property="configValue"   column="config_value"   />
+        <result property="configName"    column="config_name"    />
+        <result property="remark"        column="remark"         />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectConfigVo">
+        select config_id, config_key, config_value, config_name, remark, create_time, update_time
+        from doupi_cms_config
+    </sql>
+
+    <select id="selectConfigByKey" parameterType="String" resultMap="CmsConfigResult">
+        <include refid="selectConfigVo"/>
+        where config_key = #{configKey}
+    </select>
+
+    <select id="selectAllConfigs" resultMap="CmsConfigResult">
+        <include refid="selectConfigVo"/>
+    </select>
+
+    <insert id="insertConfig" parameterType="CmsConfig" useGeneratedKeys="true" keyProperty="configId">
+        insert into doupi_cms_config (config_key, config_value, config_name, remark, create_time)
+        values (#{configKey}, #{configValue}, #{configName}, #{remark}, sysdate())
+    </insert>
+
+    <update id="updateConfig" parameterType="CmsConfig">
+        update doupi_cms_config
+        <set>
+            <if test="configValue != null">config_value = #{configValue},</if>
+            <if test="configName != null">config_name = #{configName},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where config_key = #{configKey}
+    </update>
+
+    <insert id="upsertConfig">
+        insert into doupi_cms_config (config_key, config_value, config_name, update_time)
+        values (#{configKey}, #{configValue}, #{configName}, sysdate())
+        on duplicate key update
+        config_value = values(config_value),
+        config_name = values(config_name),
+        update_time = sysdate()
+    </insert>
+
+</mapper>

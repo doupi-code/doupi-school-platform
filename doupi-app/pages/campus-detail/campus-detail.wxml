@@ -1,0 +1,33 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="content-inner">
+      <view class="hero-wrap">
+        <image
+          wx:if="{{campusInfo.coverImage}}"
+          class="hero-image"
+          src="{{campusInfo.coverImage}}"
+          mode="aspectFill"
+          bindtap="previewCover"
+        />
+        <view wx:else class="hero-placeholder"></view>
+      </view>
+
+      <view class="info-card">
+        <text class="campus-name">{{campusInfo.title}}</text>
+        <text class="campus-summary">{{campusInfo.summary}}</text>
+        <view wx:if="{{hasContent}}" class="content-wrap">
+          <rich-text nodes="{{formattedContent}}" class="intro-content"></rich-text>
+        </view>
+      </view>
+
+      <view wx:if="{{canBookAppointment}}" class="bottom-spacer"></view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{canBookAppointment}}" class="bottom-area">
+    <button class="btn-appointment" bindtap="handleAppointment">
+      <t-icon name="calendar" size="32rpx" color="#ffffff"></t-icon>
+      <text>立即预约参观</text>
+    </button>
+  </view>
+</view>

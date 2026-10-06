@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.edu.mapper.EduGoodsKitMapper">
+    
+    <resultMap type="com.doupi.edu.domain.EduGoodsKit" id="EduGoodsKitResult">
+        <result property="kitId" column="kit_id" />
+        <result property="kitName" column="kit_name" />
+        <result property="kitCode" column="kit_code" />
+        <result property="targetType" column="target_type" />
+        <result property="grade" column="grade" />
+        <result property="subject" column="subject" />
+        <result property="description" column="description" />
+        <result property="status" column="status" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="delFlag" column="del_flag" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+        <result property="itemCount" column="item_count" />
+        <result property="totalQuantity" column="total_quantity" />
+    </resultMap>
+
+    <sql id="selectEduGoodsKitVo">
+        select k.kit_id, k.kit_name, k.kit_code, k.target_type, k.grade, k.subject, 
+               k.description, k.status, k.sort_order, k.del_flag, k.create_by, k.create_time, 
+               k.update_by, k.update_time, k.remark,
+               (select count(1) from edu_goods_kit_item ki where ki.kit_id = k.kit_id) as item_count,
+               (select coalesce(sum(ki.quantity), 0) from edu_goods_kit_item ki where ki.kit_id = k.kit_id) as total_quantity
+        from edu_goods_kit k
+    </sql>
+
+    <select id="selectEduGoodsKitList" parameterType="com.doupi.edu.domain.EduGoodsKit" resultMap="EduGoodsKitResult">
+        <include refid="selectEduGoodsKitVo"/>
+        <where>  
+            and k.del_flag = '0'
+            <if test="kitName != null and kitName != ''"> and k.kit_name like concat('%', #{kitName}, '%')</if>
+            <if test="targetType != null and targetType != ''"> and k.target_type = #{targetType}</if>
+            <if test="grade != null and grade != ''"> and k.grade = #{grade}</if>
+            <if test="subject != null and subject != ''"> and k.subject like concat('%', #{subject}, '%')</if>
+            <if test="status != null and status != ''"> and k.status = #{status}</if>
+        </where>
+        order by k.sort_order asc, k.kit_id desc
+    </select>
+    
+    <select id="selectEduGoodsKitByKitId" parameterType="Long" resultMap="EduGoodsKitResult">
+        <include refid="selectEduGoodsKitVo"/>
+        where k.kit_id = #{kitId} and k.del_flag = '0'
+    </select>
+
+    <insert id="insertEduGoodsKit" parameterType="com.doupi.edu.domain.EduGoodsKit" useGeneratedKeys="true" keyProperty="kitId">
+        insert into edu_goods_kit
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="kitName != null and kitName != ''">kit_name,</if>
+            <if test="kitCode != null and kitCode != ''">kit_code,</if>
+            <if test="targetType != null and targetType != ''">target_type,</if>
+            <if test="grade != null and grade != ''">grade,</if>
+            <if test="subject != null and subject != ''">subject,</if>
+            <if test="description != null and description != ''">description,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="delFlag != null">del_flag,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="kitName != null and kitName != ''">#{kitName},</if>
+            <if test="kitCode != null and kitCode != ''">#{kitCode},</if>
+            <if test="targetType != null and targetType != ''">#{targetType},</if>
+            <if test="grade != null and grade != ''">#{grade},</if>
+            <if test="subject != null and subject != ''">#{subject},</if>
+            <if test="description != null and description != ''">#{description},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateEduGoodsKit" parameterType="com.doupi.edu.domain.EduGoodsKit">
+        update edu_goods_kit
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="kitName != null and kitName != ''">kit_name = #{kitName},</if>
+            <if test="kitCode != null">kit_code = #{kitCode},</if>
+            <if test="targetType != null and targetType != ''">target_type = #{targetType},</if>
+            <if test="grade != null">grade = #{grade},</if>
+            <if test="subject != null">subject = #{subject},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where kit_id = #{kitId}
+    </update>
+
+    <update id="deleteEduGoodsKitByKitId" parameterType="Long">
+        update edu_goods_kit set del_flag = '2' where kit_id = #{kitId}
+    </update>
+
+    <update id="deleteEduGoodsKitByKitIds" parameterType="String">
+        update edu_goods_kit set del_flag = '2' where kit_id in 
+        <foreach item="kitId" collection="array" open="(" separator="," close=")">
+            #{kitId}
+        </foreach>
+    </update>
+</mapper>

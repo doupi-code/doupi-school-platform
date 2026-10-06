@@ -1,0 +1,448 @@
+<template>
+	<view class="up-steps-item" ref="up-steps-item" :class="[`up-steps-item--${getParentDirection()}`]">
+		<view class="up-steps-item__line"
+			:class="[`up-steps-item__line--${getParentDirection()}`]" :style="[lineStyle]"></view>
+		<view class="up-steps-item__line"
+			:class="[`up-steps-item__line--${getParentDirection()}`]" :style="[lineStyle2]"></view>
+		<view class="up-steps-item__wrapper"
+			:class="[`up-steps-item__wrapper--${getParentDirection()}`,
+				getParentDot() ? `up-steps-item__wrapper--${getParentDirection()}--dot` : '']"
+			:style="[itemStyleInner]">
+			<slot name="icon">
+				<view class="up-steps-item__wrapper__dot"
+					v-if="getParentDot()" :style="{
+						backgroundColor: statusColor
+					}">
+
+				</view>
+				<view class="up-steps-item__wrapper__icon"
+					v-else-if="parentData['activeIcon'] != '' || parentData['inactiveIcon'] != ''">
+					<up-icon :name="index <= getParentCurrent() ? parentData['activeIcon'] : parentData['inactiveIcon']"
+						:size="iconSize"
+						:color="index <= getParentCurrent() ? parentData['activeColor'] : parentData['inactiveColor']">
+					</up-icon>
+				</view>
+				<view v-else :style="{
+						backgroundColor: statusClass === 'process' ? parentData['activeColor'] : 'transparent',
+						borderColor: statusColor
+					}" class="up-steps-item__wrapper__circle">
+					<text v-if="statusClass === 'process' || statusClass === 'wait'"
+						class="up-steps-item__wrapper__circle__text" :style="{
+							color: index == getParentCurrent() ? '#ffffff' : parentData['inactiveColor']
+						}">{{ index + 1}}</text>
+					<up-icon v-else :color="statusClass === 'error' ? 'error' : parentData['activeColor']" size="12"
+						:name="statusClass === 'error' ? 'close' : 'checkmark'"></up-icon>
+				</view>
+			</slot>
+		</view>
+		<view class="up-steps-item__content" :class="[`up-steps-item__content--${getParentDirection()}`,
+			getParentCurrent() == index ? 'up-steps-item__content--current' : '']"
+			:style="[contentStyle]">
+			<slot name="content" :index="index">
+			</slot>
+			<template v-if="$slots['content'] == null">
+				<view class="up-steps-item__content__title">
+					<slot name="title">
+					</slot>
+					<up-text v-if="$slots['title'] == null" :text="title" lineHeight="20px"
+						:type="getParentCurrent() == index ? 'main' : 'content'"
+						:size="getParentCurrent() == index ? 14 : 13"></up-text>
+				</view>
+				<view class="up-steps-item__content__desc">
+					<slot name="desc">
+					</slot>
+					<up-text v-if="$slots['desc'] == null"
+						:text="desc" type="tips" size="12"></up-text>
+				</view>
+			</template>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, getCurrentInstance, onMounted, ref } from 'vue'
+	import defProps from './stepsItem.uts'
+	import { sleep, error, upGetRect } from '../../libs/function/index'
+	import color from '../../libs/config/color'
+	import { useUltraUI } from '../../libs/composable/useUltraUI'
+	/**
+	 * StepsItem 步骤条的子组件
+	 * @description 本组件需要和up-steps配合使用
+	 * @tutorial https://uview-plus.jiangruyi.com/components/steps.html
+	 * @property {String}			title			标题文字
+	 * @property {String}			current			描述文本
+	 * @property {String | Number}	iconSize		图标大小  (默认 17 )
+	 * @property {Boolean}			error			当前步骤是否处于失败状态  (默认 false )
+	 * @example <up-steps current="0"><up-steps-item title="已出库" desc="10:35" ></up-steps-item></up-steps>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-steps-item'
+	})
+
+	const props = defineProps({
+		title: {
+			type: [String, Number],
+			default: defProps.getString('stepsItem.title')
+		},
+		desc: {
+			type: [String, Number],
+			default: defProps.getString('stepsItem.desc')
+		},
+		iconSize: {
+			type: [String, Number],
+			default: defProps.getNumber('stepsItem.iconSize')
+		},
+		error: {
+			type: Boolean,
+			default: defProps.getBoolean('stepsItem.error')
+		},
+		itemStyle: {
+			type: Object,
+			default: () => ({})
+		}
+	})
+
+	const { parent, parentData, getParentData } = useUltraUI({
+		direction: 'row',
+		current: 0,
+		activeColor: '',
+		inactiveColor: '',
+		activeIcon: '',
+		inactiveIcon: '',
+		dot: false,
+		children: [] as ComponentPublicInstance[]
+	})
+	const instance = getCurrentInstance()!.proxy!
+
+	const index = ref(0)
+	const childLength = ref(0)
+	const size = ref({
+		height: 0,
+		width: 0
+	} as UTSJSONObject)
+
+	const getChildren = (): ComponentPublicInstance[] => {
+		const list = parentData.value['children']
+		if (list != null) {
+			return list as ComponentPublicInstance[]
+		}
+		return [] as ComponentPublicInstance[]
+	}
+
+	const getSizeWidth = (): number => {
+		const width = size.value['width']
+		return width != null ? parseFloat(width.toString()) : 0
+	}
+
+	const getSizeHeight = (): number => {
+		const height = size.value['height']
+		return height != null ? parseFloat(height.toString()) : 0
+	}
+
+	const getParentDirection = (): string => {
+		const direction = parentData.value['direction']
+		return direction != null ? direction.toString() : 'row'
+	}
+
+	const getParentCurrent = (): number => {
+		const current = parentData.value['current']
+		return current != null ? parseInt(current.toString()) : 0
+	}
+
+	const getParentDot = (): boolean => {
+		const dot = parentData.value['dot']
+		return dot != null ? dot.toString() == 'true' : false
+	}
+
+	const childHasError = (child: ComponentPublicInstance | null): boolean => {
+		if (child != null && child.$props != null && child.$props['error'] != null) {
+			return child.$props['error'] as boolean
+		}
+		return false
+	}
+
+	const lineStyle2 = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		const children = getChildren()
+		const width = getSizeWidth()
+		if (getParentDirection() === 'row') {
+			if (index.value == 0) {
+				style['width'] = '0px'
+				style['left'] = (width / 2).toString() + 'px'
+			} else if (index.value == children.length - 1) {
+				style['width'] = '0px'
+				style['left'] = '0px'
+			} else {
+				style['width'] = (width / 2).toString() + 'px'
+				style['left'] = '0px'
+			}
+		}
+
+		if (parent.value != null && index.value + 1 < children.length) {
+			const nextChild = children[index.value + 1]
+			if (childHasError(nextChild)) {
+				style['backgroundColor'] = color['error']
+			} else if ((index.value - 1) < getParentCurrent()) {
+				style['backgroundColor'] = parentData.value['activeColor']
+			} else {
+				style['backgroundColor'] = parentData.value['inactiveColor']
+			}
+		}
+		return style
+	})
+
+	const lineStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		const children = getChildren()
+		const width = getSizeWidth()
+		if (getParentDirection() === 'row') {
+			if (index.value == 0) {
+				style['width'] = width.toString() + 'px'
+				style['left'] = (width / 2).toString() + 'px'
+			} else if (index.value == children.length - 1) {
+				style['width'] = (width / 2).toString() + 'px'
+				style['left'] = '0px'
+			} else {
+				style['width'] = width.toString() + 'px'
+				style['left'] = '0px'
+			}
+		} else {
+			style['height'] = getSizeHeight().toString() + 'px'
+			// style['top'] = (size['height'] / 2).toString() + 'px'
+		}
+
+		if (parent.value != null && index.value + 1 < children.length) {
+			const nextChild = children[index.value + 1]
+			if (childHasError(nextChild)) {
+				style['backgroundColor'] = color['error']
+			} else if (index.value < getParentCurrent()) {
+				style['backgroundColor'] = parentData.value['activeColor']
+			} else {
+				style['backgroundColor'] = parentData.value['inactiveColor']
+			}
+		}
+		return style
+	})
+
+	const itemStyleInner = computed((): UTSJSONObject => {
+		return props.itemStyle as UTSJSONObject
+	})
+
+	const statusClass = computed((): string => {
+		const current = getParentCurrent()
+		if (current == index.value) {
+			return props.error == true ? 'error' : 'process'
+		} else if (props.error) {
+			return 'error'
+		} else if (current > index.value) {
+			return 'finish'
+		} else {
+			return 'wait'
+		}
+	})
+
+	const statusColor = computed((): string => {
+		let colorTmp = '#f1f1f1'
+		switch (statusClass.value) {
+			case 'finish':
+				colorTmp = parentData.value['activeColor'] as string
+				break
+			case 'error':
+				colorTmp = color['error'] as string
+				break
+			case 'process':
+				colorTmp = getParentDot() ? parentData.value['activeColor'] as string : 'transparent'
+				break
+			default:
+				colorTmp = parentData.value['inactiveColor'] as string
+				break
+		}
+		return colorTmp
+	})
+
+	const contentStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		const isDot = getParentDot()
+		if (getParentDirection() === 'column') {
+			style['marginLeft'] = isDot ? '2px' : '6px'
+			style['marginTop'] = isDot ? '0px' : '6px'
+		} else {
+			style['marginTop'] = isDot ? '2px' : '6px'
+			style['marginLeft'] = isDot ? '2px' : '6px'
+		}
+
+		return style
+	})
+
+	const updateParentData = (): void => {
+		getParentData('up-steps', instance, false)
+	}
+
+	const init = (): void => {
+		// 初始化数据
+		updateParentData()
+		if (parent.value == null) {
+			return error('up-steps-item必须要搭配up-steps组件使用')
+		}
+		const children = getChildren()
+		children.forEach((child: ComponentPublicInstance, idx: number) => {
+			if (child == instance) {
+				index.value = idx
+			}
+		})
+		childLength.value = children.length
+	}
+
+	// 父组件数据发生变化
+	const updateFromParent = (): void => {
+		init()
+	}
+
+	// 获取组件的尺寸，用于设置横线的位置
+	const getStepsItemRect = (): void => {
+		upGetRect('.up-steps-item', false, instance).then((nodeSize: NodeInfo) => {
+			size.value['width'] = nodeSize.width != null ? nodeSize.width : 0
+			size.value['height'] = nodeSize.height != null ? nodeSize.height : 0
+		})
+	}
+
+	init()
+
+	onMounted(() => {
+		if (parent.value != null) {
+			parent.value?.$callMethod('updateFromChild')
+		}
+		sleep().then(() => {
+			getStepsItemRect()
+		})
+	})
+
+	defineExpose({
+		init,
+		updateParentData,
+		updateFromParent,
+		getStepsItemRect
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+
+	.up-steps-item {
+		flex: 1;
+		@include flex;
+
+		&--row {
+			flex-direction: column;
+			align-items: center;
+			position: relative;
+		}
+
+		&--column {
+			position: relative;
+			flex-direction: row;
+			justify-content: flex-start;
+			padding-bottom: 5px;
+		}
+
+		&__wrapper {
+			@include flex;
+			justify-content: center;
+			align-items: center;
+			position: relative;
+			background-color: #fff;
+			border-radius: 50px;
+
+			&--column {
+				width: 20px;
+				height: 20px;
+
+				&--dot {
+					height: 20px;
+					width: 20px;
+				}
+			}
+
+			&--row {
+				width: 20px;
+				height: 20px;
+
+				&--dot {
+					width: 20px;
+					height: 20px;
+				}
+			}
+
+			&__circle {
+				width: 20px;
+				height: 20px;
+				/* #ifndef APP-NVUE */
+				box-sizing: border-box;
+				flex-shrink: 0;
+				/* #endif */
+				border-radius: 100px;
+				border-width: 1px;
+				border-color: $up-tips-color;
+				border-style: solid;
+				@include flex(row);
+				align-items: center;
+				justify-content: center;
+				transition: background-color 0.3s;
+
+				&__text {
+					color: $up-tips-color;
+					font-size: 11px;
+					@include flex(row);
+					align-items: center;
+					justify-content: center;
+					text-align: center;
+					line-height: 11px;
+				}
+			}
+
+			&__dot {
+				width: 10px;
+				height: 10px;
+				border-radius: 100px;
+				background-color: $up-content-color;
+			}
+		}
+
+		&__content {
+			@include flex;
+			flex: 1;
+
+			&__title {
+				// #ifdef H5
+				cursor: pointer;
+				// #endif
+			}
+
+			&--row {
+				flex-direction: column;
+				align-items: center;
+			}
+
+			&--column {
+				flex-direction: column;
+				margin-left: 6px;
+			}
+		}
+
+		&__line {
+			position: absolute;
+			background: $up-tips-color;
+
+			&--row {
+				top: 10px;
+				height: 1px;
+			}
+
+			&--column {
+				width: 1px;
+				left: 10px;
+			}
+		}
+	}
+</style>

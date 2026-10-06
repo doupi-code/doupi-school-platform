@@ -1,0 +1,188 @@
+<template>
+	<view class="up-city-locate">
+		<up-index-list :indexList="indexList">
+			<template #header>
+				<view class="up-current-city-wrap">
+					<view class="up-current-city-title">定位城市</view>
+					<view class="up-current-city-item" @tap="location">
+						<view class="up-location-city">{{locationCity}}</view>
+					</view>
+				</view>
+			</template>
+			<template :key="index" v-for="(item, index) in cityList">
+				<!-- #ifdef APP-NVUE -->
+				<up-index-anchor :text="getIndexText(index)"></up-index-anchor>
+				<!-- #endif -->
+				<up-index-item>
+					<!-- #ifndef APP-NVUE -->
+					<up-index-anchor :text="getIndexText(index)"></up-index-anchor>
+					<!-- #endif -->
+					<view class="hot-city-list" v-if="index == 0">
+						<view class="" v-for="(item1, index1) in getCityGroup(item)" :key="index1" @tap="selectedCity(item1)">
+							<view class="hot-city-item">{{ getCityName(item1) }}</view>
+						</view>
+					</view>
+					<view v-else class="item-list" v-for="(item1, index1) in getCityGroup(item)" :key="index1">
+						<view class="list__item" @tap="selectedCity(item1)">
+							<text class="list__item__city-name">{{getCityName(item1)}}</text>
+						</view>
+						<up-line></up-line>
+					</view>
+				</up-index-item>
+			</template>
+			<template #footer>
+				<view class="up-safe-area-inset--bottom">
+					<text class="list__footer"></text>
+				</view>
+			</template>
+		</up-index-list>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import type { PropType } from 'vue'
+	import { onMounted, ref, watch } from 'vue'
+
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-city-locate'
+	})
+
+	const props = defineProps({
+		indexList: {
+			type: Array as PropType<Array<string>>,
+			default(): Array<string> {
+				return ['热']
+			}
+		},
+		cityList: {
+			type: Array as PropType<Array<Array<UTSJSONObject>>>,
+			default(): Array<Array<UTSJSONObject>> {
+				return [
+					[{
+						name: '北京',
+						value: 'beijing'
+					} as UTSJSONObject,
+					{
+						name: '上海',
+						value: 'shanghai'
+					} as UTSJSONObject,
+					{
+						name: '广州',
+						value: 'guangzhou'
+					} as UTSJSONObject,
+					{
+						name: '深圳',
+						value: 'shenzhen'
+					} as UTSJSONObject,
+					{
+						name: '杭州',
+						value: 'hangzhou'
+					} as UTSJSONObject] as Array<UTSJSONObject>
+				] as Array<Array<UTSJSONObject>>
+			}
+		},
+		locationType: {
+			type: String,
+			default: 'wgs84'
+		},
+		currentCity: {
+			type: String,
+			default: ''
+		},
+		nameKey: {
+			type: String,
+			default: 'name'
+		}
+	})
+
+	const emit = defineEmits(['location-success', 'select-city'])
+	const locationCity = ref('定位中...')
+
+	watch((): string => props.currentCity, (val: string) => {
+		locationCity.value = val
+	})
+
+	const getIndexText = (index: number): string => {
+		const list = props.indexList as Array<string> | null
+		if (list == null || index < 0 || index >= list.length) {
+			return ''
+		}
+		return list[index]
+	}
+
+	const getCityGroup = (item: any | null): Array<UTSJSONObject> => {
+		const group = item as Array<UTSJSONObject> | null
+		if (group == null) {
+			return [] as Array<UTSJSONObject>
+		}
+		return group
+	}
+
+	const getCityName = (city: any | null): string => {
+		const cityObject = city as UTSJSONObject | null
+		if (cityObject == null) {
+			return ''
+		}
+		const value = cityObject[props.nameKey]
+		if (value == null) {
+			return ''
+		}
+		return value.toString()
+	}
+
+	// 获取城市
+	const selectedCity = (city: any | null): void => {
+		locationCity.value = getCityName(city)
+		emit('select-city', {
+			locationCity: locationCity.value
+		})
+	}
+
+	// 定位操作
+	const location = (): void => {
+		uni.getLocation({
+			type: props.locationType == 'gcj02' ? 'gcj02' : 'wgs84',
+			geocode: true,
+			success(res: any) {
+				const result = res as UTSJSONObject
+				const address = result['address'] as UTSJSONObject | null
+				const city = address == null ? null : address['city']
+				locationCity.value = city == null ? '' : city.toString()
+				result['locationCity'] = locationCity.value
+				emit('location-success', result)
+			},
+			fail() {
+				locationCity.value = '定位失败'
+			}
+		})
+	}
+
+	onMounted(() => {
+		location()
+	})
+</script>
+
+<style lang="scss">
+	.list__item {
+		padding: 8px 1px;
+	}
+	.up-current-city-title {
+		color: grey;
+		margin-bottom: 5px;
+	}
+	.up-current-city-item {
+		height: 30px;
+	}
+	.hot-city-list {
+		display: flex !important;
+		flex-direction: row !important;
+		padding: 12px 0;
+	}
+
+	.hot-city-item {
+		padding: 6px 12px;
+		margin: 5px;
+		border: 1px solid #ededed;
+	}
+</style>

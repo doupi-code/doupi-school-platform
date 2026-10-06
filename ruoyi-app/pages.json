@@ -1,0 +1,153 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^up-(.*)": "@/uni_modules/uview-ultra/components/up-$1/up-$1.uvue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "工作台",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/work/index",
+      "style": {
+        "navigationBarTitleText": "应用中心"
+      }
+    },
+    {
+      "path": "pages/message/index",
+      "style": {
+        "navigationBarTitleText": "消息协同"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "个人中心",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/work/recruit/verify",
+      "style": {
+        "navigationBarTitleText": "现场扫码核销"
+      }
+    },
+    {
+      "path": "pages/work/recruit/list",
+      "style": {
+        "navigationBarTitleText": "访校预约审批",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/print/list",
+      "style": {
+        "navigationBarTitleText": "教务文印工单",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/stock/goods",
+      "style": {
+        "navigationBarTitleText": "物资库存盘点",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/stock/out",
+      "style": {
+        "navigationBarTitleText": "领料出库审批",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/notice/list",
+      "style": {
+        "navigationBarTitleText": "通知公告",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/notice/detail",
+      "style": {
+        "navigationBarTitleText": "公告详情"
+      }
+    },
+    {
+      "path": "pages/work/user/list",
+      "style": {
+        "navigationBarTitleText": "用户管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/work/user/detail",
+      "style": {
+        "navigationBarTitleText": "用户详情"
+      }
+    },
+    {
+      "path": "pages/mine/info",
+      "style": {
+        "navigationBarTitleText": "个人信息"
+      }
+    },
+    {
+      "path": "pages/mine/password",
+      "style": {
+        "navigationBarTitleText": "修改密码"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "豆皮工作台",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F2F3F7"
+  },
+  "tabBar": {
+    "color": "#86909C",
+    "selectedColor": "#165DFF",
+    "borderStyle": "white",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home_fill.png",
+        "text": "工作台"
+      },
+      {
+        "pagePath": "pages/work/index",
+        "iconPath": "static/tabbar/work.png",
+        "selectedIconPath": "static/tabbar/work_fill.png",
+        "text": "应用"
+      },
+      {
+        "pagePath": "pages/message/index",
+        "iconPath": "static/tabbar/message.png",
+        "selectedIconPath": "static/tabbar/message_fill.png",
+        "text": "消息"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine_fill.png",
+        "text": "我的"
+      }
+    ]
+  }
+}

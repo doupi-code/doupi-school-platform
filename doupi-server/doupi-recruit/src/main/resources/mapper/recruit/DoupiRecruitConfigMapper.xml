@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.recruit.mapper.DoupiRecruitConfigMapper">
+    
+    <resultMap type="com.doupi.recruit.domain.DoupiRecruitConfig" id="DoupiRecruitConfigResult">
+        <result property="configId"    column="config_id"    />
+        <result property="configKey"   column="config_key"   />
+        <result property="configValue" column="config_value" />
+        <result property="remark"      column="remark"       />
+        <result property="updateTime"  column="update_time"  />
+    </resultMap>
+
+    <sql id="selectDoupiRecruitConfigVo">
+        select config_id, config_key, config_value, remark, update_time from doupi_recruit_config
+    </sql>
+
+    <select id="selectDoupiRecruitConfigList" parameterType="com.doupi.recruit.domain.DoupiRecruitConfig" resultMap="DoupiRecruitConfigResult">
+        <include refid="selectDoupiRecruitConfigVo"/>
+        <where>  
+            <if test="configKey != null and configKey != ''"> and config_key like concat('%', #{configKey}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectDoupiRecruitConfigByKey" parameterType="String" resultMap="DoupiRecruitConfigResult">
+        <include refid="selectDoupiRecruitConfigVo"/>
+        where config_key = #{configKey}
+    </select>
+        
+    <insert id="insertDoupiRecruitConfig" parameterType="com.doupi.recruit.domain.DoupiRecruitConfig" useGeneratedKeys="true" keyProperty="configId">
+        insert into doupi_recruit_config
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="configKey != null and configKey != ''">config_key,</if>
+            <if test="configValue != null and configValue != ''">config_value,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="configKey != null and configKey != ''">#{configKey},</if>
+            <if test="configValue != null and configValue != ''">#{configValue},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDoupiRecruitConfig" parameterType="com.doupi.recruit.domain.DoupiRecruitConfig">
+        update doupi_recruit_config
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="configValue != null and configValue != ''">config_value = #{configValue},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where config_key = #{configKey}
+    </update>
+
+    <delete id="deleteDoupiRecruitConfigByKey" parameterType="String">
+        delete from doupi_recruit_config where config_key = #{configKey}
+    </delete>
+</mapper>

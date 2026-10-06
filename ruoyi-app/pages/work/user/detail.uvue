@@ -1,0 +1,125 @@
+<template>
+  <scroll-view class="user-detail-page" scroll-y="true">
+    <view class="detail-card">
+      <view class="avatar-center">
+        <image class="avatar-big" src="/static/avatar.png" mode="aspectFill"></image>
+        <text class="user-title">李老师 (招生主任)</text>
+        <text class="user-sub">招生宣传处 · 主任</text>
+      </view>
+
+      <view class="info-list">
+        <view class="info-item">
+          <text class="item-label">用户账号</text>
+          <text class="item-value">teacher_li</text>
+        </view>
+        <view class="info-item">
+          <text class="item-label">手机号码</text>
+          <text class="item-value">13912345678</text>
+        </view>
+        <view class="info-item">
+          <text class="item-label">所属部门</text>
+          <text class="item-value">招生宣传处</text>
+        </view>
+        <view class="info-item">
+          <text class="item-label">角色权限</text>
+          <text class="item-value">招生管理员, 教职员工</text>
+        </view>
+        <view class="info-item">
+          <text class="item-label">账号状态</text>
+          <text class="item-value text-green">正常启用</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+export default {
+  data() {
+    return {
+      userId: ''
+    }
+  },
+  onLoad(options: any) {
+    if (options != null && options.id != null) {
+      this.userId = options.id.toString()
+    }
+  }
+}
+</script>
+
+<style>
+.user-detail-page {
+  flex: 1;
+  background-color: #f6f7f9;
+  flex-direction: column;
+}
+
+.detail-card {
+  background-color: #ffffff;
+  margin: 16px;
+  border-radius: 14px;
+  padding: 24px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.avatar-center {
+  align-items: center;
+  margin-bottom: 24px;
+  flex-direction: column;
+}
+
+.avatar-big {
+  width: 72px;
+  height: 72px;
+  border-radius: 36px;
+  background-color: #f0f2f5;
+  margin-bottom: 12px;
+}
+
+.user-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1d2129;
+  margin-bottom: 4px;
+}
+
+.user-sub {
+  font-size: 13px;
+  color: #86909c;
+}
+
+.info-list {
+  flex-direction: column;
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #f2f3f5;
+  padding-top: 12px;
+}
+
+.info-item {
+  flex-direction: row;
+  justify-content: space-between;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #f7f8fa;
+}
+
+.item-label {
+  font-size: 14px;
+  color: #86909c;
+}
+
+.item-value {
+  font-size: 14px;
+  color: #1d2129;
+  font-weight: 500;
+}
+
+.text-green {
+  color: #52c41a;
+}
+</style>

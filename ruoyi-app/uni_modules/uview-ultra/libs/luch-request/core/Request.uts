@@ -1,0 +1,134 @@
+/**
+ * @Class Request  luch-request http 请求（uts 版，接口兼容 luch-request 3.x）
+ * 说明：config/response 在 uts 端为 UTSJSONObject，取值用 ['key']；方法名/拦截器/配置键与原版一致。
+ * 请求拦截器按同步方式应用（fulfilled 返回新的 config）；响应拦截器走 Promise 链。
+ */
+
+import dispatchRequest from './dispatchRequest'
+import InterceptorManager from './InterceptorManager'
+import { InterceptorHandler } from './InterceptorManager'
+import mergeConfig from './mergeConfig'
+import getDefaults from './defaults'
+import clone from '../utils/clone'
+
+class RequestInterceptors {
+    request: InterceptorManager
+    response: InterceptorManager
+    constructor() {
+        this.request = new InterceptorManager()
+        this.response = new InterceptorManager()
+    }
+}
+
+export default class Request {
+    config: UTSJSONObject
+    interceptors: RequestInterceptors
+
+    constructor(arg: UTSJSONObject = {} as UTSJSONObject) {
+        this.config = clone(UTSJSONObject.assign(getDefaults(), arg)) as UTSJSONObject
+        this.interceptors = new RequestInterceptors()
+    }
+
+    setConfig(f: (config: UTSJSONObject) => UTSJSONObject): void {
+        this.config = f(this.config)
+    }
+
+    // PLACEHOLDER_REQUEST
+    middleware(config: UTSJSONObject): Promise<any> {
+        let merged: UTSJSONObject = mergeConfig(this.config, config)
+        // 请求拦截器：同步应用（fulfilled 返回新的 config）
+        this.interceptors.request.forEach((h: InterceptorHandler) => {
+            const ff = h.fulfilled!
+            const out = ff(merged)
+            if (out != null && typeof out === 'object' && !Array.isArray(out)) {
+                merged = out as UTSJSONObject
+            }
+        })
+        let promise: Promise<any> = dispatchRequest(merged)
+        // 响应拦截器：走 Promise 链
+        this.interceptors.response.forEach((h: InterceptorHandler) => {
+            const ff = h.fulfilled!
+            promise = promise.then((res: any | null): any => ff(res))
+        })
+        return promise
+    }
+
+    request(config: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        return this.middleware(config)
+    }
+
+    get(url: string, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['method'] = 'GET'
+        return this.middleware(cfg)
+    }
+
+    post(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'POST'
+        return this.middleware(cfg)
+    }
+
+    put(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'PUT'
+        return this.middleware(cfg)
+    }
+
+    delete(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'DELETE'
+        return this.middleware(cfg)
+    }
+
+    connect(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'CONNECT'
+        return this.middleware(cfg)
+    }
+
+    head(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'HEAD'
+        return this.middleware(cfg)
+    }
+
+    options(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'OPTIONS'
+        return this.middleware(cfg)
+    }
+
+    trace(url: string, data: any | null = null, options: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        const cfg = UTSJSONObject.assign({} as UTSJSONObject, options)
+        cfg['url'] = url
+        cfg['data'] = data
+        cfg['method'] = 'TRACE'
+        return this.middleware(cfg)
+    }
+
+    upload(url: string, config: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        config['url'] = url
+        config['method'] = 'UPLOAD'
+        return this.middleware(config)
+    }
+
+    download(url: string, config: UTSJSONObject = {} as UTSJSONObject): Promise<any> {
+        config['url'] = url
+        config['method'] = 'DOWNLOAD'
+        return this.middleware(config)
+    }
+}

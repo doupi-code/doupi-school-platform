@@ -1,0 +1,19 @@
+<template>
+	<view class="up-tr">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// options
+	defineOptions({
+	  styleIsolation: 'app-and-page',
+	  name: 'up-tr'
+	})
+</script>
+
+<style lang="scss" scoped>
+	.up-tr {
+		@include flex;
+	}
+</style>

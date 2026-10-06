@@ -1,0 +1,58 @@
+name: Deploy Client Web (Native Nginx)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'doupi-web-client-react/**'
+      - '.github/workflows/deploy-client.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: doupi-web-client-react/package-lock.json
+
+      - name: Build Frontend
+        run: |
+          cd doupi-web-client-react
+          npm ci
+          npm run build
+          tar -czf dist-client.tar.gz dist
+
+      - name: Upload Dist Archive
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "doupi-web-client-react/dist-client.tar.gz"
+          target: "/tmp/"
+          strip_components: 1
+
+      - name: Atomic Deploy & Nginx Reload
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            TARGET_DIR="/var/www/doupi-web-client"
+            mkdir -p $TARGET_DIR
+            mkdir -p /tmp/unpack_client
+            tar -xzf /tmp/dist-client.tar.gz -C /tmp/unpack_client
+            sudo rm -rf $TARGET_DIR/dist
+            sudo mv /tmp/unpack_client/dist $TARGET_DIR/dist
+            sudo chown -R ubuntu:ubuntu $TARGET_DIR
+            rm -rf /tmp/unpack_client /tmp/dist-client.tar.gz
+            sudo systemctl reload nginx
+            echo "Client Web Deployed successfully!"

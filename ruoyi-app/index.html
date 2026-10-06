@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <!-- 本文件为 uni-app x 编译到 Web(H5) 端专用入口模板 -->
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      var coverSupport = 'CSS' in window && typeof CSS.supports === 'function' && (CSS.supports('top: env(a)') ||
+        CSS.supports('top: constant(a)'))
+      document.write(
+        '<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0' +
+        (coverSupport ? ', viewport-fit=cover' : '') + '" />')
+    </script>
+    <title>若依/豆皮移动端</title>
+    <!--preload-links-->
+    <!--app-context-->
+    <style>
+      /* PC端浏览器预览时，自动居中并呈现精致手机真机机身，杜绝被横向拉伸成PC网页 */
+      @media screen and (min-width: 768px) {
+        html, body {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+        body {
+          background-color: #1e222d;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        #app {
+          width: 414px;
+          height: 860px;
+          max-height: 94vh;
+          background-color: #f6f7f9;
+          border-radius: 40px;
+          border: 10px solid #2d3240;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+          overflow: hidden;
+          position: relative;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"><!--app-html--></div>
+    <script type="module" src="/main"></script>
+  </body>
+</html>

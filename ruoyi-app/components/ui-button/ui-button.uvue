@@ -1,0 +1,189 @@
+<template>
+  <view 
+    :class="[
+      'ui-button',
+      'ui-button--' + type,
+      'ui-button--' + size,
+      block ? 'ui-button--block' : '',
+      disabled ? 'ui-button--disabled' : ''
+    ]"
+    @click="handleClick"
+  >
+    <image v-if="icon != ''" class="ui-button__icon" :src="icon" mode="aspectFit"></image>
+    <text 
+      :class="[
+        'ui-button__text',
+        'ui-button__text--' + type,
+        'ui-button__text--' + size,
+        disabled ? 'ui-button__text--disabled' : ''
+      ]"
+    >
+      <slot>{{ text }}</slot>
+    </text>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiButton',
+  props: {
+    // 类型: primary, success, warning, danger, default, outline
+    type: {
+      type: String,
+      default: 'primary'
+    },
+    // 尺寸: large, medium, small, mini
+    size: {
+      type: String,
+      default: 'medium'
+    },
+    // 是否块级(占满整行)
+    block: {
+      type: Boolean,
+      default: false
+    },
+    // 是否禁用
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    // 按钮文字 (也可通过 slot 传入)
+    text: {
+      type: String,
+      default: ''
+    },
+    // 按钮图标 (SVG或PNG路径)
+    icon: {
+      type: String,
+      default: ''
+    }
+  },
+  emits: ['click'],
+  methods: {
+    handleClick(event: any) {
+      if (this.disabled) return
+      this.$emit('click', event)
+    }
+  }
+}
+</script>
+
+<style>
+/* 核心容器：强制 Flex 水平垂直绝对居中 */
+.ui-button {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  border-radius: 24px;
+  box-sizing: border-box;
+}
+
+/* 块级展示 */
+.ui-button--block {
+  width: 100%;
+}
+
+/* 尺寸规格 */
+.ui-button--large {
+  height: 50px;
+  padding-left: 24px;
+  padding-right: 24px;
+  border-radius: 25px;
+}
+
+.ui-button--medium {
+  height: 44px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 22px;
+}
+
+.ui-button--small {
+  height: 34px;
+  padding-left: 14px;
+  padding-right: 14px;
+  border-radius: 17px;
+}
+
+.ui-button--mini {
+  height: 28px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 14px;
+}
+
+/* 主题颜色 */
+.ui-button--primary {
+  background-color: #165DFF;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+}
+
+.ui-button--success {
+  background-color: #00B42A;
+  box-shadow: 0 4px 12px rgba(0, 180, 42, 0.25);
+}
+
+.ui-button--warning {
+  background-color: #FF7D00;
+  box-shadow: 0 4px 12px rgba(255, 125, 0, 0.25);
+}
+
+.ui-button--danger {
+  background-color: #F53F3F;
+  box-shadow: 0 4px 12px rgba(245, 63, 63, 0.25);
+}
+
+.ui-button--default {
+  background-color: #F2F3F5;
+}
+
+.ui-button--outline {
+  background-color: #FFFFFF;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #C9CDD4;
+}
+
+/* 禁用态 */
+.ui-button--disabled {
+  opacity: 0.5;
+}
+
+/* 文字样式：强制绝对居中 */
+.ui-button__text {
+  text-align: center;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.ui-button__text--large {
+  font-size: 16px;
+}
+
+.ui-button__text--medium {
+  font-size: 15px;
+}
+
+.ui-button__text--small {
+  font-size: 13px;
+}
+
+.ui-button__text--mini {
+  font-size: 12px;
+}
+
+.ui-button__text--default {
+  color: #1D2129;
+}
+
+.ui-button__text--outline {
+  color: #4E5969;
+}
+
+.ui-button__icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+</style>

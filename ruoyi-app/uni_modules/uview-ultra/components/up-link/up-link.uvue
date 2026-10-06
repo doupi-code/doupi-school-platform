@@ -1,0 +1,136 @@
+<template>
+	<text
+	    class="up-link"
+	    @tap.stop="openLink"
+	    :style="rootStyle"
+	>{{text}}</text>
+</template>
+
+<script setup lang="uts">
+	import { computed } from 'vue'
+	import defProps from './link.uts'
+	import { addStyle, addUnit, getPx } from '../../libs/function/index'
+	/**
+	 * link 超链接
+	 * @author jry ijry@qq.com 2024
+	 * @description 该组件为超链接组件，在不同平台有不同表现形式：在APP平台会通过plus环境打开内置浏览器，在小程序中把链接复制到粘贴板，同时提示信息，在H5中通过window.open打开链接。
+	 * @tutorial https://ijry.github.io/uview-plus/components/link.html
+	 * @property {String}			color		文字颜色 （默认 color['up-primary'] ）
+	 * @property {String ｜ Number}	fontSize	字体大小，单位px （默认 15 ）
+	 * @property {Boolean}			underLine	是否显示下划线 （默认 false ）
+	 * @property {String}			href		跳转的链接，要带上http(s)
+	 * @property {String}			mpTips		各个小程序平台把链接复制到粘贴板后的提示语（默认“链接已复制，请在浏览器打开”）
+	 * @property {String}			lineColor	下划线颜色，默认同color参数颜色 
+	 * @property {String}			text		超链接的问题，不使用slot形式传入，是因为nvue下无法修改颜色 
+	 * @property {Object}			customStyle	定义需要用到的外部样式
+	 * 
+	 * @example <up-link href="http://www.uviewui.com">蜀道难，难于上青天</up-link>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-link'
+	})
+
+	const props = defineProps({
+		color: {
+			type: String,
+			default: defProps.getString('link.color')
+		},
+		fontSize: {
+			type: [String],
+			default: defProps.getString('link.fontSize')
+		},
+		underLine: {
+			type: Boolean,
+			default: defProps.getBoolean('link.underLine')
+		},
+		href: {
+			type: String,
+			default: defProps.getString('link.href')
+		},
+		mpTips: {
+			type: String,
+			default: defProps.getString('link.mpTips')
+		},
+		lineColor: {
+			type: String,
+			default: defProps.getString('link.lineColor')
+		},
+		text: {
+			type: String,
+			default: defProps.getString('link.text')
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		}
+	})
+
+	const emit = defineEmits(['click'])
+
+	const linkStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		style['color'] = props.color
+		style['fontSize'] = addUnit(props.fontSize)
+		// line-height设置为比字体大小多2px
+		style['lineHeight'] = addUnit(parseInt(getPx(props.fontSize)) + 2)
+		style['textDecoration'] = props.underLine ? 'underline' : 'none'
+		// if (props.underLine) {
+		// 	style.borderBottomColor = props.lineColor || props.color
+		// 	style.borderBottomWidth = '1px'
+		// }
+		return style
+	})
+
+	const rootStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		const base = linkStyle.value
+		const baseKeys = UTSJSONObject.keys(base)
+		for (let i = 0; i < baseKeys.length; i++) {
+			const key = baseKeys[i]
+			style[key] = base[key]
+		}
+		const custom = addStyle(props.customStyle) as UTSJSONObject
+		const customKeys = UTSJSONObject.keys(custom)
+		for (let i = 0; i < customKeys.length; i++) {
+			const key = customKeys[i]
+			style[key] = custom[key]
+		}
+		return style
+	})
+
+	const openLink = (): void => {
+		// #ifdef APP
+		// todo
+		//plus.runtime.openURL(props.href)
+		// #endif
+		// #ifdef H5
+		window.open(props.href)
+		// #endif
+		// #ifdef MP
+		// todo
+		// uni.setClipboardData({
+		// 	data: props.href,
+		// 	success: () => {
+		// 		uni.hideToast();
+		// 		uni.$nextTick(() => {
+		// 			// toast(props.mpTips);
+		// 		})
+		// 	}
+		// });
+		// #endif
+		emit('click')
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+	$up-link-line-height:1 !default;
+
+	.up-link {
+		line-height: $up-link-line-height;
+		@include flex;
+		flex-wrap: wrap;
+		flex: 1;
+	}
+</style>

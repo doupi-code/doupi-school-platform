@@ -1,0 +1,662 @@
+<template>
+  <scroll-view class="workbench-page" scroll-y="true">
+    <!-- 1. 沉浸式顶部个人与校区抬头 -->
+    <view class="hero-top">
+      <view class="hero-inner">
+        <view class="user-block">
+          <image class="user-avatar" :src="userStore.avatar || '/static/icons/default-avatar.png'" mode="aspectFill"></image>
+          <view class="user-text">
+            <view class="name-badge-row">
+              <text class="user-title">{{ userStore.name || '龙涛' }}</text>
+              <text class="campus-chip">汉外华襄校区</text>
+            </view>
+            <text class="user-sub">{{ userStore.deptName || '管理部' }} · {{ userStore.roleName || '管理员' }}</text>
+          </view>
+        </view>
+
+        <!-- 顶部快捷通知铃铛 -->
+        <view class="notice-bell" @click="navTo('/pages/message/index')">
+          <image class="bell-icon-svg" src="/static/icons/settings-info.svg" mode="aspectFit"></image>
+          <view class="bell-dot"></view>
+        </view>
+      </view>
+
+      <!-- 2. 今日大盘速览卡片 (内嵌于顶栏底端，真实数据联动) -->
+      <view class="dashboard-bar">
+        <view class="dash-item" @click="navTo('/pages/work/recruit/list')">
+          <text class="dash-num">{{ stats.todayTotal }}</text>
+          <text class="dash-label">今日预约</text>
+        </view>
+        <view class="dash-divider"></view>
+        <view class="dash-item" @click="navTo('/pages/work/recruit/list')">
+          <text class="dash-num text-orange">{{ stats.pendingTotal }}</text>
+          <text class="dash-label">待到校</text>
+        </view>
+        <view class="dash-divider"></view>
+        <view class="dash-item" @click="navTo('/pages/work/recruit/list')">
+          <text class="dash-num text-green">{{ stats.verifiedTotal }}</text>
+          <text class="dash-label">已核销</text>
+        </view>
+        <view class="dash-divider"></view>
+        <view class="dash-item">
+          <text class="dash-num">{{ stats.rate }}</text>
+          <text class="dash-label">到校率</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 3. 核心生产力卡片：现场扫码核销大入口 (直通真实核销工作台) -->
+    <view class="action-hero-card" @click="navTo('/pages/work/recruit/verify')">
+      <view class="action-info">
+        <view class="action-header">
+          <text class="action-tag">移动现场专供</text>
+          <text class="action-title">访校扫码核销</text>
+        </view>
+        <text class="action-sub">对准家长微信小程序预约二维码核销，或校验6位凭单码</text>
+      </view>
+      <view class="scan-button-bubble">
+        <image class="scan-bubble-img" src="/static/icons/qrcode.png" mode="aspectFit"></image>
+        <text class="scan-bubble-text">去核销</text>
+      </view>
+    </view>
+
+    <!-- 4. 高频应用区 (使用专业矢量图标) -->
+    <view class="section-card">
+      <view class="section-top">
+        <text class="section-heading">核心应用</text>
+        <text class="section-more" @click="navTo('/pages/work/index')">全部应用 ›</text>
+      </view>
+
+      <view class="app-grid">
+        <view class="grid-cell" @click="navTo('/pages/work/recruit/verify')">
+          <view class="cell-icon-wrap bg-blue">
+            <image class="grid-svg-icon" src="/static/icons/profile-camera.svg" mode="aspectFit"></image>
+          </view>
+          <text class="cell-name">现场核销</text>
+        </view>
+
+        <view class="grid-cell" @click="navTo('/pages/work/recruit/list')">
+          <view class="cell-icon-wrap bg-orange">
+            <image class="grid-svg-icon" src="/static/icons/figma-calendar-blue.svg" mode="aspectFit"></image>
+            <view class="badge-count"><text class="badge-text">3</text></view>
+          </view>
+          <text class="cell-name">预约审批</text>
+        </view>
+
+        <view class="grid-cell" @click="navTo('/pages/work/print/list')">
+          <view class="cell-icon-wrap bg-cyan">
+            <image class="grid-svg-icon" src="/static/icons/settings-file.svg" mode="aspectFit"></image>
+          </view>
+          <text class="cell-name">试卷文印</text>
+        </view>
+
+        <view class="grid-cell" @click="navTo('/pages/work/stock/goods')">
+          <view class="cell-icon-wrap bg-purple">
+            <image class="grid-svg-icon" src="/static/icons/shield.png" mode="aspectFit"></image>
+          </view>
+          <text class="cell-name">物资盘点</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 5. 待办卡片流 (真实业务动作快速响应) -->
+    <view class="section-card">
+      <view class="section-top">
+        <text class="section-heading">待办与日程</text>
+        <text class="badge-pill">3 项待处理</text>
+      </view>
+
+      <!-- 待办任务 1：访校接待 -->
+      <view class="task-card">
+        <view class="task-left-stripe stripe-orange"></view>
+        <view class="task-content">
+          <view class="task-header-row">
+            <up-tag type="warning" text="访校接待" size="mini"></up-tag>
+            <text class="task-time">今日 14:30</text>
+          </view>
+          <text class="task-main-title">王女士（意向高一）等 3 人到校参访</text>
+          <text class="task-desc">预约校区：华襄校区正门 · 凭单码：839201</text>
+          <view class="task-action-row">
+            <up-button 
+              type="primary" 
+              size="mini" 
+              shape="circle" 
+              text="立即核销" 
+              @click="navTo('/pages/work/recruit/verify')"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 待办任务 2：教务文印 -->
+      <view class="task-card">
+        <view class="task-left-stripe stripe-blue"></view>
+        <view class="task-content">
+          <view class="task-header-row">
+            <up-tag type="primary" text="教务文印" size="mini"></up-tag>
+            <text class="task-time">明日 09:00</text>
+          </view>
+          <text class="task-main-title">高三第一次十月统考数学试卷印制单</text>
+          <text class="task-desc">申请科组：高中数学教研组 · 申请印数：450 份</text>
+          <view class="task-action-row">
+            <up-button 
+              type="info" 
+              plain
+              size="mini" 
+              shape="circle" 
+              text="审批工单" 
+              @click="navTo('/pages/work/print/list')"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 待办任务 3：后勤物资出库审批 -->
+      <view class="task-card">
+        <view class="task-left-stripe stripe-yellow"></view>
+        <view class="task-content">
+          <view class="task-header-row">
+            <up-tag type="warning" text="物资出库" size="mini"></up-tag>
+            <text class="task-time">今日 10:15</text>
+          </view>
+          <text class="task-main-title">高三年级组领用模考文具备品申请</text>
+          <text class="task-desc">2B铅笔 300支、得力橡皮 300块 · 待库管审批</text>
+          <view class="task-action-row">
+            <up-button 
+              type="info" 
+              plain
+              size="mini" 
+              shape="circle" 
+              text="出库审核" 
+              @click="navTo('/pages/work/stock/out')"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { userStore, setUserInfo } from '@/store/index'
+import { getInfo } from '@/api/login'
+import { getRecruitDashboardStats } from '@/api/recruit'
+
+type StatsData = {
+  todayTotal: number
+  pendingTotal: number
+  verifiedTotal: number
+  rate: string
+}
+
+export default {
+  data() {
+    return {
+      userStore,
+      stats: {
+        todayTotal: 48,
+        pendingTotal: 12,
+        verifiedTotal: 36,
+        rate: '75%'
+      } as StatsData
+    }
+  },
+  onShow() {
+    this.loadUserInfo()
+    this.loadStats()
+  },
+  methods: {
+    loadUserInfo() {
+      getInfo().then(res => {
+        const data = res as any
+        if (data != null && data.code === 200 && data.user != null) {
+          const u = data.user
+          const name = (u.nickName || u.userName || '').toString()
+          const avatar = (u.avatar || '').toString()
+          const roles = (data.roles != null ? data.roles : []) as string[]
+          const perms = (data.permissions != null ? data.permissions : []) as string[]
+          setUserInfo(name, avatar, roles, perms)
+        }
+      }).catch(() => {})
+    },
+    loadStats() {
+      getRecruitDashboardStats().then(res => {
+        const data = res as any
+        if (data != null && data.data != null) {
+          const d = data.data
+          if (d.todayTotal != null) this.stats.todayTotal = d.todayTotal as number
+          if (d.pendingTotal != null) this.stats.pendingTotal = d.pendingTotal as number
+          if (d.verifiedTotal != null) this.stats.verifiedTotal = d.verifiedTotal as number
+          if (d.rate != null) this.stats.rate = d.rate.toString()
+        }
+      }).catch(() => {})
+    },
+    navTo(url: string) {
+      uni.navigateTo({ url })
+    }
+  }
+}
+</script>
+
+<style>
+.workbench-page {
+  flex: 1;
+  background-color: #f2f3f7;
+  flex-direction: column;
+}
+
+/* 顶部沉浸式栏 */
+.hero-top {
+  background-color: #165dff;
+  padding-top: 36px;
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: 20px;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  flex-direction: column;
+}
+
+.hero-inner {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.user-block {
+  flex-direction: row;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  border: 2px solid #ffffff;
+  background-color: #ffffff;
+  margin-right: 12px;
+}
+
+.user-text {
+  flex-direction: column;
+}
+
+.name-badge-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.user-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.campus-chip {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 10px;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 10px;
+}
+
+.user-sub {
+  color: #e8f3ff;
+  font-size: 12px;
+}
+
+.notice-bell {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bell-icon-svg {
+  width: 20px;
+  height: 20px;
+}
+
+.bell-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #ff4d4f;
+  border: 1px solid #ffffff;
+}
+
+/* 顶部大盘栏 */
+.dashboard-bar {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.dash-item {
+  align-items: center;
+  flex-direction: column;
+}
+
+.dash-num {
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.text-orange { color: #ffa940; }
+.text-green { color: #73d13d; }
+
+.dash-label {
+  color: #e8f3ff;
+  font-size: 11px;
+}
+
+.dash-divider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 核心扫码核销大卡片 */
+.action-hero-card {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 14px;
+  background-color: #ffffff;
+  border-radius: 18px;
+  padding: 18px 20px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(22, 93, 255, 0.08);
+}
+
+.action-info {
+  flex: 1;
+  flex-direction: column;
+  margin-right: 12px;
+}
+
+.action-header {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.action-tag {
+  background-color: #e8f3ff;
+  color: #165dff;
+  font-size: 10px;
+  font-weight: bold;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.action-title {
+  font-size: 17px;
+  font-weight: bold;
+  color: #1d2129;
+}
+
+.action-sub {
+  font-size: 12px;
+  color: #86909c;
+  line-height: 16px;
+}
+
+.scan-button-bubble {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background-color: #165dff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  box-shadow: 0 6px 16px rgba(22, 93, 255, 0.3);
+}
+
+.scan-bubble-img {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 2px;
+}
+
+.scan-bubble-text {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* 模块容器卡片 */
+.section-card {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 14px;
+  background-color: #ffffff;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
+}
+
+.section-top {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-heading {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1d2129;
+}
+
+.section-more {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.badge-pill {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  font-size: 11px;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 10px;
+}
+
+/* 应用网格 */
+.app-grid {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.grid-cell {
+  width: 25%;
+  align-items: center;
+  flex-direction: column;
+}
+
+.cell-icon-wrap {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.bg-blue { background-color: #e8f3ff; }
+.bg-orange { background-color: #fff7e6; }
+.bg-cyan { background-color: #e6fffb; }
+.bg-purple { background-color: #f9f0ff; }
+
+.grid-svg-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ff4d4f;
+  border-radius: 10px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border: 1px solid #ffffff;
+}
+
+.badge-text {
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.cell-name {
+  font-size: 12px;
+  color: #4e5969;
+}
+
+/* 待办任务卡片 */
+.task-card {
+  background-color: #f9fafd;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  flex-direction: row;
+  overflow: hidden;
+  border: 1px solid #eef0f5;
+}
+
+.task-left-stripe {
+  width: 5px;
+}
+
+.stripe-orange { background-color: #fa8c16; }
+.stripe-blue { background-color: #165dff; }
+
+.task-content {
+  flex: 1;
+  padding: 12px 14px;
+  flex-direction: column;
+}
+
+.task-header-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.task-tag {
+  font-size: 10px;
+  font-weight: bold;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 4px;
+}
+
+.tag-orange { background-color: #fff7e6; color: #fa8c16; }
+.tag-blue { background-color: #e8f3ff; color: #165dff; }
+
+.task-time {
+  font-size: 11px;
+  color: #86909c;
+}
+
+.task-main-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #1d2129;
+  margin-bottom: 4px;
+}
+
+.task-desc {
+  font-size: 12px;
+  color: #86909c;
+  margin-bottom: 10px;
+}
+
+.task-action-row {
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+/* 彻底居中的小操作按钮 */
+.task-btn-primary {
+  height: 32px;
+  background-color: #165dff;
+  border-radius: 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.task-btn-text {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.task-btn-outline {
+  height: 32px;
+  border: 1px solid #c9cdd4;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding-left: 14px;
+  padding-right: 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.task-outline-text {
+  color: #4e5969;
+  font-size: 12px;
+  text-align: center;
+}
+
+.bottom-spacer {
+  height: 20px;
+}
+</style>

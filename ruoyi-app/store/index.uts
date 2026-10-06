@@ -1,0 +1,34 @@
+import { reactive } from 'vue'
+import { getToken, setToken, removeToken } from '@/utils/auth'
+
+export const userStore = reactive({
+  token: getToken(),
+  name: '',
+  avatar: '/static/avatar.png',
+  roles: [] as string[],
+  permissions: [] as string[],
+  deptName: '管理部',
+  roleName: '管理员'
+})
+
+export function setUserInfo(name: string, avatar: string, roles: string[], permissions: string[]) {
+  userStore.name = name
+  if (avatar != '' && avatar != null) {
+    userStore.avatar = avatar
+  }
+  userStore.roles = roles
+  userStore.permissions = permissions
+}
+
+export function setUserToken(token: string) {
+  userStore.token = token
+  setToken(token)
+}
+
+export function clearUserSession() {
+  userStore.token = ''
+  userStore.name = ''
+  userStore.roles = [] as string[]
+  userStore.permissions = [] as string[]
+  removeToken()
+}

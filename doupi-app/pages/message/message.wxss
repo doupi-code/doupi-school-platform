@@ -1,0 +1,294 @@
+/**
+ * 通知页样式 - 美化增强版
+ * 设计规范：时间分组、已读/未读状态区分、图标系统
+ */
+
+.page {
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #F5F6F8;
+  overflow: hidden;
+}
+
+/* ==================== 内容区域 ==================== */
+
+.content {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  padding: 20rpx 28rpx;
+  box-sizing: border-box;
+}
+
+/* ==================== 底部「全部已读」==================== */
+
+.mark-all-footer {
+  flex-shrink: 0;
+  padding: 16rpx 28rpx;
+  padding-bottom: calc(16rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background-color: #ffffff;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+}
+
+.mark-all-btn {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #3088f4 0%, #2670d4 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mark-all-btn-text {
+  font-size: 30rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.mark-all-btn--active {
+  opacity: 0.92;
+}
+
+.mark-all-btn--disabled {
+  background: #e8e8e8;
+  box-shadow: none;
+}
+
+.mark-all-btn--disabled .mark-all-btn-text {
+  color: #999999;
+}
+
+/* ==================== 空状态 ==================== */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 32rpx;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  margin-top: 40rpx;
+}
+
+.empty-illustration {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 50%;
+  background-color: #FAFAFA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  color: #333333;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.empty-desc {
+  font-size: 26rpx;
+  color: #AAAAAA;
+  display: block;
+}
+
+/* ==================== 日期分组头部 ==================== */
+
+.date-group-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 28rpx 0 16rpx;
+}
+
+.date-line {
+  flex: 1;
+  height: 2rpx;
+  background: linear-gradient(90deg, transparent, #E8E8E8, transparent);
+}
+
+.date-label {
+  font-size: 24rpx;
+  color: #888888;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ==================== 消息列表 ==================== */
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.notice-item {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  display: flex;
+  gap: 20rpx;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.notice-item.unread {
+  border-left: 8rpx solid #3088F4;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FAFCFF 100%);
+  box-shadow: 0 4rpx 16rpx rgba(48, 136, 244, 0.08);
+}
+
+.notice-item:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+
+/* 图标容器 */
+.notice-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+
+.notice-icon-wrap.system {
+  background: linear-gradient(135deg, #FAAD14 0%, #FFA940 100%);
+}
+
+.notice-icon-wrap.appointment {
+  background: linear-gradient(135deg, #3088F4 0%, #2670D4 100%);
+}
+
+.notice-icon-wrap.read-icon {
+  opacity: 0.7;
+}
+
+/* 内容区域 */
+.notice-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-bottom: 10rpx;
+}
+
+.notice-title {
+  font-size: 30rpx;
+  color: #333333;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.notice-title--read {
+  color: #666666;
+  font-weight: 500;
+}
+
+.unread-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #3088F4;
+  flex-shrink: 0;
+  margin-top: 8rpx;
+  animation: pulse-unread 2s ease-in-out infinite;
+}
+
+@keyframes pulse-unread {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.notice-desc {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12rpx;
+}
+
+.notice-desc--read {
+  color: #999999;
+}
+
+.notice-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.notice-time {
+  font-size: 22rpx;
+  color: #BBBBBB;
+}
+
+.notice-time--read {
+  color: #CCCCCC;
+}
+
+.notice-tag {
+  padding: 4rpx 14rpx;
+  border-radius: 10rpx;
+  font-size: 20rpx;
+  color: #3088F4;
+  background-color: #EBF4FF;
+  font-weight: 500;
+}
+
+/* ==================== 加载更多 / 到底提示 ==================== */
+
+.load-more-tip {
+  text-align: center;
+  padding: 32rpx 0;
+}
+
+.load-more-tip text {
+  font-size: 24rpx;
+  color: #BBBBBB;
+}
+
+.no-more-tip {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 32rpx 0 48rpx;
+}
+
+.no-more-line {
+  flex: 1;
+  height: 2rpx;
+  background-color: #EEEEEE;
+}
+
+.no-more-text {
+  font-size: 22rpx;
+  color: #CCCCCC;
+  white-space: nowrap;
+}
+
+.bottom-spacer {
+  height: 24rpx;
+}

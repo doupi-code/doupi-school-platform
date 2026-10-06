@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>doupi</artifactId>
+        <groupId>com.doupi</groupId>
+        <version>3.9.2</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>doupi-recruit</artifactId>
+
+    <description>
+        招生预约与小程序服务模块
+    </description>
+
+    <dependencies>
+        <!-- 通用工具-->
+        <dependency>
+            <groupId>com.doupi</groupId>
+            <artifactId>doupi-common</artifactId>
+        </dependency>
+
+        <!-- 框架核心组件 (支持JWT认证与Security上下文) -->
+        <dependency>
+            <groupId>com.doupi</groupId>
+            <artifactId>doupi-framework</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

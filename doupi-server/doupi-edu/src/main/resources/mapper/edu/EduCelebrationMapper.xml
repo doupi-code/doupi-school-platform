@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.edu.mapper.EduCelebrationMapper">
+    
+    <resultMap type="com.doupi.edu.domain.EduCelebration" id="EduCelebrationResult">
+        <result property="celebrationId"  column="celebration_id"  />
+        <result property="studentName"    column="student_name"    />
+        <result property="maskedName"     column="masked_name"     />
+        <result property="subject"        column="subject"         />
+        <result property="beforeScore"    column="before_score"    />
+        <result property="afterScore"     column="after_score"     />
+        <result property="upgradeScore"   column="upgrade_score"   />
+        <result property="batchTitle"     column="batch_title"     />
+        <result property="tag"            column="tag"             />
+        <result property="status"         column="status"          />
+        <result property="orderNum"       column="order_num"       />
+        <result property="createBy"       column="create_by"       />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateBy"       column="update_by"       />
+        <result property="updateTime"     column="update_time"     />
+        <result property="remark"         column="remark"          />
+    </resultMap>
+
+    <sql id="selectEduCelebrationVo">
+        select celebration_id, student_name, masked_name, subject, before_score, after_score, upgrade_score, 
+               batch_title, tag, status, order_num, create_by, create_time, update_by, update_time, remark 
+        from edu_celebration
+    </sql>
+
+    <select id="selectEduCelebrationList" parameterType="com.doupi.edu.domain.EduCelebration" resultMap="EduCelebrationResult">
+        <include refid="selectEduCelebrationVo"/>
+        <where>  
+            <if test="studentName != null and studentName != ''">
+                and (student_name like concat('%', #{studentName}, '%') or masked_name like concat('%', #{studentName}, '%'))
+            </if>
+            <if test="subject != null and subject != ''">
+                and subject like concat('%', #{subject}, '%')
+            </if>
+            <if test="batchTitle != null and batchTitle != ''">
+                and batch_title like concat('%', #{batchTitle}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+            <if test="tag != null and tag != ''">
+                and tag = #{tag}
+            </if>
+        </where>
+        order by upgrade_score desc, order_num asc, celebration_id desc
+    </select>
+    
+    <select id="selectEduCelebrationById" parameterType="Long" resultMap="EduCelebrationResult">
+        <include refid="selectEduCelebrationVo"/>
+        where celebration_id = #{celebrationId}
+    </select>
+
+    <select id="selectCelebrationSummary" parameterType="String" resultType="java.util.Map">
+        select 
+            count(1) as totalCount,
+            coalesce(max(upgrade_score), 0) as maxUpgrade,
+            coalesce(round(avg(upgrade_score), 1), 0) as avgUpgrade,
+            coalesce(max(after_score), 0) as maxAfterScore,
+            coalesce(sum(case when after_score >= 600 then 1 else 0 end), 0) as countAbove600,
+            coalesce(sum(case when after_score >= 550 then 1 else 0 end), 0) as countAbove550,
+            coalesce(sum(case when after_score >= 500 then 1 else 0 end), 0) as countAbove500,
+            coalesce(sum(case when upgrade_score >= 100 then 1 else 0 end), 0) as countUpgradeOver100
+        from edu_celebration
+        where status = '0'
+        <if test="batchTitle != null and batchTitle != ''">
+            and batch_title = #{batchTitle}
+        </if>
+    </select>
+
+    <select id="selectCelebrationBatchList" resultType="java.util.Map">
+        select 
+            batch_title as batchTitle,
+            count(1) as totalCount,
+            coalesce(max(upgrade_score), 0) as maxUpgrade,
+            coalesce(round(avg(upgrade_score), 1), 0) as avgUpgrade,
+            max(create_time) as latestTime
+        from edu_celebration
+        where batch_title is not null and trim(batch_title) != ''
+        group by batch_title
+        order by max(create_time) desc, max(celebration_id) desc
+    </select>
+
+    <insert id="insertEduCelebration" parameterType="com.doupi.edu.domain.EduCelebration" useGeneratedKeys="true" keyProperty="celebrationId">
+        insert into edu_celebration
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentName != null and studentName != ''">student_name,</if>
+            <if test="maskedName != null">masked_name,</if>
+            <if test="subject != null">subject,</if>
+            <if test="beforeScore != null">before_score,</if>
+            <if test="afterScore != null">after_score,</if>
+            <if test="upgradeScore != null">upgrade_score,</if>
+            <if test="batchTitle != null and batchTitle != ''">batch_title,</if>
+            <if test="tag != null">tag,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentName != null and studentName != ''">#{studentName},</if>
+            <if test="maskedName != null">#{maskedName},</if>
+            <if test="subject != null">#{subject},</if>
+            <if test="beforeScore != null">#{beforeScore},</if>
+            <if test="afterScore != null">#{afterScore},</if>
+            <if test="upgradeScore != null">#{upgradeScore},</if>
+            <if test="batchTitle != null and batchTitle != ''">#{batchTitle},</if>
+            <if test="tag != null">#{tag},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateEduCelebration" parameterType="com.doupi.edu.domain.EduCelebration">
+        update edu_celebration
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentName != null and studentName != ''">student_name = #{studentName},</if>
+            <if test="maskedName != null">masked_name = #{maskedName},</if>
+            <if test="subject != null">subject = #{subject},</if>
+            <if test="beforeScore != null">before_score = #{beforeScore},</if>
+            <if test="afterScore != null">after_score = #{afterScore},</if>
+            <if test="upgradeScore != null">upgrade_score = #{upgradeScore},</if>
+            <if test="batchTitle != null">batch_title = #{batchTitle},</if>
+            <if test="tag != null">tag = #{tag},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where celebration_id = #{celebrationId}
+    </update>
+
+    <delete id="deleteEduCelebrationById" parameterType="Long">
+        delete from edu_celebration where celebration_id = #{celebrationId}
+    </delete>
+
+    <delete id="deleteEduCelebrationByIds" parameterType="String">
+        delete from edu_celebration where celebration_id in 
+        <foreach item="celebrationId" collection="array" open="(" separator="," close=")">
+            #{celebrationId}
+        </foreach>
+    </delete>
+
+    <delete id="cleanEduCelebration">
+        truncate table edu_celebration
+    </delete>
+</mapper>

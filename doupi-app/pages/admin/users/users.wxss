@@ -1,0 +1,675 @@
+/* ==================== 页面基础样式 ==================== */
+.page {
+  min-height: 100vh;
+  background: #F5F6F8;
+}
+
+/* ==================== 页面头部样式 ==================== */
+/* ==================== 搜索栏样式 ==================== */
+.search-bar {
+  background: #fff;
+  padding: 24rpx 32rpx;
+  display: flex;
+  gap: 16rpx;
+  border-bottom: 2rpx solid #F5F6F8;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #F5F6F8;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  height: 72rpx;
+}
+
+.search-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333333;
+  height: 72rpx;
+  line-height: 72rpx;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: #F5F6F8;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: #333333;
+  white-space: nowrap;
+}
+
+.filter-icon {
+  font-size: 28rpx;
+}
+
+/* 筛选下拉框样式 */
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 32rpx;
+  z-index: 100;
+}
+
+.dropdown-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
+
+.dropdown-menu {
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+  width: 224rpx;
+  overflow: hidden;
+  border: 2rpx solid #EEEEEE;
+}
+
+.dropdown-item {
+  padding: 20rpx 24rpx;
+  font-size: 26rpx;
+  color: #333333;
+  transition: all 0.3s ease;
+}
+
+.dropdown-item.active {
+  background: #E8F2FE;
+  color: #3088F4;
+}
+
+/* ==================== 内容区域样式 ==================== */
+.content {
+  height: calc(100vh - 120rpx);
+  margin-top: 120rpx;
+  box-sizing: border-box;
+  background: #F5F6F8;
+}
+
+.content-inner {
+  padding: 16rpx 32rpx 0;
+  box-sizing: border-box;
+}
+
+.result-count {
+  font-size: 22rpx;
+  color: #666666;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.toolbar-row {
+  margin-bottom: 16rpx;
+}
+
+.batch-action-btn {
+  width: 100%;
+  height: 76rpx;
+  border: none;
+  border-radius: 14rpx;
+  background: #3088F4;
+  color: #FFFFFF;
+  font-size: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+}
+
+/* ==================== 用户卡片样式 ==================== */
+.user-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 头像样式 */
+.avatar-box {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: #E8F2FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+/* 用户信息样式 */
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.user-name {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-disabled-tag {
+  font-size: 20rpx;
+  color: #FF4D4F;
+  background: #FFF1F0;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.phone-icon {
+  font-size: 22rpx;
+  line-height: 1;
+}
+
+.user-phone {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.user-phone.released {
+  color: #666666;
+}
+
+/* 卡片右侧区域 */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+/* 角色标签样式 */
+.role-tag {
+  padding: 8rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.role-1 {
+  /* 管理员：主题蓝色 */
+  background: #E8F2FE;
+  color: #3088F4;
+}
+
+.role-2 {
+  /* 招生主任：紫色 */
+  background: #F9F0FF;
+  color: #722ED1;
+}
+
+.role-3 {
+  /* 招生老师：绿色 */
+  background: #F6FFED;
+  color: #52C41A;
+}
+
+.role-4 {
+  /* 家长：灰色 */
+  background: #F5F6F8;
+  color: #666666;
+}
+
+.role-5 {
+  /* 管理员：深蓝 */
+  background: #EDF3FF;
+  color: #2F54EB;
+}
+
+/* 更多操作按钮样式 */
+.menu-wrapper {
+  position: relative;
+}
+
+.menu-btn {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  transition: all 0.2s ease;
+}
+
+.menu-btn.active {
+  background: #F5F6F8;
+}
+
+.menu-icon {
+  font-size: 32rpx;
+  color: #666666;
+  line-height: 1;
+}
+
+/* 操作菜单下拉框 */
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 200;
+}
+
+.menu-list {
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+  width: 256rpx;
+  overflow: hidden;
+  border: 2rpx solid #EEEEEE;
+  margin-top: 8rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx 28rpx;
+  font-size: 26rpx;
+  color: #333333;
+  transition: all 0.2s ease;
+}
+
+.menu-item:active {
+  background: #F5F6F8;
+}
+
+.menu-item.danger {
+  color: #FF4D4F;
+}
+
+.menu-item.danger:active {
+  background: #FFF1F0;
+}
+
+.menu-item-icon {
+  font-size: 28rpx;
+  line-height: 1;
+  width: 32rpx;
+  text-align: center;
+}
+
+.menu-item-icon.detail {
+  color: #3088F4;
+}
+
+.menu-item-icon.edit {
+  color: #52C41A;
+}
+
+.menu-item-icon.disable {
+  color: #FF8C00;
+}
+
+.menu-item-icon.enable {
+  color: #52C41A;
+}
+
+.menu-item-icon.delete {
+  color: #FF4D4F;
+}
+
+/* 卡片内容样式 */
+.card-body {
+  border-top: 2rpx solid #F5F6F8;
+  padding-top: 20rpx;
+}
+
+.card-actions {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid #F5F6F8;
+  display: flex;
+  gap: 14rpx;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  min-width: 130rpx;
+  height: 58rpx;
+  padding: 0 16rpx;
+  border-radius: 14rpx;
+  background: #F5FAFF;
+  border: 2rpx solid #B7D9FF;
+  color: #3088F4;
+  font-size: 24rpx;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  box-sizing: border-box;
+}
+
+.action-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.action-btn.warn {
+  background: #FFF9ED;
+  border-color: #FFD8A8;
+  color: #FA8C16;
+}
+
+.action-btn.success {
+  background: #F6FFED;
+  border-color: #C7EFB1;
+  color: #52C41A;
+}
+
+.action-btn.danger {
+  background: #FFF2F1;
+  border-color: #FFC3C0;
+  color: #FF4D4F;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+  align-items: center;
+}
+
+.info-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.info-label {
+  width: 140rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: #333333;
+  flex: 1;
+}
+
+.info-value.time {
+  font-size: 26rpx;
+  color: #333333;
+  white-space: nowrap;
+}
+
+.time-icon {
+  font-size: 22rpx;
+  line-height: 1;
+}
+
+/* ==================== 空状态样式 ==================== */
+.empty {
+  text-align: center;
+  padding: 128rpx 0;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999999;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.empty-desc {
+  font-size: 22rpx;
+  color: #CCCCCC;
+}
+
+.load-state {
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.bottom-spacer {
+  height: calc(32rpx + env(safe-area-inset-bottom));
+}
+
+/* ==================== 弹窗通用样式 ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 24rpx;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-small {
+  max-width: 600rpx;
+}
+
+.modal-header {
+  padding: 32rpx 32rpx 24rpx;
+  border-bottom: 2rpx solid #F5F6F8;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  color: #333333;
+  font-weight: bold;
+  display: block;
+}
+
+.modal-body {
+  padding: 24rpx 32rpx;
+}
+
+.modal-footer {
+  padding: 24rpx 32rpx 32rpx;
+  border-top: 2rpx solid #F5F6F8;
+}
+
+.modal-footer-flex {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+}
+
+/* 弹窗详情行样式 */
+.detail-row {
+  display: flex;
+  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  align-items: center;
+}
+
+.detail-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  width: 140rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: #333333;
+  flex: 1;
+  word-break: normal;
+}
+
+.detail-value.time {
+  font-size: 26rpx;
+  color: #333333;
+  white-space: nowrap;
+}
+
+/* 角色选择样式 */
+.role-select-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 16rpx;
+}
+
+.role-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.role-option {
+  padding: 16rpx 28rpx;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  color: #333333;
+  background: #F5F6F8;
+  transition: all 0.2s ease;
+}
+
+.role-option.selected {
+  background: #3088F4;
+  color: #ffffff;
+}
+
+.role-option:active {
+  background: #E5E5E5;
+}
+
+.role-option.selected:active {
+  background: #1a6dd4;
+}
+
+/* ==================== 按钮样式 ==================== */
+.btn-primary {
+  width: 100%;
+  height: 88rpx;
+  background: #3088F4;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: bold;
+  border-radius: 16rpx;
+  border: none;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.btn-primary:active {
+  background: #1a6dd4;
+}
+
+.btn-secondary {
+  width: 100%;
+  height: 88rpx;
+  background: #F5F6F8;
+  color: #333333;
+  font-size: 28rpx;
+  font-weight: bold;
+  border-radius: 16rpx;
+  border: none;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.btn-secondary:active {
+  background: #E5E5E5;
+}
+
+.modal-footer-flex .btn-primary,
+.modal-footer-flex .btn-secondary,
+.modal-footer-flex .btn-danger {
+  width: auto;
+  min-width: 180rpx;
+  padding: 0 40rpx;
+}
+
+.btn-danger {
+  min-width: 180rpx;
+  height: 88rpx;
+  background: #FF4D4F;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: bold;
+  border-radius: 16rpx;
+  border: none;
+  line-height: 88rpx;
+  text-align: center;
+  padding: 0 40rpx;
+}
+
+.btn-danger:active {
+  background: #d9363e;
+}

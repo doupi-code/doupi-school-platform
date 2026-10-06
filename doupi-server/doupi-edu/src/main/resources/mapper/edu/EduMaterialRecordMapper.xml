@@ -1,0 +1,746 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.edu.mapper.EduMaterialRecordMapper">
+    
+    <resultMap type="com.doupi.edu.domain.EduMaterialRecord" id="EduMaterialRecordResult">
+        <result property="recordId" column="record_id" />
+        <result property="recordNo" column="record_no" />
+        <result property="recordType" column="record_type" />
+        <result property="businessCategory" column="business_category" />
+        <result property="targetType" column="target_type" />
+        <result property="targetId" column="target_id" />
+        <result property="targetName" column="target_name" />
+        <result property="classId" column="class_id" />
+        <result property="className" column="class_name" />
+        <result property="grade" column="grade" />
+        <result property="subject" column="subject" />
+        <result property="kitId" column="kit_id" />
+        <result property="kitName" column="kit_name" />
+        <result property="totalQuantity" column="total_quantity" />
+        <result property="imageUrl" column="image_url" />
+        <result property="operator" column="operator" />
+        <result property="operateTime" column="operate_time" />
+        <result property="status" column="status" />
+        <result property="delFlag" column="del_flag" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectEduMaterialRecordVo">
+        select record_id, record_no, record_type, business_category, target_type, target_id, target_name, 
+               class_id, class_name, grade, subject, kit_id, kit_name, total_quantity, image_url, 
+               operator, operate_time, status, del_flag, create_by, create_time, update_by, update_time, remark
+        from edu_material_record
+    </sql>
+
+    <select id="selectEduMaterialRecordList" parameterType="com.doupi.edu.domain.EduMaterialRecord" resultMap="EduMaterialRecordResult">
+        <include refid="selectEduMaterialRecordVo"/>
+        <where>  
+            and del_flag = '0'
+            <if test="recordNo != null and recordNo != ''"> and record_no like concat('%', #{recordNo}, '%')</if>
+            <if test="recordType != null and recordType != ''"> and record_type = #{recordType}</if>
+            <if test="businessCategory != null and businessCategory != ''"> and business_category like concat('%', #{businessCategory}, '%')</if>
+            <if test="targetType != null and targetType != ''"> and target_type = #{targetType}</if>
+            <if test="targetName != null and targetName != ''"> and target_name like concat('%', #{targetName}, '%')</if>
+            <if test="className != null and className != ''"> and class_name like concat('%', #{className}, '%')</if>
+            <if test="grade != null and grade != ''"> and grade = #{grade}</if>
+            <if test="subject != null and subject != ''"> and subject like concat('%', #{subject}, '%')</if>
+            <if test="operator != null and operator != ''"> and operator like concat('%', #{operator}, '%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(operate_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(operate_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by operate_time desc, record_id desc
+    </select>
+    
+    <select id="selectEduMaterialRecordById" parameterType="Long" resultMap="EduMaterialRecordResult">
+        <include refid="selectEduMaterialRecordVo"/>
+        where record_id = #{recordId} and del_flag = '0'
+    </select>
+
+    <insert id="insertEduMaterialRecord" parameterType="com.doupi.edu.domain.EduMaterialRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into edu_material_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="recordNo != null and recordNo != ''">record_no,</if>
+            <if test="recordType != null and recordType != ''">record_type,</if>
+            <if test="businessCategory != null and businessCategory != ''">business_category,</if>
+            <if test="targetType != null and targetType != ''">target_type,</if>
+            <if test="targetId != null">target_id,</if>
+            <if test="targetName != null and targetName != ''">target_name,</if>
+            <if test="classId != null">class_id,</if>
+            <if test="className != null and className != ''">class_name,</if>
+            <if test="grade != null and grade != ''">grade,</if>
+            <if test="subject != null and subject != ''">subject,</if>
+            <if test="kitId != null">kit_id,</if>
+            <if test="kitName != null and kitName != ''">kit_name,</if>
+            <if test="totalQuantity != null">total_quantity,</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url,</if>
+            <if test="operator != null and operator != ''">operator,</if>
+            <if test="operateTime != null">operate_time,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="delFlag != null">del_flag,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="recordNo != null and recordNo != ''">#{recordNo},</if>
+            <if test="recordType != null and recordType != ''">#{recordType},</if>
+            <if test="businessCategory != null and businessCategory != ''">#{businessCategory},</if>
+            <if test="targetType != null and targetType != ''">#{targetType},</if>
+            <if test="targetId != null">#{targetId},</if>
+            <if test="targetName != null and targetName != ''">#{targetName},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="className != null and className != ''">#{className},</if>
+            <if test="grade != null and grade != ''">#{grade},</if>
+            <if test="subject != null and subject != ''">#{subject},</if>
+            <if test="kitId != null">#{kitId},</if>
+            <if test="kitName != null and kitName != ''">#{kitName},</if>
+            <if test="totalQuantity != null">#{totalQuantity},</if>
+            <if test="imageUrl != null and imageUrl != ''">#{imageUrl},</if>
+            <if test="operator != null and operator != ''">#{operator},</if>
+            <if test="operateTime != null">#{operateTime},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateEduMaterialRecord" parameterType="com.doupi.edu.domain.EduMaterialRecord">
+        update edu_material_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="delFlag != null and delFlag != ''">del_flag = #{delFlag},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+
+    <select id="selectMaterialDashboardStats" resultType="java.util.HashMap">
+        select 
+            coalesce(sum(case when record_type = '1' and date(operate_time) = curdate() then 1 else 0 end), 0) as todayGrantCount,
+            coalesce(sum(case when record_type = '1' and date(operate_time) = curdate() then total_quantity else 0 end), 0) as todayGrantQuantity,
+            coalesce(sum(case when record_type = '2' and date(operate_time) = curdate() then 1 else 0 end), 0) as todayReturnCount,
+            coalesce(sum(case when record_type = '2' and date(operate_time) = curdate() then total_quantity else 0 end), 0) as todayReturnQuantity,
+            coalesce(count(distinct case when record_type = '1' and target_type = '1' then target_name end), 0) as totalTeacherCount,
+            coalesce(count(distinct case when record_type = '1' and target_type = '2' then target_name end), 0) as totalStudentCount,
+            coalesce(sum(case when record_type = '1' then total_quantity else 0 end), 0) as grandTotalGrantQty,
+            coalesce(sum(case when record_type = '2' then total_quantity else 0 end), 0) as grandTotalReturnQty
+        from edu_material_record
+        where del_flag = '0' and status = '0'
+    </select>
+
+    <!-- 最细化领退台账（单品穿透到各班、个人、各个物资） -->
+    <select id="selectDetailReportList" parameterType="java.util.Map" resultType="com.doupi.edu.domain.vo.EduMaterialDetailReportVo">
+        SELECT 
+            item.item_id AS itemId,
+            r.record_id AS recordId,
+            r.record_no AS recordNo,
+            r.record_type AS recordType,
+            CASE r.record_type 
+                WHEN '1' THEN '发放领取' 
+                WHEN '2' THEN '退还回收' 
+                ELSE '其他' 
+            END AS recordTypeName,
+            r.business_category AS businessCategory,
+            r.operate_time AS operateTime,
+            r.grade AS grade,
+            COALESCE(r.class_name, (SELECT class_name FROM edu_class WHERE class_id = r.class_id), '通用公用') AS className,
+            r.class_id AS classId,
+            r.target_type AS targetType,
+            CASE r.target_type 
+                WHEN '1' THEN '教师' 
+                WHEN '2' THEN '学生' 
+                WHEN '3' THEN '班级公用' 
+                ELSE '其他' 
+            END AS targetTypeName,
+            r.target_name AS targetName,
+            r.subject AS subject,
+            g.category AS category,
+            CASE g.category 
+                WHEN '1' THEN '教师办公品'
+                WHEN '2' THEN '学生教材'
+                WHEN '3' THEN '文印耗材'
+                ELSE '其他物资'
+            END AS categoryName,
+            item.goods_id AS goodsId,
+            COALESCE(item.goods_name, g.goods_name) AS goodsName,
+            COALESCE(item.spec, g.spec, '-') AS spec,
+            COALESCE(item.unit, g.unit, '件') AS unit,
+            item.quantity AS quantity,
+            COALESCE(
+                (SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 
+                0.00
+            ) AS price,
+            ROUND(item.quantity * COALESCE(
+                (SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 
+                0.00
+            ), 2) AS amount,
+            r.kit_name AS kitName,
+            r.operator AS operator,
+            item.item_status AS itemStatus,
+            r.image_url AS imageUrl,
+            r.remark AS remark
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        ORDER BY r.operate_time DESC, item.item_id DESC
+    </select>
+
+    <!-- 各班级物资领用汇总透视列表 -->
+    <select id="selectClassStatList" parameterType="java.util.Map" resultType="com.doupi.edu.domain.vo.EduMaterialClassStatVo">
+        SELECT 
+            COALESCE(r.class_id, 0) AS classId,
+            COALESCE(r.grade, '全校通用') AS grade,
+            COALESCE(MAX(r.class_name), (SELECT class_name FROM edu_class WHERE class_id = r.class_id), '通用公用') AS className,
+            COUNT(DISTINCT r.record_id) AS orderCount,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS totalQuantity,
+            COUNT(DISTINCT item.goods_id) AS goodsTypesCount,
+            COUNT(DISTINCT r.target_name) AS personCount,
+            ROUND(COALESCE(SUM(
+                (CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END) * 
+                COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00)
+            ), 0), 2) AS totalAmount,
+            GROUP_CONCAT(DISTINCT CONCAT(COALESCE(item.goods_name, g.goods_name), '*', item.quantity, COALESCE(item.unit, g.unit, '件')) SEPARATOR '；') AS goodsSummary
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY r.class_id, r.grade
+        ORDER BY totalQuantity DESC
+    </select>
+
+    <!-- 个人(教师/学生)物资领用汇总透视列表 -->
+    <select id="selectPersonStatList" parameterType="java.util.Map" resultType="com.doupi.edu.domain.vo.EduMaterialPersonStatVo">
+        SELECT 
+            r.target_type AS targetType,
+            CASE r.target_type 
+                WHEN '1' THEN '教师' 
+                WHEN '2' THEN '学生' 
+                WHEN '3' THEN '班级公用' 
+                ELSE '其他' 
+            END AS targetTypeName,
+            r.target_name AS targetName,
+            COALESCE(MAX(r.class_name), (SELECT class_name FROM edu_class WHERE class_id = MAX(r.class_id)), '-') AS className,
+            MAX(r.grade) AS grade,
+            MAX(r.subject) AS subject,
+            COUNT(DISTINCT r.record_id) AS orderCount,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS totalQuantity,
+            COUNT(DISTINCT item.goods_id) AS goodsTypesCount,
+            ROUND(COALESCE(SUM(
+                (CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END) * 
+                COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00)
+            ), 0), 2) AS totalAmount,
+            GROUP_CONCAT(DISTINCT CONCAT(COALESCE(item.goods_name, g.goods_name), '*', item.quantity, COALESCE(item.unit, g.unit, '件')) SEPARATOR '；') AS goodsSummary
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY r.target_type, r.target_name
+        ORDER BY totalQuantity DESC
+    </select>
+
+    <!-- 概览KPI指标卡统计 -->
+    <select id="selectReportSummaryKpi" parameterType="java.util.Map" resultType="java.util.HashMap">
+        SELECT 
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE 0 END), 0) AS totalGrantQty,
+            COALESCE(SUM(CASE WHEN r.record_type = '2' THEN item.quantity ELSE 0 END), 0) AS totalReturnQty,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS netGrantQty,
+            COUNT(DISTINCT r.target_name) AS totalPersonCount,
+            COUNT(DISTINCT r.class_id) AS totalClassCount,
+            COUNT(DISTINCT r.record_id) AS totalOrderCount,
+            ROUND(COALESCE(SUM(
+                (CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END) * 
+                COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00)
+            ), 0), 2) AS totalAmount
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+    </select>
+
+    <!-- 物资品类分布统计（环形图） -->
+    <select id="selectReportCategoryPie" parameterType="java.util.Map" resultType="java.util.HashMap">
+        SELECT 
+            CASE g.category 
+                WHEN '1' THEN '教师办公品'
+                WHEN '2' THEN '学生教材'
+                WHEN '3' THEN '文印耗材'
+                ELSE '其他物资'
+            END AS name,
+            COALESCE(SUM(item.quantity), 0) AS value
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0' AND r.record_type = '1'
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY g.category
+        ORDER BY value DESC
+    </select>
+
+    <!-- 各班级领用数量排行TOP10（柱状图） -->
+    <select id="selectReportClassRank" parameterType="java.util.Map" resultType="java.util.HashMap">
+        SELECT 
+            COALESCE(MAX(r.class_name), (SELECT class_name FROM edu_class WHERE class_id = r.class_id), '通用公用') AS className,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS quantity
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY r.class_id
+        ORDER BY quantity DESC
+        LIMIT 10
+    </select>
+
+    <!-- 月度领退走势（折线图） -->
+    <select id="selectReportMonthlyTrend" parameterType="java.util.Map" resultType="java.util.HashMap">
+        SELECT 
+            DATE_FORMAT(r.operate_time, '%Y-%m') AS month,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE 0 END), 0) AS grantQty,
+            COALESCE(SUM(CASE WHEN r.record_type = '2' THEN item.quantity ELSE 0 END), 0) AS returnQty
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginMonth != null and beginMonth != ''">
+            AND DATE_FORMAT(r.operate_time, '%Y-%m') &gt;= #{beginMonth}
+        </if>
+        GROUP BY month
+        ORDER BY month ASC
+        LIMIT 12
+    </select>
+
+    <!-- 高频领用物资TOP8 -->
+    <select id="selectReportTopGoods" parameterType="java.util.Map" resultType="java.util.HashMap">
+        SELECT 
+            COALESCE(item.goods_name, g.goods_name) AS goodsName,
+            COALESCE(item.unit, g.unit, '件') AS unit,
+            COALESCE(SUM(item.quantity), 0) AS quantity,
+            COUNT(DISTINCT r.target_name) AS personCount,
+            COUNT(DISTINCT r.class_id) AS classCount
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0' AND r.record_type = '1'
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY item.goods_id, goodsName, unit
+        ORDER BY quantity DESC
+        LIMIT 8
+    </select>
+
+    <!-- 查询各班级物资明细单项列表（用于Excel每个物品占一行、班级信息合并单元格导出） -->
+    <select id="selectClassGoodsItemsList" parameterType="java.util.Map" resultType="com.doupi.edu.domain.vo.EduMaterialDetailReportVo">
+        SELECT 
+            COALESCE(r.class_id, 0) AS classId,
+            COALESCE(r.grade, '全校通用') AS grade,
+            COALESCE(MAX(r.class_name), (SELECT class_name FROM edu_class WHERE class_id = r.class_id), '通用公用') AS className,
+            item.goods_id AS goodsId,
+            COALESCE(item.goods_name, g.goods_name) AS goodsName,
+            COALESCE(item.spec, g.spec, '-') AS spec,
+            COALESCE(item.unit, g.unit, '件') AS unit,
+            CASE g.category 
+                WHEN '1' THEN '教师办公品' 
+                WHEN '2' THEN '学生教材' 
+                WHEN '3' THEN '文印耗材' 
+                ELSE '其他物资' 
+            END AS categoryName,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS quantity,
+            COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00) AS price,
+            ROUND(COALESCE(SUM(
+                (CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END) * 
+                COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00)
+            ), 0), 2) AS amount
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY r.class_id, r.grade, item.goods_id, goodsName, spec, unit, categoryName
+        ORDER BY r.class_id, quantity DESC
+    </select>
+
+    <!-- 查询个人物资明细单项列表（用于Excel每个物品占一行、人员信息合并单元格导出） -->
+    <select id="selectPersonGoodsItemsList" parameterType="java.util.Map" resultType="com.doupi.edu.domain.vo.EduMaterialDetailReportVo">
+        SELECT 
+            r.target_type AS targetType,
+            CASE r.target_type 
+                WHEN '1' THEN '教师' 
+                WHEN '2' THEN '学生' 
+                WHEN '3' THEN '班级公用' 
+                ELSE '其他' 
+            END AS targetTypeName,
+            r.target_name AS targetName,
+            COALESCE(MAX(r.class_name), (SELECT class_name FROM edu_class WHERE class_id = MAX(r.class_id)), '-') AS className,
+            MAX(r.grade) AS grade,
+            MAX(r.subject) AS subject,
+            item.goods_id AS goodsId,
+            COALESCE(item.goods_name, g.goods_name) AS goodsName,
+            COALESCE(item.spec, g.spec, '-') AS spec,
+            COALESCE(item.unit, g.unit, '件') AS unit,
+            CASE g.category 
+                WHEN '1' THEN '教师办公品' 
+                WHEN '2' THEN '学生教材' 
+                WHEN '3' THEN '文印耗材' 
+                ELSE '其他物资' 
+            END AS categoryName,
+            COALESCE(SUM(CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END), 0) AS quantity,
+            COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00) AS price,
+            ROUND(COALESCE(SUM(
+                (CASE WHEN r.record_type = '1' THEN item.quantity ELSE -item.quantity END) * 
+                COALESCE((SELECT in_item.price FROM edu_stock_in_item in_item WHERE in_item.goods_id = item.goods_id ORDER BY in_item.item_id DESC LIMIT 1), 0.00)
+            ), 0), 2) AS amount
+        FROM edu_material_record r
+        JOIN edu_material_record_item item ON r.record_id = item.record_id
+        LEFT JOIN edu_goods g ON item.goods_id = g.goods_id
+        WHERE r.del_flag = '0' AND r.status = '0'
+        <if test="recordType != null and recordType != ''">
+            AND r.record_type = #{recordType}
+        </if>
+        <if test="businessCategory != null and businessCategory != ''">
+            AND r.business_category LIKE CONCAT('%', #{businessCategory}, '%')
+        </if>
+        <if test="targetType != null and targetType != ''">
+            AND r.target_type = #{targetType}
+        </if>
+        <if test="targetName != null and targetName != ''">
+            AND r.target_name LIKE CONCAT('%', #{targetName}, '%')
+        </if>
+        <if test="grade != null and grade != ''">
+            AND r.grade = #{grade}
+        </if>
+        <if test="classId != null">
+            AND r.class_id = #{classId}
+        </if>
+        <if test="className != null and className != ''">
+            AND (r.class_name LIKE CONCAT('%', #{className}, '%') OR (SELECT class_name FROM edu_class WHERE class_id = r.class_id) LIKE CONCAT('%', #{className}, '%'))
+        </if>
+        <if test="goodsId != null">
+            AND item.goods_id = #{goodsId}
+        </if>
+        <if test="goodsName != null and goodsName != ''">
+            AND (item.goods_name LIKE CONCAT('%', #{goodsName}, '%') OR g.goods_name LIKE CONCAT('%', #{goodsName}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND g.category = #{category}
+        </if>
+        <if test="beginTime != null and beginTime != ''">
+            AND r.operate_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND r.operate_time &lt;= #{endTime}
+        </if>
+        GROUP BY r.target_type, r.target_name, item.goods_id, goodsName, spec, unit, categoryName
+        ORDER BY r.target_name, quantity DESC
+    </select>
+</mapper>

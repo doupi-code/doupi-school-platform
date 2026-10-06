@@ -1,0 +1,38 @@
+/**
+ * uts 兼容的简易 clone：克隆普通对象(UTSJSONObject)与数组，函数按引用复制
+ * 不处理 Buffer/Map/Set/RegExp（config 对象用不到）
+ */
+
+function clone(obj: any | null): any | null {
+    if (obj == null || typeof obj !== 'object') {
+        return obj
+    }
+
+    if (obj instanceof Date) {
+        return new Date((obj as Date).getTime())
+    }
+
+    if (Array.isArray(obj)) {
+        const src = obj as Array<any>
+        const arr: Array<any | null> = []
+        for (let i = 0; i < src.length; i++) {
+            arr.push(clone(src[i]))
+        }
+        return arr
+    }
+
+    const o = obj as UTSJSONObject
+    const result: UTSJSONObject = {} as UTSJSONObject
+    UTSJSONObject.keys(o).forEach((key: string) => {
+        const val = o[key]
+        if (val != null && typeof val === 'object') {
+            result[key] = clone(val)
+        } else {
+            // 基本类型与函数：按引用/值复制
+            result[key] = val
+        }
+    })
+    return result
+}
+
+export default clone

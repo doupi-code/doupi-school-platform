@@ -1,0 +1,81 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/appointment/appointment",
+    "pages/appointment-detail/appointment-detail",
+    "pages/appointment-list/appointment-list",
+    "pages/appointment-notice/appointment-notice",
+    "pages/campus-detail/campus-detail",
+    "pages/about/about",
+    "pages/profile/profile",
+    "pages/settings/settings",
+    "pages/login/login",
+    "pages/login/profile-complete/profile-complete",
+    "pages/message/message",
+    "pages/privacy/privacy",
+    "pages/user-agreement/user-agreement"
+  ],
+  "subpackages": [
+    {
+      "root": "pages/admin",
+      "name": "admin",
+      "pages": [
+        "dashboard/dashboard",
+        "global-appointments/global-appointments",
+        "appointment-detail/appointment-detail",
+        "data-audit/data-audit",
+        "teacher-qrcode/teacher-qrcode",
+        "teacher-ranking/teacher-ranking",
+        "bind-director/bind-director",
+        "binding-audit/binding-audit",
+        "bound-teachers/bound-teachers",
+        "campus/campus",
+        "banners/banners",
+        "stats/stats",
+        "global-config/global-config",
+        "about-config/about-config",
+        "content-config/content-config",
+        "users/users",
+        "batch-users/batch-users",
+        "role-management/role-management",
+        "permission/permission",
+        "logs/logs",
+        "log-detail/log-detail",
+        "media-assets/media-assets",
+        "media-asset-detail/media-asset-detail"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/profile/profile": {
+      "network": "all",
+      "packages": ["admin"]
+    }
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#3088F4",
+    "navigationBarTitleText": "华襄高中 - 访校预约与教务服务",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F5F6F8"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#999999",
+    "selectedColor": "#3088F4",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

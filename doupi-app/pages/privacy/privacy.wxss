@@ -1,0 +1,9 @@
+/**
+ * 隐私政策/用户协议页样式 - 美化增强版
+ * 设计规范：清晰的内容展示、良好的阅读体验
+ */
+
+.page { min-height: 100vh; background: #f5f6f8; }
+.content { height: 100vh; padding: 16rpx; box-sizing: border-box; }
+.policy-card { background: #fff; border-radius: 12rpx; padding: 16rpx; }
+.rich-text { font-size: 28rpx; color: #333; line-height: 1.75; }

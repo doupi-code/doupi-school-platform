@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "绑定招生主任",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsFacilityMapper">
+    
+    <resultMap type="CmsFacility" id="CmsFacilityResult">
+        <id     property="facilityId"   column="facility_id"   />
+        <result property="facilityCode" column="facility_code" />
+        <result property="name"         column="name"          />
+        <result property="tag"          column="tag"           />
+        <result property="zone"         column="zone"          />
+        <result property="area"         column="area"          />
+        <result property="detail"       column="detail"        />
+        <result property="imageUrl"     column="image_url"     />
+        <result property="status"       column="status"        />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectFacilityVo">
+        select facility_id, facility_code, name, tag, zone, area, detail, image_url, status, sort_order, create_time, update_time
+        from doupi_cms_facility
+    </sql>
+
+    <select id="selectFacilityList" parameterType="CmsFacility" resultMap="CmsFacilityResult">
+        <include refid="selectFacilityVo"/>
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="zone != null and zone != ''">
+                and zone = #{zone}
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+        </where>
+        order by sort_order asc, facility_id asc
+    </select>
+
+    <select id="selectFacilityById" parameterType="Long" resultMap="CmsFacilityResult">
+        <include refid="selectFacilityVo"/>
+        where facility_id = #{facilityId}
+    </select>
+
+    <insert id="insertFacility" parameterType="CmsFacility" useGeneratedKeys="true" keyProperty="facilityId">
+        insert into doupi_cms_facility (
+            facility_code, name, tag, zone, area, detail, image_url, status, sort_order, create_time
+        ) values (
+            coalesce(#{facilityCode}, concat('f-', uuid_short())),
+            #{name}, 
+            coalesce(#{tag}, '核心设施'), 
+            coalesce(#{zone}, '教学'), 
+            #{area}, #{detail}, #{imageUrl}, 
+            coalesce(#{status}, '0'), 
+            coalesce(#{sortOrder}, 0), 
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateFacility" parameterType="CmsFacility">
+        update doupi_cms_facility
+        <set>
+            <if test="facilityCode != null and facilityCode != ''">facility_code = #{facilityCode},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="tag != null">tag = #{tag},</if>
+            <if test="zone != null">zone = #{zone},</if>
+            <if test="area != null">area = #{area},</if>
+            <if test="detail != null">detail = #{detail},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = sysdate()
+        </set>
+        where facility_id = #{facilityId}
+    </update>
+
+    <delete id="deleteFacilityById" parameterType="Long">
+        delete from doupi_cms_facility where facility_id = #{facilityId}
+    </delete>
+
+    <delete id="deleteFacilityByIds" parameterType="String">
+        delete from doupi_cms_facility where facility_id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

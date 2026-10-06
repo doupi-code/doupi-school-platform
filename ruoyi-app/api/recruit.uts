@@ -1,0 +1,31 @@
+import request from '@/utils/request'
+import { tansParams } from '@/utils/common'
+
+// 现场扫码核销
+export function verifyAppointment(checkInCode: string): Promise<any> {
+  return request.post('/recruit/appointment/verify', {
+    checkInCode: checkInCode
+  })
+}
+
+// 查询访校预约列表
+export function listAppointment(query: any): Promise<any> {
+  let url = '/recruit/appointment/list'
+  if (query != null) {
+    const qStr = tansParams(query)
+    if (qStr != '') {
+      url += '?' + qStr
+    }
+  }
+  return request.get(url)
+}
+
+// 查询预约详情
+export function getAppointment(appointmentId: string | number): Promise<any> {
+  return request.get('/recruit/appointment/' + appointmentId)
+}
+
+// 获取招生大盘统计数据
+export function getRecruitDashboardStats(): Promise<any> {
+  return request.get('/recruit/dashboard/stats')
+}

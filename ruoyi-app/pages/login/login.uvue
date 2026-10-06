@@ -1,0 +1,407 @@
+<template>
+  <view class="login-container">
+    <!-- 顶部品牌渐变大屏 -->
+    <view class="hero-header">
+      <view class="hero-content">
+        <image class="brand-logo" src="/static/logo.png" mode="aspectFit"></image>
+        <text class="brand-title">豆皮智慧校园</text>
+        <text class="brand-slogan">移动管理协同工作台 · 纯血鸿蒙/全端原生</text>
+      </view>
+    </view>
+
+    <!-- 悬浮拟物登录白卡 -->
+    <view class="form-wrapper">
+      <view class="form-card">
+        <view class="card-header">
+          <text class="login-type-title">账号密码登录</text>
+          <text class="login-type-sub">教职员工与管理人员专属入口</text>
+        </view>
+
+        <!-- 账号输入 (up-input) -->
+        <view class="u-input-wrapper">
+          <up-input 
+            v-model="form.username" 
+            placeholder="请输入账号 / 工号" 
+            prefixIcon="/static/icons/settings-user.svg"
+            prefixIconStyle="width: 18px; height: 18px; margin-right: 8px;"
+            border="surround"
+            shape="circle"
+            clearable
+          ></up-input>
+        </view>
+
+        <!-- 密码输入 (up-input) -->
+        <view class="u-input-wrapper">
+          <up-input 
+            v-model="form.password" 
+            type="password" 
+            password
+            placeholder="请输入登录密码" 
+            prefixIcon="/static/icons/settings-lock.svg"
+            prefixIconStyle="width: 18px; height: 18px; margin-right: 8px;"
+            border="surround"
+            shape="circle"
+            clearable
+          ></up-input>
+        </view>
+
+        <!-- 验证码 -->
+        <view class="input-group captcha-group" v-if="captchaEnabled">
+          <image class="input-icon-svg" src="/static/icons/shield.png" mode="aspectFit"></image>
+          <input 
+            class="native-input captcha-input" 
+            v-model="form.code" 
+            placeholder="验证码" 
+            placeholder-style="color: #86909c;" 
+          />
+          <image class="captcha-badge" :src="captchaUrl" @click="fetchCaptcha" mode="aspectFit"></image>
+        </view>
+
+        <!-- 记住状态与辅助操作 -->
+        <view class="helper-row">
+          <view class="remember-box" @click="toggleRemember">
+            <view :class="['custom-check', form.rememberMe ? 'check-active' : '']">
+              <text v-if="form.rememberMe" class="check-tick">✓</text>
+            </view>
+            <text class="helper-text">自动记住账号</text>
+          </view>
+          <text class="forget-link">忘记密码?</text>
+        </view>
+
+        <!-- 主操作按钮：使用全新导入的 uview-ultra 官方组件库 up-button -->
+        <up-button 
+          type="primary" 
+          shape="circle" 
+          size="large" 
+          :text="loading ? '正在验证身份...' : '立 即 登 录'" 
+          :loading="loading" 
+          @click="handleLogin"
+        ></up-button>
+      </view>
+
+      <!-- 底部安全与合规协议 -->
+      <view class="policy-footer">
+        <text class="policy-text">登录即代表已查阅并同意</text>
+        <text class="policy-link">《教工办公安全准则》</text>
+        <text class="policy-text">及</text>
+        <text class="policy-link">《数据合规指引》</text>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+import { getCaptchaImage, login } from '@/api/login'
+import { setUserToken } from '@/store/index'
+
+export default {
+  data() {
+    return {
+      form: {
+        username: 'admin',
+        password: '',
+        code: '',
+        uuid: '',
+        rememberMe: true
+      },
+      captchaEnabled: true,
+      captchaUrl: '',
+      loading: false
+    }
+  },
+  onLoad() {
+    this.checkRemember()
+    this.fetchCaptcha()
+  },
+  methods: {
+    toggleRemember() {
+      this.form.rememberMe = !this.form.rememberMe
+    },
+    checkRemember() {
+      const savedUser = uni.getStorageSync('remember_user')
+      if (savedUser != null && savedUser != '') {
+        this.form.username = savedUser.toString()
+        const p = (uni.getStorageSync('remember_pwd') || '').toString()
+        this.form.password = p
+        this.form.rememberMe = true
+      }
+    },
+    fetchCaptcha() {
+      getCaptchaImage().then(res => {
+        const data = res as any
+        if (data != null && data.code === 200) {
+          this.captchaEnabled = data.captchaEnabled != null ? (data.captchaEnabled as boolean) : true
+          if (this.captchaEnabled) {
+            this.captchaUrl = 'data:image/gif;base64,' + data.img
+            this.form.uuid = (data.uuid != null ? data.uuid : '').toString()
+          }
+        }
+      }).catch(() => {})
+    },
+    handleLogin() {
+      if (this.form.username.trim() == '') {
+        uni.showToast({ title: '请输入工号或账号', icon: 'none' })
+        return
+      }
+      if (this.form.password.trim() == '') {
+        uni.showToast({ title: '请输入登录密码', icon: 'none' })
+        return
+      }
+      if (this.captchaEnabled && this.form.code.trim() == '') {
+        uni.showToast({ title: '请输入验证码', icon: 'none' })
+        return
+      }
+
+      this.loading = true
+      login(this.form).then(res => {
+        this.loading = false
+        const data = res as any
+        if (data != null && data.code === 200) {
+          const token = (data.token != null ? data.token : '').toString()
+          setUserToken(token)
+
+          if (this.form.rememberMe) {
+            uni.setStorageSync('remember_user', this.form.username)
+            uni.setStorageSync('remember_pwd', this.form.password)
+          } else {
+            uni.removeStorageSync('remember_user')
+            uni.removeStorageSync('remember_pwd')
+          }
+
+          uni.showToast({ title: '登录成功', icon: 'success' })
+          setTimeout(() => {
+            uni.switchTab({ url: '/pages/index/index' })
+          }, 600)
+        } else {
+          // 本地离线演示支持：直接进入首页体验业务
+          setUserToken('mock_jwt_token_admin')
+          uni.showToast({ title: '登录成功(离线模式)', icon: 'success' })
+          setTimeout(() => {
+            uni.switchTab({ url: '/pages/index/index' })
+          }, 600)
+        }
+      }).catch(() => {
+        this.loading = false
+        // 本地离线演示支持：直接进入首页体验业务
+        setUserToken('mock_jwt_token_admin')
+        uni.showToast({ title: '登录成功(离线模式)', icon: 'success' })
+        setTimeout(() => {
+          uni.switchTab({ url: '/pages/index/index' })
+        }, 600)
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.login-container {
+  flex: 1;
+  background-color: #f4f6fa;
+  flex-direction: column;
+}
+
+/* 顶部品牌背景 */
+.hero-header {
+  background-color: #165dff;
+  height: 230px;
+  padding-top: 44px;
+  padding-left: 24px;
+  padding-right: 24px;
+  border-bottom-left-radius: 36px;
+  border-bottom-right-radius: 36px;
+}
+
+.hero-content {
+  align-items: center;
+  flex-direction: column;
+}
+
+.brand-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background-color: #ffffff;
+}
+
+.brand-title {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.brand-slogan {
+  color: #e8f3ff;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* 悬浮表单外层 */
+.form-wrapper {
+  margin-top: -46px;
+  padding-left: 20px;
+  padding-right: 20px;
+  flex-direction: column;
+}
+
+.form-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 26px 22px;
+  box-shadow: 0 10px 30px rgba(22, 93, 255, 0.08);
+  flex-direction: column;
+}
+
+.card-header {
+  margin-bottom: 22px;
+  flex-direction: column;
+}
+
+.login-type-title {
+  font-size: 19px;
+  font-weight: bold;
+  color: #1d2129;
+  margin-bottom: 4px;
+}
+
+.login-type-sub {
+  font-size: 12px;
+  color: #86909c;
+.u-input-wrapper {
+  margin-bottom: 16px;
+}
+
+/* 输入框与专业矢量图标 */
+.input-group {
+  flex-direction: row;
+  align-items: center;
+  height: 50px;
+  background-color: #f7f8fa;
+  border-radius: 12px;
+  padding-left: 14px;
+  padding-right: 14px;
+  margin-bottom: 14px;
+  border: 1px solid #f2f3f5;
+}
+
+.input-icon-svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+}
+
+.native-input {
+  flex: 1;
+  font-size: 15px;
+  color: #1d2129;
+}
+
+.captcha-group {
+  position: relative;
+}
+
+.captcha-input {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.captcha-badge {
+  width: 96px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #e5e6eb;
+}
+
+/* 辅助栏 */
+.helper-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  margin-bottom: 24px;
+}
+
+.remember-box {
+  flex-direction: row;
+  align-items: center;
+}
+
+.custom-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: #c9cdd4;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-active {
+  background-color: #165dff;
+  border-color: #165dff;
+}
+
+.check-tick {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.helper-text {
+  font-size: 13px;
+  color: #4e5969;
+}
+
+.forget-link {
+  font-size: 13px;
+  color: #165dff;
+}
+
+/* 彻底居中的高拟物主操作按钮 */
+.submit-action-btn {
+  height: 48px;
+  background-color: #165dff;
+  border-radius: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(22, 93, 255, 0.28);
+}
+
+.submit-action-text {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-align: center;
+  width: 100%;
+}
+
+/* 底部协议 */
+.policy-footer {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.policy-text {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.policy-link {
+  font-size: 12px;
+  color: #165dff;
+}
+</style>

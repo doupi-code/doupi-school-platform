@@ -1,0 +1,11 @@
+import { createSSRApp } from 'vue'
+import App from './App.uvue'
+import uviewUltra from './uni_modules/uview-ultra'
+
+export function createApp() {
+  const app = createSSRApp(App)
+  app.use(uviewUltra)
+  return {
+    app
+  }
+}

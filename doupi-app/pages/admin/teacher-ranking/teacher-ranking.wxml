@@ -1,0 +1,94 @@
+<view class="page">
+  <view class="search-bar">
+    <view class="search-box">
+      <t-icon name="search" size="32rpx" color="#999999"></t-icon>
+      <input
+        class="search-input"
+        placeholder="搜索姓名、手机号"
+        value="{{searchKeyword}}"
+        bindinput="handleSearch"
+        confirm-type="search"
+      />
+      <text class="search-clear" wx:if="{{searchKeyword}}" bindtap="handleSearch" data-clear="true">&times;</text>
+    </view>
+    <view class="filter-btn" bindtap="toggleFilter">
+      <t-icon name="filter" size="32rpx" color="#666666"></t-icon>
+      <text>{{statusOptions[selectedStatus === 'all' ? 0 : selectedStatus === 'active' ? 1 : 2].label}}</text>
+    </view>
+
+    <view class="filter-dropdown" wx:if="{{showFilter}}">
+      <view class="dropdown-mask" bindtap="toggleFilter"></view>
+      <view class="dropdown-menu">
+        <view
+          class="dropdown-item {{selectedStatus === item.value ? 'active' : ''}}"
+          wx:for="{{statusOptions}}"
+          wx:key="value"
+          data-value="{{item.value}}"
+          bindtap="selectStatus"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="sort-row">
+      <text class="sort-tip">点击按钮可自定义排序</text>
+      <view class="sort-tabs">
+        <view
+          class="sort-tab {{sortMode === item.value ? 'active' : ''}}"
+          wx:for="{{sortOptions}}"
+          wx:key="value"
+          data-value="{{item.value}}"
+          bindtap="handleSortChange"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="teacher-card" wx:for="{{filteredList}}" wx:key="teacherId">
+      <view class="card-top">
+        <view class="teacher-avatar">
+          <image
+            class="avatar-img"
+            src="{{item.avatar || '/images/icons/default-avatar.png'}}"
+            mode="aspectFill"
+          />
+        </view>
+        <view class="teacher-info">
+          <view class="info-header">
+            <text class="teacher-name">{{item.name}}</text>
+            <view class="status-tag {{item.status === 'active' ? 'success' : 'disabled'}}">{{item.statusText}}</view>
+          </view>
+          <text class="teacher-phone">{{item.phone}}</text>
+          <text wx:if="{{item.directorName}}" class="teacher-director">招生主任：{{item.directorName}}</text>
+        </view>
+        <view class="rank-badge">{{index + 1}}</view>
+      </view>
+
+      <view class="card-stats">
+        <view class="stat-item">
+          <text class="stat-num">{{item.appointmentCount}}</text>
+          <text class="stat-label">预约数</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-num">{{item.receptionCount}}</text>
+          <text class="stat-label">接待数</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-num">{{item.totalCount}}</text>
+          <text class="stat-label">总数</text>
+        </view>
+      </view>
+
+      <view class="card-actions">
+        <button class="btn-view" data-id="{{item.id}}" bindtap="goToTeacherDetail">查看详情</button>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{filteredList.length === 0}}">
+      <text class="empty-text">暂无匹配的老师记录</text>
+      <text class="empty-desc">试试调整搜索或筛选条件</text>
+    </view>
+  </scroll-view>
+</view>

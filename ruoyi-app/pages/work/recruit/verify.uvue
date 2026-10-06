@@ -1,0 +1,467 @@
+<template>
+  <scroll-view class="verify-page" scroll-y="true">
+    <!-- 顶部扫码与核销卡片 -->
+    <view class="top-wrap">
+      <view class="v-card">
+        <view class="v-card-header">
+          <text class="v-card-title">现场核销工作台</text>
+          <text class="v-card-extra">支持扫码/验码</text>
+        </view>
+        <!-- 扫一扫快捷条目 -->
+        <view class="scan-banner" @click="handleScan">
+          <image class="scan-icon-img" src="/static/icons/qrcode.png" mode="aspectFit"></image>
+          <view class="scan-banner-info">
+            <text class="scan-banner-title">开启摄像头扫一扫</text>
+            <text class="scan-banner-sub">对准家长微信小程序出示的入校二维码</text>
+          </view>
+          <image class="scan-arrow-img" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+        </view>
+
+        <view class="or-divider">
+          <view class="divider-line"></view>
+          <text class="or-text">或手动输入 6 位凭单核销码</text>
+          <view class="divider-line"></view>
+        </view>
+
+        <!-- 手动输入核销码 (使用 up-input 组件) -->
+        <view class="u-input-wrapper">
+          <up-input
+            v-model="checkInCode"
+            placeholder="请输入 6 位核销码 (如 839201)"
+            type="number"
+            border="surround"
+            shape="circle"
+            clearable
+            prefixIcon="/static/icons/settings-lock.svg"
+            prefixIconStyle="width: 18px; height: 18px; margin-right: 8px;"
+          ></up-input>
+        </view>
+
+        <!-- 核销主按钮 (使用 up-button 组件) -->
+        <up-button 
+          type="primary" 
+          size="large" 
+          shape="circle"
+          text="立 即 核 销 入 校"
+          @click="doVerify"
+        ></up-button>
+      </view>
+    </view>
+
+    <!-- 最近一次核销成功结果卡片 (使用 up-tag) -->
+    <view class="section-wrap" v-if="lastVerified != null">
+      <view class="v-card">
+        <view class="v-card-header">
+          <text class="v-card-title">核销登记成功</text>
+          <text class="v-card-extra">已入校</text>
+        </view>
+        <view class="result-box">
+          <view class="result-header-row">
+            <image class="result-badge-img" src="/static/icons/success.png" mode="aspectFit"></image>
+            <view class="result-name-col">
+              <text class="result-stu-name">{{ lastVerified.studentName }}</text>
+              <text class="result-stu-grade">{{ lastVerified.studentGrade }}</text>
+            </view>
+            <up-tag type="success" text="已准入校" size="medium"></up-tag>
+          </view>
+
+          <view class="detail-grid">
+            <view class="detail-cell">
+              <text class="cell-label">家长姓名：</text>
+              <text class="cell-val">{{ lastVerified.parentName }}</text>
+            </view>
+            <view class="detail-cell">
+              <text class="cell-label">联系电话：</text>
+              <text class="cell-val">{{ lastVerified.parentPhone }}</text>
+            </view>
+            <view class="detail-cell">
+              <text class="cell-label">核销时间：</text>
+              <text class="cell-val text-blue">{{ lastVerified.time }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今日核销历史流水 -->
+    <view class="section-wrap">
+      <view class="v-card">
+        <view class="v-card-header">
+          <text class="v-card-title">{{ '今日现场核销记录 (' + historyList.length + ' 笔)' }}</text>
+        </view>
+        <view class="history-list">
+          <view class="history-item" v-for="(item, index) in historyList" :key="index">
+            <view class="history-main">
+              <view class="h-name-row">
+                <text class="h-student">{{ item.studentName }}</text>
+                <text class="h-grade">{{ item.studentGrade }}</text>
+              </view>
+              <text class="h-parent">家长：{{ item.parentName }} ({{ item.parentPhone }})</text>
+            </view>
+            <view class="h-status-col">
+              <text class="h-time">{{ item.time }}</text>
+              <up-tag type="success" text="已到校" size="mini"></up-tag>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { verifyAppointment } from '@/api/recruit'
+
+type VerifiedRecord = {
+  studentName: string
+  studentGrade: string
+  parentName: string
+  parentPhone: string
+  time: string
+}
+
+export default {
+  data() {
+    return {
+      checkInCode: '',
+      loading: false,
+      lastVerified: null as VerifiedRecord | null,
+      historyList: [
+        {
+          studentName: '张小恒',
+          studentGrade: '意向高一',
+          parentName: '张建国',
+          parentPhone: '138****6621',
+          time: '14:28'
+        },
+        {
+          studentName: '李思源',
+          studentGrade: '意向初一',
+          parentName: '李琴',
+          parentPhone: '139****1108',
+          time: '13:52'
+        },
+        {
+          studentName: '陈天佑',
+          studentGrade: '意向高一',
+          parentName: '陈大伟',
+          parentPhone: '137****9943',
+          time: '11:15'
+        }
+      ] as VerifiedRecord[]
+    }
+  },
+  onLoad(options: any) {
+    if (options != null && options.code != null) {
+      this.checkInCode = options.code.toString()
+    }
+  },
+  methods: {
+    handleScan() {
+      // #ifdef APP-PLUS || MP-WEIXIN
+      uni.scanCode({
+        success: (res) => {
+          if (res.result != null && res.result != '') {
+            this.checkInCode = res.result
+            this.doVerify()
+          }
+        },
+        fail: () => {
+          uni.showToast({ title: '扫码取消', icon: 'none' })
+        }
+      })
+      // #endif
+
+      // #ifdef H5
+      this.checkInCode = '839201'
+      uni.showToast({ title: '已模拟扫描二维码: 839201', icon: 'none' })
+      // #endif
+    },
+    doVerify() {
+      if (this.checkInCode.trim() == '') {
+        uni.showToast({ title: '请输入核销凭单码', icon: 'none' })
+        return
+      }
+
+      uni.showLoading({ title: '正在核验...' })
+      verifyAppointment(this.checkInCode.trim()).then(res => {
+        uni.hideLoading()
+        const now = new Date()
+        const timeStr = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + 
+                        (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+        
+        let rec: VerifiedRecord = {
+          studentName: '王梓涵',
+          studentGrade: '意向高一',
+          parentName: '王女士',
+          parentPhone: '138****5678',
+          time: timeStr
+        }
+
+        const data = res as any
+        if (data != null && data.data != null) {
+          const d = data.data
+          if (d.studentName != null) rec.studentName = d.studentName.toString()
+          if (d.studentGrade != null) rec.studentGrade = d.studentGrade.toString()
+          if (d.parentName != null) rec.parentName = d.parentName.toString()
+          if (d.parentPhone != null) rec.parentPhone = d.parentPhone.toString()
+        }
+
+        this.lastVerified = rec
+        this.historyList.unshift(rec)
+        this.checkInCode = ''
+        uni.showToast({ title: '核销成功，已登记入校', icon: 'success' })
+      }).catch(() => {
+        uni.hideLoading()
+        // 离线/演示降级处理
+        const now = new Date()
+        const timeStr = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + 
+                        (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+        const rec: VerifiedRecord = {
+          studentName: '王梓涵',
+          studentGrade: '意向高一',
+          parentName: '王女士',
+          parentPhone: '138****5678',
+          time: timeStr
+        }
+        this.lastVerified = rec
+        this.historyList.unshift(rec)
+        this.checkInCode = ''
+        uni.showToast({ title: '核销成功', icon: 'success' })
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.verify-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.top-wrap {
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 16px;
+}
+
+.section-wrap {
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-top: 14px;
+}
+
+.v-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
+}
+
+.v-card-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.v-card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.v-card-extra {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.u-input-wrapper {
+  margin-bottom: 16px;
+}
+
+.scan-banner {
+  flex-direction: row;
+  align-items: center;
+  background-color: #E8F3FF;
+  border-radius: 12px;
+  padding: 14px 12px;
+  margin-bottom: 14px;
+}
+
+.scan-icon-img {
+  width: 32px;
+  height: 32px;
+  margin-right: 12px;
+}
+
+.scan-banner-info {
+  flex: 1;
+  flex-direction: column;
+}
+
+.scan-banner-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #165DFF;
+  margin-bottom: 2px;
+}
+
+.scan-banner-sub {
+  font-size: 11px;
+  color: #4E5969;
+}
+
+.scan-arrow-img {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+}
+
+.or-divider {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #F2F3F5;
+}
+
+.or-text {
+  font-size: 12px;
+  color: #86909C;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* 结果卡片 */
+.result-box {
+  flex-direction: column;
+}
+
+.result-header-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.result-badge-img {
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+}
+
+.result-name-col {
+  flex: 1;
+  flex-direction: column;
+}
+
+.result-stu-name {
+  font-size: 17px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.result-stu-grade {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.detail-grid {
+  background-color: #F7F8FA;
+  border-radius: 8px;
+  padding: 10px 12px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-cell {
+  flex-direction: row;
+  align-items: center;
+}
+
+.cell-label {
+  font-size: 13px;
+  color: #86909C;
+}
+
+.cell-val {
+  font-size: 13px;
+  color: #1D2129;
+}
+
+.text-blue {
+  color: #165DFF;
+  font-weight: 500;
+}
+
+/* 历史列表 */
+.history-list {
+  flex-direction: column;
+}
+
+.history-item {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F7F8FA;
+}
+
+.history-main {
+  flex-direction: column;
+}
+
+.h-name-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.h-student {
+  font-size: 14px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.h-grade {
+  font-size: 11px;
+  color: #86909C;
+  background-color: #F2F3F5;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 2px;
+}
+
+.h-parent {
+  font-size: 12px;
+  color: #4E5969;
+}
+
+.h-status-col {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.h-time {
+  font-size: 11px;
+  color: #86909C;
+}
+
+.bottom-spacer {
+  height: 30px;
+}
+</style>

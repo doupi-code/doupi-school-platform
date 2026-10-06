@@ -1,0 +1,563 @@
+<template>
+	<view class="up-signature">
+		<view class="up-signature__canvas-wrap" :style="canvasWrapStyle">
+			<up-canvas
+				ref="signatureCanvas"
+				:canvas-id="canvasId"
+				:width="canvasWidth"
+				:height="canvasHeight"
+				:bg-color="bgColor"
+				@touchstart="touchStart"
+				@touchmove="touchMove"
+				@touchend="touchEnd"
+				@ready="onCanvasReady"
+				:disable-scroll="true"
+				class="up-signature__canvas"
+			></up-canvas>
+		</view>
+
+		<view v-if="showToolbar" class="up-signature__toolbar">
+			<view class="up-signature__toolbar-icons up-flex up-flex-x">
+				<view class="up-signature__toolbar-icon" @click="undo">
+				<up-icon name="arrow-left" size="22" :color="pathCount == 0 ? '#ccc' : '#999'"></up-icon>
+				</view>
+				<view class="up-signature__toolbar-icon" @click="clearCanvas">
+					<up-icon name="trash" size="25" color="#999"></up-icon>
+				</view>
+				<view class="up-signature__toolbar-icon" @click="toggleBrushSettings">
+					<up-icon name="edit-pen" size="25" color="#999"></up-icon>
+				</view>
+				<view class="up-signature__toolbar-icon" @click="toggleColorSettings">
+					<up-icon name="grid" size="24" color="#999"></up-icon>
+				</view>
+				<view class="up-signature__toolbar-icon" @click="exportSignature">
+					<up-icon name="checkmark" size="25" :color="isEmpty ? '#ccc' : '#999'"></up-icon>
+				</view>
+			</view>
+
+			<view v-if="showBrushSettings" class="up-signature__brush-settings">
+				<view class="up-signature__progress">
+					<text class="up-signature__progress-label">{{ penSizeLabel }}:</text>
+					<up-slider
+						v-model="lineWidth"
+						:min="1"
+						:max="20"
+						:step="1"
+						:value-show="lineWidth"
+					></up-slider>
+				</view>
+			</view>
+
+			<view v-if="showColorSettings" class="up-signature__color-settings">
+				<view class="up-signature__color-picker">
+					<text class="up-signature__color-label">{{ penColorLabel }}:</text>
+					<view class="up-signature__colors">
+						<view
+							v-for="(color, index) in colorItems"
+							:key="index"
+							class="up-signature__color-item"
+							:class="lineColor === color ? 'up-signature__color-item--active' : ''"
+							:style="getColorStyle(color)"
+							@click="selectColor(color)"
+						></view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue'
+import { t } from '../../libs/i18n/index.uts'
+import { upGetRect } from '../../libs/function/index.uts'
+
+type SignaturePoint = {
+	x: number,
+	y: number,
+	type: string,
+	color: string,
+	width: number
+}
+
+function normalizeNumber(value: any | null, defaultValue: number = 0): number {
+	if (typeof value === 'number') {
+		return value
+	}
+	if (value == null) {
+		return defaultValue
+	}
+	const parsed = parseFloat(value.toString())
+	return isNaN(parsed) ? defaultValue : parsed
+}
+
+function createPath(): Array<SignaturePoint> {
+	return [] as Array<SignaturePoint>
+}
+
+function createPathStack(): Array<Array<SignaturePoint>> {
+	return [] as Array<Array<SignaturePoint>>
+}
+
+function createColors(): Array<string> {
+	return [
+		'#000000',
+		'#ff0000',
+		'#00ff00',
+		'#0000ff',
+		'#ffff00',
+		'#00ffff',
+		'#ff00ff',
+		'#ffffff'
+	] as Array<string>
+}
+
+function createPoint(x: number, y: number, type: string, color: string, width: number): SignaturePoint {
+	return {
+		x,
+		y,
+		type,
+		color,
+		width
+	} as SignaturePoint
+}
+
+// 画布在视口中的位置，用于把视口坐标换算为画布坐标
+const rectLeft = ref(0)
+const rectTop = ref(0)
+
+function getTouchPoint(e: UniTouchEvent): SignaturePoint {
+	let x = 0
+	let y = 0
+	if (e.touches.length > 0) {
+		x = e.touches[0].pageX
+		y = e.touches[0].pageY
+	} else if (e.changedTouches.length > 0) {
+		x = e.changedTouches[0].pageX
+		y = e.changedTouches[0].pageY
+	}
+	// pageX/pageY 为页面坐标，需减去画布位置得到画布相对坐标
+	return createPoint(x - rectLeft.value, y - rectTop.value, 'move', '', 0)
+}
+
+defineOptions({
+	styleIsolation: 'app-and-page',
+	name: 'up-signature'
+})
+
+const props = defineProps({
+	width: {
+		type: [String, Number],
+		default: 300
+	},
+	height: {
+		type: [String, Number],
+		default: 200
+	},
+	bgColor: {
+		type: String,
+		default: '#ffffff'
+	},
+	color: {
+		type: String,
+		default: '#000000'
+	},
+	thickness: {
+		type: [String, Number],
+		default: 3
+	},
+	showToolbar: {
+		type: Boolean,
+		default: true
+	}
+})
+
+const emit = defineEmits(['confirm', 'error', 'change', 'clear'])
+
+const signatureCanvas = ref<ComponentPublicInstance | null>(null)
+const canvasId = ref('up-signature-' + Date.now().toString())
+const canvasWidth = ref(normalizeNumber(props.width, 300))
+const canvasHeight = ref(normalizeNumber(props.height, 200))
+const lineColor = ref(props.color)
+const lineWidth = ref(normalizeNumber(props.thickness, 3))
+const isDrawing = ref(false)
+const pathStack = ref<Array<Array<SignaturePoint>>>(createPathStack())
+const currentPath = ref<Array<SignaturePoint>>(createPath())
+const isEmpty = ref(true)
+const presetColors = ref<Array<string>>(createColors())
+const showBrushSettings = ref(false)
+const showColorSettings = ref(false)
+// up-canvas 画布上下文在部分平台为异步就绪，需等待握手
+const canvasReady = ref(false)
+// 上一个触摸点（增量绘制用）
+const lastX = ref(0)
+const lastY = ref(0)
+
+const pathCount = computed((): number => {
+	const stack = pathStack.value as Array<Array<SignaturePoint>>
+	return stack.length
+})
+
+const colorItems = computed((): Array<string> => {
+	return presetColors.value as Array<string>
+})
+
+const canvasWrapStyle = computed((): UTSJSONObject => {
+	const style = {} as UTSJSONObject
+	style['width'] = canvasWidth.value.toString() + 'px'
+	style['height'] = canvasHeight.value.toString() + 'px'
+	style['background'] = props.bgColor
+	return style
+})
+
+const penSizeLabel = computed((): string => {
+	return t('up.signature.penSize')
+})
+
+const penColorLabel = computed((): string => {
+	return t('up.signature.penColor')
+})
+
+const getColorStyle = (color: string): UTSJSONObject => {
+	const style = {} as UTSJSONObject
+	style['backgroundColor'] = color
+	return style
+}
+
+const getCanvasInstance = (): ComponentPublicInstance | null => {
+	return signatureCanvas.value
+}
+
+const getLineColor = (): string => {
+	const color = lineColor.value
+	return color == null ? '#000000' : color.toString()
+}
+
+const getLineWidth = (): number => {
+	return normalizeNumber(lineWidth.value, 3)
+}
+
+// 缓存画布在页面中的位置，用于把页面坐标换算为画布坐标
+const refreshCanvasRect = (): void => {
+	const inst = getCurrentInstance()
+	if (inst == null) {
+		return
+	}
+	upGetRect('#' + canvasId.value, false, inst.proxy).then((rect: NodeInfo) => {
+		rectLeft.value = normalizeNumber(rect.left, 0)
+		rectTop.value = normalizeNumber(rect.top, 0)
+	}).catch((_err: any | null) => {})
+}
+
+// up-canvas 初始化完成（@ready）后：标记就绪、缓存画布位置
+const onCanvasReady = (): void => {
+	if (canvasReady.value) {
+		return
+	}
+	canvasReady.value = true
+	refreshCanvasRect()
+}
+
+// 主动触发 up-canvas 初始化（幂等：已就绪时为空操作）
+const initCanvasInstance = (): void => {
+	const canvas = getCanvasInstance()
+	if (canvas == null) {
+		return
+	}
+	canvas.$callMethod('initCanvas', false)
+}
+
+const touchStart = (e: UniTouchEvent): void => {
+	if (canvasReady.value == false) {
+		// 画布尚未就绪：触发初始化，待 @ready 后下一次触摸即可绘制
+		initCanvasInstance()
+		return
+	}
+	const canvas = getCanvasInstance()
+	if (canvas == null) {
+		return
+	}
+	isDrawing.value = true
+	isEmpty.value = false
+	currentPath.value = createPath()
+	const point = getTouchPoint(e)
+	const color = getLineColor()
+	const width = getLineWidth()
+	const x = normalizeNumber(point.x, 0)
+	const y = normalizeNumber(point.y, 0)
+	const startPoint = createPoint(x, y, 'start', color, width)
+	const path = currentPath.value as Array<SignaturePoint>
+	path.push(startPoint)
+	canvas.$callMethod('setLineStyle', color, width)
+	// 仅记录起点，真正的绘制在 touchMove 中以“增量线段”方式完成
+	lastX.value = x
+	lastY.value = y
+	emit('change', path)
+}
+
+const touchMove = (e: UniTouchEvent): void => {
+	if (isDrawing.value == false) {
+		return
+	}
+	const canvas = getCanvasInstance()
+	if (canvas == null) {
+		return
+	}
+	const point = getTouchPoint(e)
+	const x = normalizeNumber(point.x, 0)
+	const y = normalizeNumber(point.y, 0)
+	const movePoint = createPoint(x, y, 'move', getLineColor(), getLineWidth())
+	const path = currentPath.value as Array<SignaturePoint>
+	path.push(movePoint)
+	// 增量绘制：以上一个点为起点画到当前点，draw(true) 保留已有笔迹
+	canvas.$callMethod('setLineStyle', getLineColor(), getLineWidth())
+	canvas.$callMethod('beginPath')
+	canvas.$callMethod('moveTo', lastX.value, lastY.value)
+	canvas.$callMethod('lineTo', x, y)
+	canvas.$callMethod('stroke')
+	canvas.$callMethod('draw', true)
+	lastX.value = x
+	lastY.value = y
+	emit('change', path)
+}
+
+const touchEnd = (): void => {
+	if (isDrawing.value == false) {
+		return
+	}
+	const canvas = getCanvasInstance()
+	isDrawing.value = false
+	if (canvas != null) {
+		// 收尾绘制（保留已有内容），不闭合路径避免出现回连直线
+		canvas.$callMethod('draw', true)
+	}
+	const path = currentPath.value as Array<SignaturePoint>
+	if (path.length > 0) {
+		const stack = pathStack.value as Array<Array<SignaturePoint>>
+		stack.push(path)
+	}
+	currentPath.value = createPath()
+}
+
+const selectColor = (color: string): void => {
+	lineColor.value = color
+}
+
+const redraw = (): void => {
+	const canvas = getCanvasInstance()
+	if (canvas == null) {
+		return
+	}
+	canvas.$callMethod('clearCanvas')
+	const stack = pathStack.value as Array<Array<SignaturePoint>>
+	if (stack.length == 0) {
+		isEmpty.value = true
+		return
+	}
+	isEmpty.value = false
+	for (let i = 0; i < stack.length; i++) {
+		const path = stack[i]
+		if (path.length == 0) {
+			continue
+		}
+		canvas.$callMethod('beginPath')
+		for (let j = 0; j < path.length; j++) {
+			const point = path[j]
+			if (j == 0 && point.type === 'start') {
+				canvas.$callMethod('setLineStyle', point.color, point.width)
+				canvas.$callMethod('moveTo', point.x, point.y)
+			} else if (point.type === 'move') {
+				canvas.$callMethod('lineTo', point.x, point.y)
+			}
+		}
+		canvas.$callMethod('stroke')
+		canvas.$callMethod('draw', true)
+	}
+}
+
+const undo = (): void => {
+	const stack = pathStack.value as Array<Array<SignaturePoint>>
+	if (stack.length == 0) {
+		return
+	}
+	stack.pop()
+	redraw()
+}
+
+const clearCanvas = (): void => {
+	const canvas = getCanvasInstance()
+	if (canvas != null) {
+		canvas.$callMethod('clearCanvas')
+	}
+	pathStack.value = createPathStack()
+	currentPath.value = createPath()
+	isEmpty.value = true
+	emit('clear')
+}
+
+const exportSignature = (): void => {
+	if (isEmpty.value) {
+		emit('error', '签名为空')
+		return
+	}
+	const canvas = getCanvasInstance()
+	if (canvas == null) {
+		emit('error', '无法获取画布实例')
+		return
+	}
+	redraw()
+	const result = canvas.$callMethod('exportImage', 'png', 1)
+	if (result == null) {
+		emit('error', '导出签名图片失败')
+		return
+	}
+	;(result as Promise<string>).then((imagePath: string) => {
+		emit('confirm', imagePath)
+	}).catch((error: any | null) => {
+		emit('error', error)
+	})
+}
+
+const toggleBrushSettings = (): void => {
+	showBrushSettings.value = !showBrushSettings.value
+	if (showBrushSettings.value) {
+		showColorSettings.value = false
+	}
+}
+
+const toggleColorSettings = (): void => {
+	showColorSettings.value = !showColorSettings.value
+	if (showColorSettings.value) {
+		showBrushSettings.value = false
+	}
+}
+
+watch((): any => props.width, (newVal: any | null) => {
+	canvasWidth.value = normalizeNumber(newVal, 300)
+}, { immediate: true })
+
+watch((): any => props.height, (newVal: any | null) => {
+	canvasHeight.value = normalizeNumber(newVal, 200)
+}, { immediate: true })
+
+watch((): string => props.color, (newVal: string) => {
+	lineColor.value = newVal
+}, { immediate: true })
+
+watch((): any => props.thickness, (newVal: any | null) => {
+	lineWidth.value = normalizeNumber(newVal, 3)
+}, { immediate: true })
+
+onMounted((): void => {
+	// 触发 up-canvas 初始化，@ready 回调后 onCanvasReady 标记画布就绪
+	initCanvasInstance()
+})
+
+defineExpose({
+	signatureCanvas,
+	canvasId,
+	canvasWidth,
+	canvasHeight,
+	lineColor,
+	lineWidth,
+	isDrawing,
+	pathStack,
+	currentPath,
+	isEmpty,
+	presetColors,
+	showBrushSettings,
+	showColorSettings,
+	pathCount,
+	colorItems,
+	canvasWrapStyle,
+	penSizeLabel,
+	penColorLabel,
+	getColorStyle,
+	getCanvasInstance,
+	getLineColor,
+	getLineWidth,
+	canvasReady,
+	onCanvasReady,
+	refreshCanvasRect,
+	initCanvasInstance,
+	touchStart,
+	touchMove,
+	touchEnd,
+	selectColor,
+	undo,
+	redraw,
+	clearCanvas,
+	exportSignature,
+	toggleBrushSettings,
+	toggleColorSettings
+})
+</script>
+
+<style lang="scss" scoped>
+	.up-signature {
+		display: flex;
+		flex-direction: column;
+
+		&__canvas-wrap {
+			border: 1px solid #e0e0e0;
+			border-radius: 4px;
+			overflow: hidden;
+		}
+
+		&__canvas {
+			width: 100%;
+			height: 100%;
+		}
+
+		&__toolbar {
+			margin-top: 5px;
+			background-color: #fff;
+		}
+
+		&__toolbar-icons {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 1px 0;
+			border-radius: 4px;
+		}
+
+		&__toolbar-icon {
+			padding: 5px;
+		}
+
+		&__brush-settings,
+		&__color-settings {
+			margin-top: 15px;
+			padding: 1px;
+			border-radius: 4px;
+		}
+
+		&__progress-label,
+		&__color-label {
+			display: flex;
+			margin-bottom: 10px;
+			font-size: 14px;
+			color: #999;
+		}
+
+		&__colors {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+
+		&__color-item {
+			width: 30px;
+			height: 30px;
+			border-radius: 50%;
+			margin-right: 10px;
+			margin-bottom: 10px;
+			border: 2px solid transparent;
+
+			&--active {
+				border-color: #2979ff;
+			}
+		}
+	}
+</style>

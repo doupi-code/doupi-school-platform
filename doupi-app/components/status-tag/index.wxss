@@ -1,0 +1,120 @@
+/**
+ * status-tag 组件样式
+ */
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36rpx;
+  padding: 0 14rpx;
+  border-radius: 18rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 36rpx;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.status-tag__dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+  background-color: currentColor;
+  opacity: 0.88;
+}
+
+.status-tag__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 尺寸变体 */
+.status-tag--small {
+  padding: 2rpx 12rpx;
+  font-size: 18rpx;
+  line-height: 28rpx;
+  min-height: 28rpx;
+}
+
+.status-tag--medium {
+  padding: 0 14rpx;
+  font-size: 20rpx;
+}
+
+.status-tag--large {
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+  line-height: 44rpx;
+  min-height: 44rpx;
+}
+
+/* 类型变体 - 实心样式 */
+.status-tag--default {
+  background-color: #F0F0F0;
+  color: #666666;
+}
+
+.status-tag--success {
+  background-color: #F6FFED;
+  color: #389E0D;
+}
+
+.status-tag--warning {
+  background-color: #FFF7E6;
+  color: #D48806;
+}
+
+.status-tag--error {
+  background-color: #FFF2F0;
+  color: #CF1322;
+}
+
+.status-tag--info {
+  background-color: #E6F7FF;
+  color: #0958D9;
+}
+
+.status-tag--disabled {
+  background-color: #F5F5F5;
+  color: #8C8C8C;
+}
+
+/* 描边样式（空心） */
+.status-tag--plain.status-tag--default {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 2rpx solid var(--border-color);
+}
+
+.status-tag--plain.status-tag--success {
+  background-color: transparent;
+  color: var(--success);
+  border: 2rpx solid var(--success);
+}
+
+.status-tag--plain.status-tag--warning {
+  background-color: transparent;
+  color: var(--warning);
+  border: 2rpx solid var(--warning);
+}
+
+.status-tag--plain.status-tag--error {
+  background-color: transparent;
+  color: var(--error);
+  border: 2rpx solid var(--error);
+}
+
+.status-tag--plain.status-tag--info {
+  background-color: transparent;
+  color: var(--info);
+  border: 2rpx solid var(--info);
+}
+
+.status-tag--plain.status-tag--disabled {
+  background-color: transparent;
+  color: #8C8C8C;
+  border: 2rpx solid #D9D9D9;
+}

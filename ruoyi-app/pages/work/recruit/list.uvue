@@ -1,0 +1,357 @@
+<template>
+  <scroll-view class="recruit-list-page" scroll-y="true">
+    <!-- 顶部状态切换 (使用 up-tabs 组件) -->
+    <view class="seg-header">
+      <up-tabs 
+        :list="tabs" 
+        lineColor="#165DFF"
+        activeStyle="color: #165DFF; font-weight: bold;"
+        @click="handleTabClick"
+      ></up-tabs>
+    </view>
+
+    <!-- 列表展示 (使用 up-tag, up-button 组件) -->
+    <view class="card-list">
+      <view 
+        class="appoint-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index"
+      >
+        <view class="card-head">
+          <text class="card-title">{{ item.studentName }} ({{ item.studentGrade }})</text>
+          <text class="card-extra">单号: {{ item.appointmentNo }}</text>
+        </view>
+
+        <view class="meta-status-row">
+          <up-tag 
+            :type="getStatusTagType(item.status)" 
+            :text="formatStatus(item.status)" 
+            size="mini"
+          ></up-tag>
+          <up-tag 
+            v-if="item.checkInCode != ''" 
+            type="primary" 
+            :text="'凭单码: ' + item.checkInCode" 
+            size="mini" 
+            plain
+          ></up-tag>
+          <text class="time-slot-text">{{ item.visitDate }} {{ item.timeSlot }}</text>
+        </view>
+
+        <view class="detail-box">
+          <view class="detail-line">
+            <text class="detail-label">家长姓名：</text>
+            <text class="detail-value">{{ item.parentName }}</text>
+            <view class="phone-link-wrap" @click="callPhone(item.parentPhone)">
+              <image class="phone-inline-icon" src="/static/icons/about-phone.svg" mode="aspectFit"></image>
+              <text class="phone-link-text">{{ item.parentPhone }}</text>
+            </view>
+          </view>
+
+          <view class="detail-line">
+            <text class="detail-label">参访校区：</text>
+            <text class="detail-value">{{ item.campusName }}</text>
+          </view>
+        </view>
+
+        <!-- 卡片底部动作栏 (使用 up-button 组件) -->
+        <view class="card-footer">
+          <view class="footer-btn-group">
+            <up-button 
+              type="info" 
+              size="mini" 
+              shape="circle" 
+              text="电话联系" 
+              icon="/static/icons/about-phone.svg"
+              @click="callPhone(item.parentPhone)"
+            ></up-button>
+            <up-button 
+              v-if="item.status === 'PENDING'" 
+              type="primary" 
+              size="mini" 
+              shape="circle" 
+              text="同意预约" 
+              @click="handleApprove(item)"
+            ></up-button>
+            <up-button 
+              v-if="item.status === 'APPROVED'" 
+              type="success" 
+              size="mini" 
+              shape="circle" 
+              text="到校核销" 
+              @click="navToVerify(item)"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="data" 
+        text="暂无符合条件的访校预约"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { listAppointment } from '@/api/recruit'
+
+type AppointmentItem = {
+  appointmentId: number
+  appointmentNo: string
+  studentName: string
+  studentGrade: string
+  parentName: string
+  parentPhone: string
+  campusName: string
+  visitDate: string
+  timeSlot: string
+  status: string
+  checkInCode: string
+}
+
+export default {
+  data() {
+    return {
+      currentStatus: '',
+      tabs: [
+        { name: '全部', status: '' },
+        { name: '待到校', status: 'APPROVED' },
+        { name: '待审批', status: 'PENDING' },
+        { name: '已核销', status: 'VERIFIED' }
+      ] as any[],
+      list: [
+        {
+          appointmentId: 101,
+          appointmentNo: 'AP20261005001',
+          studentName: '王梓涵',
+          studentGrade: '意向高一',
+          parentName: '王女士',
+          parentPhone: '13812345678',
+          campusName: '汉外华襄校区',
+          visitDate: '2026-10-05',
+          timeSlot: '14:30 - 16:00',
+          status: 'APPROVED',
+          checkInCode: '839201'
+        },
+        {
+          appointmentId: 102,
+          appointmentNo: 'AP20261005002',
+          studentName: '刘晨宇',
+          studentGrade: '意向初一',
+          parentName: '刘先生',
+          parentPhone: '13987654321',
+          campusName: '汉外华襄校区',
+          visitDate: '2026-10-05',
+          timeSlot: '15:00 - 16:30',
+          status: 'PENDING',
+          checkInCode: ''
+        },
+        {
+          appointmentId: 103,
+          appointmentNo: 'AP20261004001',
+          studentName: '张小恒',
+          studentGrade: '意向高一',
+          parentName: '张建国',
+          parentPhone: '13888886621',
+          campusName: '汉外华襄校区',
+          visitDate: '2026-10-04',
+          timeSlot: '10:00 - 11:30',
+          status: 'VERIFIED',
+          checkInCode: '618290'
+        }
+      ] as AppointmentItem[]
+    }
+  },
+  computed: {
+    filteredList(): AppointmentItem[] {
+      if (this.currentStatus === '') {
+        return this.list
+      }
+      return this.list.filter((item: AppointmentItem): boolean => item.status === this.currentStatus)
+    }
+  },
+  onLoad() {
+    this.fetchData()
+  },
+  methods: {
+    fetchData() {
+      listAppointment({}).then(res => {
+        const data = res as any
+        if (data != null && data.rows != null && Array.isArray(data.rows)) {
+          const rows = data.rows as any[]
+          if (rows.length > 0) {
+            this.list = rows as AppointmentItem[]
+          }
+        }
+      }).catch(() => {})
+    },
+    handleTabClick(item: any) {
+      if (item != null && item.status != null) {
+        this.currentStatus = item.status.toString()
+      } else if (item != null && item.index != null) {
+        const idx = item.index as number
+        this.currentStatus = this.tabs[idx].status.toString()
+      }
+    },
+    formatStatus(status: string): string {
+      if (status === 'APPROVED') return '待到校'
+      if (status === 'PENDING') return '待审批'
+      if (status === 'VERIFIED') return '已核销'
+      if (status === 'CANCELLED') return '已取消'
+      return '待处理'
+    },
+    getStatusTagType(status: string): string {
+      if (status === 'APPROVED') return 'primary'
+      if (status === 'PENDING') return 'warning'
+      if (status === 'VERIFIED') return 'success'
+      return 'info'
+    },
+    callPhone(phone: string) {
+      uni.makePhoneCall({
+        phoneNumber: phone
+      })
+    },
+    navToVerify(item: AppointmentItem) {
+      uni.navigateTo({
+        url: '/pages/work/recruit/verify?code=' + item.checkInCode
+      })
+    },
+    handleApprove(item: AppointmentItem) {
+      item.status = 'APPROVED'
+      item.checkInCode = (Math.floor(100000 + Math.random() * 900000)).toString()
+      uni.showToast({ title: '已同意预约，凭单码已发送家长', icon: 'success' })
+    }
+  }
+}
+</script>
+
+<style>
+.recruit-list-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.seg-header {
+  background-color: #FFFFFF;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F2F3F5;
+}
+
+.card-list {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.appoint-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.card-head {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F2F3F5;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.card-extra {
+  font-size: 13px;
+  color: #86909C;
+}
+
+.meta-status-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.time-slot-text {
+  font-size: 12px;
+  color: #165DFF;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.detail-box {
+  background-color: #F7F8FA;
+  border-radius: 8px;
+  padding: 10px 12px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-line {
+  flex-direction: row;
+  align-items: center;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #86909C;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #1D2129;
+}
+
+.phone-link-wrap {
+  flex-direction: row;
+  align-items: center;
+  margin-left: 10px;
+  background-color: #E8F3FF;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 4px;
+}
+
+.phone-inline-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+
+.phone-link-text {
+  font-size: 12px;
+  color: #165DFF;
+  font-weight: 500;
+}
+
+.card-footer {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #F2F3F5;
+  padding-top: 12px;
+  margin-top: 12px;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.footer-btn-group {
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+}
+</style>

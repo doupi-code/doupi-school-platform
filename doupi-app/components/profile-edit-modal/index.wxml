@@ -1,0 +1,32 @@
+<view class="profile-edit-mask" wx:if="{{visible}}" catchtap="onMaskTap" catchtouchmove="true">
+  <view class="profile-edit-sheet {{avoidTabBar ? 'profile-edit-sheet--avoid-tabbar' : ''}}" catchtap="onSheetTap">
+    <view class="profile-edit-head">
+      <view class="profile-edit-brand">
+        <image class="profile-edit-brand-logo" src="/images/icons/logo.png" mode="aspectFit" />
+        <text class="profile-edit-brand-name">华翼预约</text>
+      </view>
+      <text class="profile-edit-subtitle">请完善个人资料</text>
+    </view>
+
+    <view class="native-form-row">
+      <text class="native-form-label">头像</text>
+      <button class="native-avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="native-avatar-img" src="{{draft.avatar}}" mode="aspectFill" />
+        <text class="native-arrow">></text>
+      </button>
+    </view>
+
+    <view class="native-form-row">
+      <text class="native-form-label">昵称</text>
+      <input class="native-nickname-input" type="nickname" value="{{draft.nickname}}" placeholder="点击填写" maxlength="20" bindinput="onNicknameInput" />
+    </view>
+
+    <view class="profile-edit-actions">
+      <view class="profile-edit-action profile-edit-action-default" bindtap="onUseDefault">默认</view>
+      <view class="profile-edit-action profile-edit-action-cancel" bindtap="onClose" wx:if="{{!force}}">取消</view>
+      <view class="profile-edit-action profile-edit-action-save {{saving ? 'disabled' : ''}}" bindtap="onSave">
+        {{saving ? '处理中...' : '保存'}}
+      </view>
+    </view>
+  </view>
+</view>

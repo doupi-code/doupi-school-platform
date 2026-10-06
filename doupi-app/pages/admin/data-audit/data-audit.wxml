@@ -1,0 +1,138 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <!-- 日期范围选择卡片（与概览、导出共用） -->
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">选择日期范围</text>
+      </view>
+      <text class="date-tip">概览与导出均按此处开始、结束日期统计与筛选。</text>
+
+      <view class="date-picker-row">
+        <view class="date-picker-wrap">
+          <text class="date-label">开始</text>
+          <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+            <view class="date-value">
+              <text class="date-value__text {{startDate ? '' : 'date-value__text--placeholder'}}">{{startDate || '请选择开始日期'}}</text>
+              <t-icon name="chevron-down" size="24rpx" color="#3088F4"></t-icon>
+            </view>
+          </picker>
+        </view>
+        <text class="date-separator">至</text>
+        <view class="date-picker-wrap">
+          <text class="date-label">结束</text>
+          <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+            <view class="date-value">
+              <text class="date-value__text {{endDate ? '' : 'date-value__text--placeholder'}}">{{endDate || '请选择结束日期'}}</text>
+              <t-icon name="chevron-down" size="24rpx" color="#3088F4"></t-icon>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数据概览卡片 -->
+    <view class="card" wx:if="{{overviewShow.appointments || overviewShow.users || overviewShow.logs || overviewShow.today}}">
+      <view class="card-header">
+        <text class="card-title">数据概览</text>
+      </view>
+      <view class="overview-grid">
+        <view class="overview-item" wx:if="{{overviewShow.appointments}}">
+          <text class="overview-value">{{overviewData.totalAppointments}}</text>
+          <text class="overview-label">总预约量</text>
+        </view>
+        <view class="overview-item" wx:if="{{overviewShow.users}}">
+          <text class="overview-value">{{overviewData.totalUsers}}</text>
+          <text class="overview-label">总用户数</text>
+        </view>
+        <view class="overview-item" wx:if="{{overviewShow.logs}}">
+          <text class="overview-value">{{overviewData.totalLogs}}</text>
+          <text class="overview-label">操作日志</text>
+        </view>
+        <view class="overview-item" wx:if="{{overviewShow.today}}">
+          <text class="overview-value highlight">{{overviewData.todayNewAppointments}}</text>
+          <text class="overview-label">今日新增预约</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 导出类型卡片 -->
+    <view class="card" wx:if="{{visibleExportTypes.length > 0}}">
+      <view class="card-header">
+        <text class="card-title">选择导出内容</text>
+        <text class="export-hint">支持Excel格式导出</text>
+      </view>
+
+      <view class="export-type-list">
+        <view
+          class="export-type-card {{exporting && exportingType === item.id ? 'exporting' : ''}}"
+          wx:for="{{visibleExportTypes}}"
+          wx:key="id"
+          data-type="{{item.id}}"
+          bindtap="onExport"
+        >
+          <view class="export-icon-wrap" style="background-color: {{item.bgColor}};">
+            <view class="export-icon" style="color: {{item.color}};">
+              <t-icon name="{{item.icon}}" size="34rpx" color="{{item.color}}"></t-icon>
+            </view>
+          </view>
+          <view class="export-info">
+            <text class="export-name">{{item.name}}</text>
+            <text class="export-desc">{{item.desc}}</text>
+            <view class="export-fields" data-type="{{item.id}}" catchtap="onPreviewFields">
+              <text class="export-fields__label">查看导出字段</text>
+              <t-icon name="info-circle" size="22rpx" color="{{item.color}}"></t-icon>
+            </view>
+          </view>
+          <view class="export-action">
+            <text class="export-btn-text" wx:if="{{exporting && exportingType === item.id}}">导出中...</text>
+            <text class="export-btn-text" wx:else>导出</text>
+            <t-icon class="export-arrow" name="chevron-right" size="22rpx" color="#C9CDD4"></t-icon>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最近导出记录卡片 -->
+    <view class="card" wx:if="{{exportHistory.length > 0}}">
+      <view class="card-header">
+        <text class="card-title">最近导出记录</text>
+      </view>
+
+      <view class="history-list">
+        <view class="history-item" wx:for="{{exportHistory}}" wx:key="_id">
+          <view class="history-left">
+            <view class="history-type-badge {{item.type === 'appointment' ? 'type-appointment' : item.type === 'user' ? 'type-user' : item.type === 'log' ? 'type-log' : 'type-stats'}}">
+              <block wx:if="{{item.type === 'appointment'}}">预约</block>
+              <block wx:elif="{{item.type === 'user'}}">用户</block>
+              <block wx:elif="{{item.type === 'log'}}">日志</block>
+              <block wx:else>报表</block>
+            </view>
+            <view class="history-detail">
+              <text class="history-time">{{item.export_time}}</text>
+              <text class="history-range">{{item.start_date}} ~ {{item.end_date}}</text>
+            </view>
+          </view>
+          <text class="history-status {{item.status === 'success' ? 'success' : 'failed'}}">
+            {{item.status === 'success' ? '已完成' : '失败'}}
+          </text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部说明区域 -->
+    <view class="tips-area">
+      <view class="tip-item">
+        <text class="tip-dot"></text>
+        <text class="tip-text">单次导出最多支持一年的数据量</text>
+      </view>
+      <view class="tip-item">
+        <text class="tip-dot"></text>
+        <text class="tip-text">导出的文件为真正的 Excel .xlsx 文件</text>
+      </view>
+      <view class="tip-item">
+        <text class="tip-dot"></text>
+        <text class="tip-text">当前仅预约详情页和部分列表做脱敏，导出接口本身仍以现有后端字段为准</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

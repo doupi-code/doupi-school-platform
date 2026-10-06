@@ -1,0 +1,164 @@
+<template>
+  <view 
+    :class="[
+      'ui-tag',
+      'ui-tag--' + type,
+      'ui-tag--' + size,
+      plain ? 'ui-tag--plain-' + type : ''
+    ]"
+  >
+    <text 
+      :class="[
+        'ui-tag__text',
+        'ui-tag__text--' + type,
+        'ui-tag__text--' + size,
+        plain ? 'ui-tag__text--plain-' + type : ''
+      ]"
+    >
+      <slot>{{ text }}</slot>
+    </text>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiTag',
+  props: {
+    // 类型: primary, success, warning, danger, info
+    type: {
+      type: String,
+      default: 'primary'
+    },
+    // 尺寸: default, small
+    size: {
+      type: String,
+      default: 'default'
+    },
+    // 是否镂空
+    plain: {
+      type: Boolean,
+      default: false
+    },
+    // 显示文字
+    text: {
+      type: String,
+      default: ''
+    }
+  }
+}
+</script>
+
+<style>
+.ui-tag {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.ui-tag--default {
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.ui-tag--small {
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* 填充背景 */
+.ui-tag--primary {
+  background-color: #E8F3FF;
+}
+
+.ui-tag--success {
+  background-color: #E8FFEA;
+}
+
+.ui-tag--warning {
+  background-color: #FFF7E8;
+}
+
+.ui-tag--danger {
+  background-color: #FFECE8;
+}
+
+.ui-tag--info {
+  background-color: #F2F3F5;
+}
+
+/* 镂空背景与边框 */
+.ui-tag--plain-primary {
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #165DFF;
+}
+
+.ui-tag--plain-success {
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #00B42A;
+}
+
+.ui-tag--plain-warning {
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #FF7D00;
+}
+
+.ui-tag--plain-danger {
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #F53F3F;
+}
+
+.ui-tag--plain-info {
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #C9CDD4;
+}
+
+/* 文字颜色与尺寸 */
+.ui-tag__text {
+  text-align: center;
+  font-weight: 500;
+}
+
+.ui-tag__text--default {
+  font-size: 12px;
+}
+
+.ui-tag__text--small {
+  font-size: 11px;
+}
+
+.ui-tag__text--primary {
+  color: #165DFF;
+}
+
+.ui-tag__text--success {
+  color: #00B42A;
+}
+
+.ui-tag__text--warning {
+  color: #FF7D00;
+}
+
+.ui-tag__text--danger {
+  color: #F53F3F;
+}
+
+.ui-tag__text--info {
+  color: #4E5969;
+}
+</style>

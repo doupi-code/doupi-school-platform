@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsArticleMapper">
+    
+    <resultMap type="CmsArticle" id="CmsArticleResult">
+        <id     property="articleId"     column="article_id"     />
+        <result property="title"         column="title"          />
+        <result property="kind"          column="kind"           />
+        <result property="category"      column="category"       />
+        <result property="summary"       column="summary"        />
+        <result property="content"       column="content"        />
+        <result property="coverUrl"      column="cover_url"      />
+        <result property="publishedDate" column="published_date" />
+        <result property="author"        column="author"         />
+        <result property="status"        column="status"         />
+        <result property="sortOrder"     column="sort_order"     />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectArticleVo">
+        select article_id, title, kind, category, summary, content, cover_url, published_date, author, status, sort_order, create_time, update_time
+        from doupi_cms_article
+    </sql>
+
+    <select id="selectArticleList" parameterType="CmsArticle" resultMap="CmsArticleResult">
+        <include refid="selectArticleVo"/>
+        <where>
+            <if test="title != null and title != ''">
+                and title like concat('%', #{title}, '%')
+            </if>
+            <if test="kind != null and kind != ''">
+                and kind = #{kind}
+            </if>
+            <if test="category != null and category != ''">
+                and category = #{category}
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+            <if test="author != null and author != ''">
+                and author like concat('%', #{author}, '%')
+            </if>
+        </where>
+        order by sort_order desc, article_id desc
+    </select>
+
+    <select id="selectArticleById" parameterType="Long" resultMap="CmsArticleResult">
+        <include refid="selectArticleVo"/>
+        where article_id = #{articleId}
+    </select>
+
+    <insert id="insertArticle" parameterType="CmsArticle" useGeneratedKeys="true" keyProperty="articleId">
+        insert into doupi_cms_article (
+            title, kind, category, summary, content, cover_url, published_date, author, status, sort_order, create_time
+        ) values (
+            #{title}, #{kind}, #{category}, #{summary}, #{content}, #{coverUrl}, 
+            coalesce(#{publishedDate}, date_format(sysdate(), '%Y-%m-%d')),
+            coalesce(#{author}, '汉外华襄校办'), 
+            coalesce(#{status}, '0'), 
+            coalesce(#{sortOrder}, 0), 
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateArticle" parameterType="CmsArticle">
+        update doupi_cms_article
+        <set>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="kind != null and kind != ''">kind = #{kind},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+            <if test="publishedDate != null">published_date = #{publishedDate},</if>
+            <if test="author != null">author = #{author},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = sysdate()
+        </set>
+        where article_id = #{articleId}
+    </update>
+
+    <delete id="deleteArticleById" parameterType="Long">
+        delete from doupi_cms_article where article_id = #{articleId}
+    </delete>
+
+    <delete id="deleteArticleByIds" parameterType="String">
+        delete from doupi_cms_article where article_id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

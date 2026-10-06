@@ -1,0 +1,7 @@
+<view
+  class="status-tag status-tag--{{visualType}} status-tag--{{size}} {{plain ? 'status-tag--plain' : ''}}"
+  bindtap="onTap"
+>
+  <view class="status-tag__dot" wx:if="{{computedShowDot}}"></view>
+  <text class="status-tag__text">{{displayText}}</text>
+</view>

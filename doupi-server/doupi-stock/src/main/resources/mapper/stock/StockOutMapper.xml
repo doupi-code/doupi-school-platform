@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.stock.mapper.StockOutMapper">
+    
+    <resultMap type="StockOut" id="StockOutResult">
+        <result property="outId"    column="out_id"    />
+        <result property="outNo"    column="out_no"    />
+        <result property="outType"    column="out_type"    />
+        <result property="receiver"    column="receiver"    />
+        <result property="classId"    column="class_id"    />
+        <result property="outTime"    column="out_time"    />
+        <result property="operator"    column="operator"    />
+        <result property="remark"    column="remark"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+        <result property="className"    column="class_name"    />
+        <result property="grade"    column="grade"    />
+        <result property="dept"    column="dept"    />
+        <result property="printId"    column="print_id"    />
+        <result property="printName"    column="print_name"    />
+    </resultMap>
+
+    <sql id="selectStockOutVo">
+        select o.out_id, o.out_no, o.out_type, o.receiver, o.class_id, o.out_time, o.operator, o.remark, o.status, o.create_by, o.create_time, o.update_by, o.update_time, o.del_flag,
+               c.class_name, c.grade,
+               p.print_id, p.print_name,
+               coalesce(u_dept.dept_name, '') as dept
+        from edu_stock_out o
+        left join edu_class c on o.class_id = c.class_id
+        left join (
+            select out_id, min(print_id) as print_id, min(print_name) as print_name 
+            from edu_print_record 
+            where del_flag = '0' and out_id is not null 
+            group by out_id
+        ) p on o.out_id = p.out_id
+        left join (
+            select u.nick_name, min(d.dept_name) as dept_name
+            from sys_user u
+            inner join sys_dept d on u.dept_id = d.dept_id
+            where u.del_flag = '0'
+            group by u.nick_name
+        ) u_dept on o.receiver = u_dept.nick_name COLLATE utf8mb4_unicode_ci
+    </sql>
+
+    <select id="selectEduStockOutList" parameterType="StockOut" resultMap="StockOutResult">
+        <include refid="selectStockOutVo"/>
+        <where>  
+            and o.del_flag = '0'
+            <if test="outNo != null  and outNo != ''"> and o.out_no like concat('%', #{outNo}, '%')</if>
+            <if test="outType != null  and outType != ''"> and o.out_type = #{outType}</if>
+            <if test="receiver != null  and receiver != ''"> and o.receiver like concat('%', #{receiver}, '%')</if>
+            <if test="classId != null "> and o.class_id = #{classId}</if>
+            <if test="printId != null "> and p.print_id = #{printId}</if>
+            <if test="printName != null and printName != ''"> and p.print_name like concat('%', #{printName}, '%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''"><!-- 开始时间检索 -->
+                and date_format(o.out_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''"><!-- 结束时间检索 -->
+                and date_format(o.out_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+            <if test="operator != null  and operator != ''"> and o.operator like concat('%', #{operator}, '%')</if>
+            <if test="status != null  and status != ''"> and o.status = #{status}</if>
+        </where>
+        order by o.out_id desc
+    </select>
+    
+    <select id="selectEduStockOutByOutId" parameterType="Long" resultMap="StockOutResult">
+        <include refid="selectStockOutVo"/>
+        where o.out_id = #{outId}
+    </select>
+
+    <select id="selectMaxOutNo" resultType="String">
+        select max(out_no) from edu_stock_out where out_no like concat(#{prefix}, '%')
+    </select>
+
+    <insert id="insertEduStockOut" parameterType="StockOut" useGeneratedKeys="true" keyProperty="outId">
+        insert into edu_stock_out
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="outNo != null and outNo != ''">out_no,</if>
+            <if test="outType != null and outType != ''">out_type,</if>
+            <if test="receiver != null">receiver,</if>
+            <if test="classId != null">class_id,</if>
+            <if test="outTime != null">out_time,</if>
+            <if test="operator != null and operator != ''">operator,</if>
+            <if test="remark != null">remark,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="outNo != null and outNo != ''">#{outNo},</if>
+            <if test="outType != null and outType != ''">#{outType},</if>
+            <if test="receiver != null">#{receiver},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="outTime != null">#{outTime},</if>
+            <if test="operator != null and operator != ''">#{operator},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduStockOut" parameterType="StockOut">
+        update edu_stock_out
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="outNo != null and outNo != ''">out_no = #{outNo},</if>
+            <if test="outType != null and outType != ''">out_type = #{outType},</if>
+            <if test="receiver != null">receiver = #{receiver},</if>
+            <if test="classId != null">class_id = #{classId},</if>
+            <if test="outTime != null">out_time = #{outTime},</if>
+            <if test="operator != null and operator != ''">operator = #{operator},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where out_id = #{outId}
+    </update>
+
+    <update id="deleteEduStockOutByOutId" parameterType="Long">
+        update edu_stock_out set del_flag = '2' where out_id = #{outId}
+    </update>
+
+    <update id="deleteEduStockOutByOutIds" parameterType="String">
+        update edu_stock_out set del_flag = '2' where out_id in 
+        <foreach item="outId" collection="array" open="(" separator="," close=")">
+            #{outId}
+        </foreach>
+    </update>
+</mapper>

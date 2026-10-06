@@ -1,0 +1,17 @@
+const TOKEN_KEY = 'App-Token'
+
+export function getToken(): string {
+  const token = uni.getStorageSync(TOKEN_KEY)
+  if (token != null) {
+    return token.toString()
+  }
+  return ''
+}
+
+export function setToken(token: string) {
+  uni.setStorageSync(TOKEN_KEY, token)
+}
+
+export function removeToken() {
+  uni.removeStorageSync(TOKEN_KEY)
+}

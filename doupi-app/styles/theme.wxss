@@ -1,0 +1,160 @@
+/**
+ * 全局设计系统变量 - 汉外华襄预约小程序
+ * 基于品牌色 #3088F4 蓝色体系
+ * 采用 8px 网格系统的间距规范
+ */
+
+page {
+  /* ==================== 色彩系统 ==================== */
+
+  /* 品牌色 */
+  --primary: #3088F4;
+  --primary-hover: #2670D4;
+  --primary-active: #1A6DD9;
+  --primary-light: #E8F2FE;
+  --primary-lighter: #EBF4FF;
+  --primary-bg: rgba(48, 136, 244, 0.08);
+
+  /* 功能色 - 成功/警告/错误/信息 */
+  --success: #52C41A;
+  --success-hover: #45B015;
+  --success-light: #F6FFED;
+  --success-bg: rgba(82, 196, 26, 0.08);
+
+  --warning: #FAAD14;
+  --warning-hover: #E69B0A;
+  --warning-light: #FFFBE6;
+  --warning-bg: rgba(250, 173, 20, 0.08);
+
+  --error: #FF4D4F;
+  --error-hover: #F03E40;
+  --error-light: #FFF2F0;
+  --error-bg: rgba(255, 77, 79, 0.08);
+
+  --info: #1890FF;
+  --info-hover: #0E7AD6;
+  --info-light: #E6F7FF;
+  --info-bg: rgba(24, 144, 255, 0.08);
+
+  /* 中性色 - 文本层级 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-placeholder: #BBBBBB;
+  --text-disabled: #CCCCCC;
+  --text-white: #FFFFFF;
+
+  /* 中性色 - 边框与分割线 */
+  --border-color: #EEEEEE;
+  --border-color-dark: #E5E5E5;
+  --divider-color: #F0F0F0;
+
+  /* 中性色 - 背景 */
+  --background: #F5F6F8;
+  --background-page: #F7F8FA;
+  --card-bg: #FFFFFF;
+  --card-bg-gray: #FAFAFA;
+
+  /* ==================== 字体系统 ==================== */
+  /* 字号（单位：rpx，基于设计稿 750rpx 宽度） */
+  --font-size-xs: 20rpx;    /* 微小：12px - 辅助文本、提示信息 */
+  --font-size-sm: 24rpx;    /* 小号：14px - 标签、次要说明 */
+  --font-size-base: 28rpx;  /* 常规：16px - 正文内容 */
+  --font-size-md: 32rpx;    /* 中号：18px - 小标题 */
+  --font-size-lg: 36rpx;    /* 大号：20px - 标题 */
+  --font-size-xl: 44rpx;    /* 特大：24px - 大标题、数字展示 */
+
+  /* 字重 */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 行高 */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* 字体族 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* ==================== 圆角系统 ==================== */
+  --radius-xs: 8rpx;     /* 小圆角：4px - 小元素、输入框 */
+  --radius-sm: 12rpx;    /* 中圆角：6px - 按钮、标签 */
+  --radius-base: 16rpx;  /* 大圆角：8px - 卡片、面板 */
+  --radius-lg: 24rpx;    /* 特大圆角：12px - 对话框、弹窗 */
+  --radius-xl: 32rpx;    /* 超大圆角：16px - 特殊容器 */
+  --radius-round: 50%;   /* 圆形：头像、图标按钮 */
+  --radius-pill: 999rpx; /* 胶囊形：长按钮 */
+
+  /* ==================== 间距系统（8px 网格）==================== */
+  /* 单位：rpx (8px = 16rpx) */
+  --spacing-xs: 8rpx;    /* 4px - 极小间距 */
+  --spacing-sm: 16rpx;   /* 8px - 小间距 */
+  --spacing-md: 24rpx;   /* 12px - 中等间距 */
+  --spacing-base: 32rpx; /* 16px - 基础间距 */
+  --spacing-lg: 48rpx;   /* 24px - 大间距 */
+  --spacing-xl: 64rpx;   /* 32px - 特大间距 */
+  --spacing-xxl: 96rpx;  /* 48px - 超大间距 */
+
+  /* 水平内边距（页面左右边距） */
+  --page-padding-x: 32rpx; /* 16px */
+
+  /* ==================== 阴影系统 ==================== */
+  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  --shadow-base: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
+
+  /* ==================== 过渡动画 ==================== */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  /* ==================== 层级系统（z-index）==================== */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+
+  /* ==================== 安全区域变量（异形屏/刘海屏适配）==================== */
+  /*
+   * 使用 env() 函数获取设备安全区域尺寸
+   * 支持的设备：iPhone X 及以上、刘海屏 Android 设备等
+   * 不支持的设备会自动降级为 0
+   */
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+
+  /* 导航栏相关常量 */
+  --nav-bar-height: 44px;           /* 标准导航栏高度 */
+  --status-bar-height: env(safe-area-inset-top); /* 状态栏高度（动态获取） */
+
+  /* ==================== 兼容旧版变量 ==================== */
+  --hx-primary: var(--primary);
+  --hx-primary-light: var(--primary-light);
+  --hx-primary-dark: var(--primary-active);
+  --hx-primary-subtle: var(--primary-lighter);
+  --hx-primary-bg: var(--primary-bg);
+  --hx-secondary: #5BA9FF;
+  --hx-success: var(--success);
+  --hx-success-pressed: var(--success-hover);
+  --hx-bg: var(--background);
+  --hx-card: var(--card-bg);
+  --hx-text: var(--text-primary);
+  --hx-text-2: var(--text-secondary);
+  --hx-text-3: var(--text-tertiary);
+  --hx-text-placeholder: var(--text-placeholder);
+  --hx-border: var(--border-color-dark);
+  --hx-divider: var(--divider-color);
+  --hx-danger: var(--error);
+  --hx-warning: var(--warning);
+}

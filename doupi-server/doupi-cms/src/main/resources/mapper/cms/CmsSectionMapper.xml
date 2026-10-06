@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsSectionMapper">
+    
+    <resultMap type="com.doupi.cms.domain.CmsSection" id="CmsSectionResult">
+        <id     property="sectionId"    column="section_id"   />
+        <result property="pageId"       column="page_id"      />
+        <result property="sectionType"  column="section_type" />
+        <result property="sectionName"  column="section_name" />
+        <result property="sortOrder"    column="sort_order"   />
+        <result property="isVisible"    column="is_visible"   />
+        <result property="contentData"  column="content_data" />
+        <result property="createTime"   column="create_time"  />
+        <result property="updateTime"   column="update_time"  />
+    </resultMap>
+
+    <sql id="selectSectionVo">
+        select section_id, page_id, section_type, section_name, sort_order, is_visible, content_data, create_time, update_time
+        from doupi_cms_section
+    </sql>
+
+    <select id="selectSectionsByPageId" parameterType="Long" resultMap="CmsSectionResult">
+        <include refid="selectSectionVo"/>
+        where page_id = #{pageId} and is_visible = 1
+        order by sort_order asc, section_id asc
+    </select>
+
+    <select id="selectAllSectionsByPageId" parameterType="Long" resultMap="CmsSectionResult">
+        <include refid="selectSectionVo"/>
+        where page_id = #{pageId}
+        order by sort_order asc, section_id asc
+    </select>
+
+    <select id="selectSectionById" parameterType="Long" resultMap="CmsSectionResult">
+        <include refid="selectSectionVo"/>
+        where section_id = #{sectionId}
+    </select>
+
+    <insert id="insertSection" parameterType="com.doupi.cms.domain.CmsSection" useGeneratedKeys="true" keyProperty="sectionId">
+        insert into doupi_cms_section (page_id, section_type, section_name, sort_order, is_visible, content_data, create_time)
+        values (#{pageId}, #{sectionType}, #{sectionName}, #{sortOrder}, #{isVisible}, #{contentData}, sysdate())
+    </insert>
+
+    <update id="updateSection" parameterType="com.doupi.cms.domain.CmsSection">
+        update doupi_cms_section
+        <set>
+            <if test="sectionType != null and sectionType != ''">section_type = #{sectionType},</if>
+            <if test="sectionName != null and sectionName != ''">section_name = #{sectionName},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="isVisible != null">is_visible = #{isVisible},</if>
+            <if test="contentData != null and contentData != ''">content_data = #{contentData},</if>
+            update_time = sysdate()
+        </set>
+        where section_id = #{sectionId}
+    </update>
+
+    <delete id="deleteSectionById" parameterType="Long">
+        delete from doupi_cms_section where section_id = #{sectionId}
+    </delete>
+
+    <delete id="deleteSectionsByPageId" parameterType="Long">
+        delete from doupi_cms_section where page_id = #{pageId}
+    </delete>
+
+</mapper>

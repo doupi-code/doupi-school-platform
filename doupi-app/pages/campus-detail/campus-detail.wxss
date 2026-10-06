@@ -1,0 +1,106 @@
+.page {
+  min-height: 100vh;
+  background: #F5F6F8;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+}
+
+.content-inner {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.hero-wrap {
+  width: 100%;
+  height: 480rpx;
+  background: #EAF2FC;
+}
+
+.hero-image,
+.hero-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-placeholder {
+  background: linear-gradient(135deg, #DCEBFF 0%, #EFF5FC 100%);
+}
+
+.info-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin: -32rpx 28rpx 20rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 10;
+}
+
+.campus-name {
+  font-size: 36rpx;
+  color: #333333;
+  font-weight: 700;
+  line-height: 1.3;
+  display: block;
+}
+
+.campus-summary {
+  font-size: 28rpx;
+  color: #666666;
+  display: block;
+  margin-top: 18rpx;
+  line-height: 1.8;
+}
+
+.content-wrap {
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid #F5F6F8;
+}
+
+.intro-content {
+  font-size: 28rpx;
+  color: #666666;
+  line-height: 1.9;
+  display: block;
+  text-align: justify;
+}
+
+.btn-appointment {
+  width: 100%;
+  height: 96rpx;
+  background: linear-gradient(135deg, #3088F4 0%, #1E6FE6 100%);
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  border: none;
+  line-height: normal;
+  padding: 0;
+  box-shadow: 0 8rpx 32rpx rgba(48, 136, 244, 0.35);
+}
+
+.bottom-spacer {
+  height: calc(180rpx + env(safe-area-inset-bottom));
+}
+
+.bottom-area {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 20rpx 28rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.08);
+  z-index: 90;
+}

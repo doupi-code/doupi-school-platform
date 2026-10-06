@@ -1,0 +1,171 @@
+<view class="page">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-row">
+      <view class="search-box">
+        <t-icon name="search" size="32rpx" color="#999999"></t-icon>
+        <input
+          class="search-input"
+          placeholder="搜索预约号、姓名、手机号、老师"
+          value="{{searchKeyword}}"
+          bindinput="handleSearch"
+          confirm-type="search"
+        />
+      </view>
+      <view class="filter-btn" bindtap="toggleStatusFilter">
+        <t-icon name="filter" size="32rpx" color="#666666"></t-icon>
+        <text>{{statusMap[selectedStatus]}}</text>
+      </view>
+    </view>
+
+    <view class="time-inline">
+      <picker class="time-inline__picker-wrap" mode="date" value="{{startDateText}}" bindchange="onStartDateChange">
+        <view class="time-inline__picker">{{startDateText || '开始日期'}}</view>
+      </picker>
+      <text class="time-inline__sep">至</text>
+      <picker class="time-inline__picker-wrap" mode="date" value="{{endDateText}}" bindchange="onEndDateChange">
+        <view class="time-inline__picker">{{endDateText || '结束日期'}}</view>
+      </picker>
+    </view>
+
+    <view class="time-actions">
+      <view class="time-inline__quick" data-days="7" bindtap="onQuickRecentRange">最近7天</view>
+      <view class="time-inline__quick" data-days="15" bindtap="onQuickRecentRange">最近15天</view>
+      <view class="time-inline__quick" data-days="30" bindtap="onQuickRecentRange">最近30天</view>
+      <view class="time-inline__clear" bindtap="onClearDateRange">清空</view>
+    </view>
+
+    <!-- 状态筛选下拉 -->
+    <view class="filter-dropdown" wx:if="{{showStatusFilter}}">
+      <view class="dropdown-mask" bindtap="toggleStatusFilter"></view>
+      <view class="dropdown-menu">
+        <view
+          class="dropdown-item {{selectedStatus === key ? 'active' : ''}}"
+          wx:for="{{statusMap}}"
+          wx:key="*this"
+          data-status="{{key}}"
+          bindtap="selectStatus"
+        >{{item}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="scope-tip">
+      <text class="scope-tip__text">数据范围：超级管理员/管理员=全平台；主任=有效绑定老师及本人；老师=本人。</text>
+    </view>
+    <view class="bind-entry" wx:if="{{bindStatusLoaded && !isTeacherBound && !filterTeacherId}}">
+      <text class="bind-entry__title">{{displayText.unbound}}招生主任</text>
+      <text class="bind-entry__desc">请先选择招生主任并提交绑定申请，审核通过后可生成个人招生二维码，并进行扫码核销等操作。</text>
+      <button class="bind-entry__btn" bindtap="onScanBindQr">{{displayText.btnScanBindDirector}}</button>
+    </view>
+    <block wx:if="{{!bindStatusLoaded || isTeacherBound || filterTeacherId}}">
+    <view class="teacher-filter" wx:if="{{filterTeacherId}}">
+      <text class="teacher-filter__text">当前老师：{{filterTeacherName || filterTeacherId}}</text>
+      <view class="teacher-filter__clear" bindtap="clearTeacherFilter">{{displayText.btnClear}}</view>
+    </view>
+    <view class="teacher-filter" wx:if="{{selectedSource}}">
+      <text class="teacher-filter__text">当前来源：{{sourceMap[selectedSource]}}</text>
+      <view class="teacher-filter__clear" bindtap="clearPresetSource">{{displayText.btnClear}}</view>
+    </view>
+    <view class="teacher-filter" wx:if="{{selectedStatus !== 'all'}}">
+      <text class="teacher-filter__text">当前状态：{{statusMap[selectedStatus]}}</text>
+      <view class="teacher-filter__clear" bindtap="clearPresetStatus">{{displayText.btnClear}}</view>
+    </view>
+
+    <!-- 状态统计标签 -->
+    <view class="stats-tabs">
+      <view
+        class="stat-tab {{selectedStatus === 'all' ? 'active' : ''}}"
+        data-status="all"
+        bindtap="quickFilter"
+      >
+        <text class="tab-num">{{stats.total}}</text>
+        <text class="tab-label">{{displayText.statAll}}</text>
+      </view>
+      <view class="stat-tab-divider"></view>
+      <view
+        class="stat-tab pending {{selectedStatus === 'pending' ? 'active' : ''}}"
+        data-status="pending"
+        bindtap="quickFilter"
+      >
+        <text class="tab-num">{{stats.pending}}</text>
+        <text class="tab-label">{{displayText.statPending}}</text>
+      </view>
+      <view class="stat-tab-divider"></view>
+      <view
+        class="stat-tab success {{selectedStatus === 'verified' ? 'active' : ''}}"
+        data-status="verified"
+        bindtap="quickFilter"
+      >
+        <text class="tab-num">{{stats.verified}}</text>
+        <text class="tab-label">{{displayText.statVerified}}</text>
+      </view>
+      <view class="stat-tab-divider"></view>
+      <view
+        class="stat-tab cancelled {{selectedStatus === 'cancelled' ? 'active' : ''}}"
+        data-status="cancelled"
+        bindtap="quickFilter"
+      >
+        <text class="tab-num">{{stats.cancelled}}</text>
+        <text class="tab-label">{{displayText.statCancelled}}</text>
+      </view>
+    </view>
+
+    <text class="result-count">共 {{filteredAppointments.length}} 条预约记录</text>
+
+    <!-- 预约卡片列表 -->
+    <view class="appointment-card" wx:for="{{filteredAppointments}}" wx:key="id">
+      <view class="card-header">
+        <view class="header-left">
+          <text class="student-name">{{item.studentName}}</text>
+          <text class="appointment-id">{{item.appointmentNo}}</text>
+        </view>
+        <view class="status-tag {{item.status === 'pending' ? 'warning' : item.status === 'verified' ? 'success' : 'disabled'}}">{{item.statusText}}</view>
+      </view>
+
+      <view class="info-grid">
+        <view class="info-cell">
+          <text class="cell-label">{{displayText.labelParent}}</text>
+          <text class="cell-value">{{item.parentName}} / {{item.appointmentPhone}}</text>
+          <text wx:if="{{item.accountPhone && item.accountPhone !== item.appointmentPhone}}" class="cell-value sub">账号手机号：{{item.accountPhone}}</text>
+        </view>
+        <view class="info-cell">
+          <text class="cell-label">{{displayText.labelResponsibleTeacher}}</text>
+          <text class="cell-value">{{item.teacherName}}</text>
+        </view>
+        <view class="info-cell">
+          <text class="cell-label">{{displayText.labelBookingTime}}</text>
+          <text class="cell-value highlight">{{item.visitDate}} {{item.visitTime}}</text>
+        </view>
+        <view class="info-cell">
+          <text class="cell-label">{{displayText.labelSubmitTime}}</text>
+          <text class="cell-value time">{{item.createdAt}}</text>
+        </view>
+        <view class="info-cell">
+          <text class="cell-label">{{displayText.labelCurrentSchool}}</text>
+          <text class="cell-value">{{item.currentSchool}}</text>
+        </view>
+        <view class="info-cell">
+          <text class="cell-label">备注</text>
+          <text class="cell-value">{{item.remark}}</text>
+        </view>
+      </view>
+
+      <button class="btn-detail" data-id="{{item.id}}" bindtap="goToDetail">{{displayText.btnViewDetail}}</button>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{filteredAppointments.length === 0}}">
+      <text class="empty-text">{{displayText.emptyBookings}}</text>
+      <text class="empty-desc">{{emptyHint}}</text>
+    </view>
+
+    <!-- 导出按钮 -->
+    <view class="export-area" wx:if="{{filteredAppointments.length > 0}}">
+      <button class="btn-export" bindtap="onExportData">{{displayText.btnExportFilteredResult}}</button>
+    </view>
+    </block>
+  </scroll-view>
+</view>

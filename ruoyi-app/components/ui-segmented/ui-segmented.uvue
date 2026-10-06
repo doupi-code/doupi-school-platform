@@ -1,0 +1,110 @@
+<template>
+  <view class="ui-segmented">
+    <view 
+      v-for="(item, index) in normalizedOptions" 
+      :key="index"
+      :class="[
+        'ui-segmented__item',
+        currentVal === item.value ? 'ui-segmented__item--active' : ''
+      ]"
+      @click="handleSelect(item.value)"
+    >
+      <text 
+        :class="[
+          'ui-segmented__text',
+          currentVal === item.value ? 'ui-segmented__text--active' : ''
+        ]"
+      >
+        {{ item.label }}
+      </text>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+type SegmentedOption = {
+  label: string
+  value: string
+}
+
+export default {
+  name: 'UiSegmented',
+  props: {
+    modelValue: {
+      type: [String, Number],
+      default: ''
+    },
+    // 支持数组 ['全部', '待到校'] 或 [{label: '全部', value: ''}]
+    options: {
+      type: Array,
+      default: () => []
+    }
+  },
+  emits: ['update:modelValue', 'change'],
+  computed: {
+    currentVal(): string {
+      return this.modelValue != null ? this.modelValue.toString() : ''
+    },
+    normalizedOptions(): SegmentedOption[] {
+      const res: SegmentedOption[] = []
+      if (this.options == null) return res
+      for (let i = 0; i < this.options.length; i++) {
+        const item = this.options[i]
+        if (typeof item === 'string') {
+          res.push({ label: item, value: item } as SegmentedOption)
+        } else if (item != null && typeof item === 'object') {
+          const obj = item as any
+          const label = obj.label != null ? obj.label.toString() : (obj.name != null ? obj.name.toString() : '')
+          const val = obj.value != null ? obj.value.toString() : (obj.status != null ? obj.status.toString() : i.toString())
+          res.push({ label: label, value: val } as SegmentedOption)
+        }
+      }
+      return res
+    }
+  },
+  methods: {
+    handleSelect(val: string) {
+      this.$emit('update:modelValue', val)
+      this.$emit('change', val)
+    }
+  }
+}
+</script>
+
+<style>
+.ui-segmented {
+  display: flex;
+  flex-direction: row;
+  background-color: #F2F3F5;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+
+.ui-segmented__item {
+  flex: 1;
+  height: 34px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.ui-segmented__item--active {
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.ui-segmented__text {
+  font-size: 13px;
+  color: #86909C;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ui-segmented__text--active {
+  color: #165DFF;
+  font-weight: bold;
+}
+</style>

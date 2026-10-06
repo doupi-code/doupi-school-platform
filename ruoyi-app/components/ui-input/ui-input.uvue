@@ -1,0 +1,122 @@
+<template>
+  <view class="ui-input-box">
+    <!-- 字段标签 -->
+    <view v-if="label != ''" class="ui-input__label-row">
+      <image v-if="icon != ''" class="ui-input__icon" :src="icon" mode="aspectFit"></image>
+      <text class="ui-input__label">{{ label }}</text>
+    </view>
+
+    <!-- 输入容器 -->
+    <view :class="['ui-input__wrap', focused ? 'ui-input__wrap--focus' : '']">
+      <input
+        class="ui-input__control"
+        :value="modelValue"
+        :type="type"
+        :password="type === 'password'"
+        :placeholder="placeholder"
+        :placeholder-style="'color: #C9CDD4; font-size: 14px;'"
+        :disabled="disabled"
+        @input="handleInput"
+        @focus="focused = true"
+        @blur="focused = false"
+      />
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiInput',
+  props: {
+    modelValue: {
+      type: String,
+      default: ''
+    },
+    label: {
+      type: String,
+      default: ''
+    },
+    icon: {
+      type: String,
+      default: ''
+    },
+    placeholder: {
+      type: String,
+      default: '请输入'
+    },
+    type: {
+      type: String,
+      default: 'text'
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: ['update:modelValue', 'input'],
+  data() {
+    return {
+      focused: false
+    }
+  },
+  methods: {
+    handleInput(event: any) {
+      const val = event.detail.value as string
+      this.$emit('update:modelValue', val)
+      this.$emit('input', val)
+    }
+  }
+}
+</script>
+
+<style>
+.ui-input-box {
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.ui-input__label-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ui-input__icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  opacity: 0.75;
+}
+
+.ui-input__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4E5969;
+}
+
+.ui-input__wrap {
+  height: 46px;
+  background-color: #F7F8FA;
+  border-radius: 10px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  padding-left: 14px;
+  padding-right: 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ui-input__wrap--focus {
+  border-color: #165DFF;
+  background-color: #FFFFFF;
+}
+
+.ui-input__control {
+  flex: 1;
+  height: 100%;
+  font-size: 15px;
+  color: #1D2129;
+}
+</style>

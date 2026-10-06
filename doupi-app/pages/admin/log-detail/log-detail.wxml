@@ -1,0 +1,20 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="card" wx:if="{{!loading && detail}}">
+      <view class="title">{{title}}</view>
+      <view class="row" wx:for="{{detailRows}}" wx:key="label">
+        <text class="label">{{item.label}}</text>
+        <text class="value">{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{!loading && rawJsonText}}">
+      <view class="title">原始数据</view>
+      <text class="json">{{rawJsonText}}</text>
+    </view>
+
+    <view class="loading" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+  </scroll-view>
+</view>

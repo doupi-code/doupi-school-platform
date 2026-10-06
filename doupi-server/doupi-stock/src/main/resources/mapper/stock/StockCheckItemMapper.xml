@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.stock.mapper.StockCheckItemMapper">
+    
+    <resultMap type="StockCheckItem" id="StockCheckItemResult">
+        <result property="itemId"    column="item_id"    />
+        <result property="checkId"    column="check_id"    />
+        <result property="goodsId"    column="goods_id"    />
+        <result property="bookNum"    column="book_num"    />
+        <result property="realNum"    column="real_num"    />
+        <result property="diffNum"    column="diff_num"    />
+        <result property="goodsName"  column="goods_name"  />
+        <result property="spec"       column="spec"        />
+        <result property="unit"       column="unit"        />
+        <result property="category"   column="category"    />
+    </resultMap>
+
+    <sql id="selectStockCheckItemVo">
+        select i.item_id, i.check_id, i.goods_id, i.book_num, i.real_num, i.diff_num,
+               g.goods_name, g.spec, g.unit, g.category
+        from edu_stock_check_item i
+        left join edu_goods g on i.goods_id = g.goods_id
+    </sql>
+
+    <select id="selectItemsByCheckId" parameterType="Long" resultMap="StockCheckItemResult">
+        <include refid="selectStockCheckItemVo"/>
+        where i.check_id = #{checkId}
+    </select>
+
+    <insert id="batchInsertCheckItems">
+        insert into edu_stock_check_item (check_id, goods_id, book_num, real_num, diff_num, create_by, create_time)
+        values
+        <foreach item="item" collection="list" separator=",">
+            (#{item.checkId}, #{item.goodsId}, #{item.bookNum}, #{item.realNum}, #{item.diffNum}, #{item.createBy}, #{item.createTime})
+        </foreach>
+    </insert>
+
+    <delete id="deleteCheckItemsByCheckId" parameterType="Long">
+        delete from edu_stock_check_item where check_id = #{checkId}
+    </delete>
+
+    <delete id="deleteEduStockCheckItemByItemIds" parameterType="String">
+        delete from edu_stock_check_item where item_id in 
+        <foreach item="itemId" collection="array" open="(" separator="," close=")">
+            #{itemId}
+        </foreach>
+    </delete>
+</mapper>

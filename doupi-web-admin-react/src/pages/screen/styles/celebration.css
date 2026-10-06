@@ -1,0 +1,553 @@
+.celebration-fullscreen-page {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #780206;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  font-family: "PingFang SC", "Microsoft YaHei", SimHei, sans-serif;
+  user-select: none;
+  z-index: 9999;
+}
+
+/* 顶部悬浮控制条：紧贴右上角，通透半透明毛玻璃质感 */
+.celebration-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-top: none;
+  border-right: none;
+  padding: 8px 18px;
+  border-radius: 0 0 0 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.celebration-controls.is-hidden {
+  opacity: 0;
+  transform: translateY(-80px);
+  pointer-events: none;
+}
+
+.celebration-controls .control-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.celebration-controls .ctrl-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.celebration-controls .ctrl-btn {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #ffd700;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.25s;
+}
+
+.celebration-controls .ctrl-btn:hover {
+  background: rgba(255, 215, 0, 0.35);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.celebration-controls .ctrl-btn.btn-back {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.celebration-controls .ctrl-btn.btn-back:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.celebration-controls .ctrl-btn.btn-system {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.35);
+  color: #00e5ff;
+}
+
+.celebration-controls .ctrl-btn.btn-system:hover {
+  background: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+
+.celebration-controls .ctrl-btn.btn-collapse {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #e0e0e0;
+}
+
+.celebration-controls .ctrl-btn.btn-collapse:hover {
+  background: rgba(255, 77, 79, 0.25);
+  border-color: rgba(255, 77, 79, 0.5);
+  color: #ff7875;
+}
+
+/* 隐藏时的右上角控制面板按钮：紧贴右上角，高透光毛玻璃质感 */
+.celebration-trigger-btn {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-top: none;
+  border-right: none;
+  border-radius: 0 0 0 12px;
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(-20px);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.celebration-trigger-btn.is-visible {
+  opacity: 0.75;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.celebration-trigger-btn.is-visible:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.5);
+  transform: translateY(0);
+}
+
+/* 主体容器 */
+.celebration-body {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  align-items: stretch;
+  position: relative;
+}
+
+/* 左侧竖排大字区域：尊贵金榜、清晰大气、主次分明 */
+.vertical-title-area {
+  width: 18%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-left: 28px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255, 215, 0, 0.18);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.05) 100%);
+}
+
+.vertical-title-area .vertical-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.vertical-title-area .vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  white-space: nowrap;
+  font-weight: 900;
+  font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans CN", SimHei, sans-serif;
+  user-select: none;
+  font-size: clamp(26px, 4.4vh, 56px);
+  /* 采用纯正深邃多重立体投影，避免文字内部发脏，文字笔画极其锐利清晰 */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95)) 
+          drop-shadow(0 6px 16px rgba(0, 0, 0, 0.8))
+          drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+}
+
+/* 校名（汉外华襄高复）：高贵纯净的皓月白金，字体大小与榜单名完全控制为一样大 */
+.vertical-title-area .vertical-text.title-school {
+  font-size: clamp(26px, 4.4vh, 56px);
+  letter-spacing: 14px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF5 40%, #FFE9B3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 榜单名称（2026湖北高考卓越提分榜）：纯正璀璨的鎏金赤金，字体大小与校名完全控制为一样大 */
+.vertical-title-area .vertical-text.title-type {
+  font-size: clamp(26px, 4.4vh, 56px);
+  letter-spacing: 6px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF199 25%, #FFD700 65%, #FFB300 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 竖排年份数字（如 2026）：按汉字方块字面精确补偿字号与宽高比，使视觉体量（Optical Size）与方块汉字完全一样大、浑厚大气 */
+.vertical-title-area .title-digit {
+  display: inline-block;
+  font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  font-weight: 900;
+  font-size: 1.36em;
+  transform: scaleX(1.22);
+  line-height: 0.95;
+  margin: 1px 0;
+  text-align: center;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF199 25%, #FFD700 65%, #FFB300 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 1px rgba(255, 215, 0, 0.6));
+}
+
+/* 右侧内容区 */
+.right-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 48px 20px 16px;
+  overflow: hidden;
+}
+
+/* 顶部高分荣誉动态摘要 */
+.stats-announcement-box {
+  width: 100%;
+  padding: 12px 24px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.52);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+}
+
+.stats-announcement-box .stats-text p {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(16px, 2.2vh, 26px);
+  line-height: 1.5;
+  text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.stats-announcement-box strong {
+  color: #ffd700;
+  letter-spacing: 1px;
+}
+
+.stats-announcement-box .stat-highlight {
+  font-size: 1.2em;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.85);
+  margin: 0 4px;
+}
+
+/* 无限平滑垂直滚动容器 */
+.infinite-scroll-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.infinite-scroll-container:active {
+  cursor: grabbing;
+}
+
+.infinite-scroll-container .scroll-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 0 8px;
+  will-change: transform;
+}
+
+.celebration-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(22px, 2.8vh, 36px);
+}
+
+.celebration-table tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background 0.25s;
+}
+
+.celebration-table tr:hover {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.celebration-table td {
+  padding: 12px 14px;
+  color: #ffffff;
+  white-space: nowrap;
+  text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+.celebration-table td.col-name {
+  font-weight: 900;
+  color: #ffffff;
+  width: 15%;
+  letter-spacing: 2px;
+}
+
+.celebration-table td.col-subject {
+  color: #ffeaa7;
+  width: 15%;
+}
+
+.celebration-table td.col-before {
+  color: rgba(255, 255, 255, 0.85);
+  width: 25%;
+}
+
+.celebration-table td.col-before strong {
+  color: #ffffff;
+}
+
+.celebration-table td.col-after {
+  color: #ffffff;
+  width: 25%;
+}
+
+.celebration-table td.col-after strong {
+  color: #ffd700;
+  font-size: 1.12em;
+}
+
+.celebration-table td.col-upgrade {
+  width: 20%;
+  text-align: right;
+}
+
+.celebration-table .upgrade-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-weight: 900;
+  /* 沉稳高贵深绯红渐变底色 + 纯正赤金勾边，彻底解决原先亮橙底色导致字底发糊、看不清的问题 */
+  background: linear-gradient(135deg, rgba(160, 15, 15, 0.88) 0%, rgba(105, 5, 5, 0.94) 100%);
+  border: 1.5px solid #FFD700;
+  padding: 3px 14px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.celebration-table .upgrade-badge .badge-flame {
+  font-size: 0.95em;
+  margin-right: 2px;
+}
+
+.celebration-table .upgrade-badge .badge-label {
+  color: #FFFFFF;
+  font-size: 0.92em;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.celebration-table .upgrade-badge .badge-value {
+  color: #FFE600;
+  font-size: 1.05em;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 6px rgba(255, 230, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+  .celebration-body {
+    flex-direction: column;
+  }
+  .vertical-title-area {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 12px 0 6px;
+  }
+  .vertical-title-area .vertical-text {
+    writing-mode: horizontal-tb;
+    font-size: 5.2vw;
+  }
+  .vertical-title-area .vertical-text.title-school,
+  .vertical-title-area .vertical-text.title-type {
+    font-size: 5.2vw;
+  }
+  .vertical-title-area .title-digit {
+    font-size: 1em;
+    transform: none;
+    line-height: inherit;
+  }
+  .right-content-area {
+    padding: 8px 16px;
+  }
+  .celebration-table td {
+    font-size: 14px;
+    padding: 6px 4px;
+  }
+}
+
+/* 考试空数据提示盒子 */
+.celebration-empty-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 60px;
+  padding: 48px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(255, 215, 0, 0.35);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+
+.celebration-empty-box .empty-trophy {
+  font-size: 54px;
+  color: #ffd700;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+}
+
+.celebration-empty-box .empty-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.celebration-empty-box .empty-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+/* 大屏考试切换下拉框增强 */
+.exam-switch-item .ant-select-selector {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(255, 215, 0, 0.5) !important;
+  color: #ffd700 !important;
+}
+
+.exam-switch-item .ant-select-arrow {
+  color: #ffd700 !important;
+}
+
+/* 考试快捷切换胶囊选项卡 */
+.exam-quick-tabs {
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 12px;
+  padding: 8px 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.exam-quick-tabs .tabs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.exam-quick-tabs .tabs-title {
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.exam-quick-tabs .tabs-pill-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.exam-quick-tabs .exam-pill-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: rgba(255, 255, 255, 0.88);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.exam-quick-tabs .exam-pill-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.6);
+  color: #ffd700;
+  transform: translateY(-1px);
+}
+
+.exam-quick-tabs .exam-pill-btn.is-active {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35) 0%, rgba(255, 77, 79, 0.35) 100%);
+  border-color: #ffd700;
+  color: #ffd700;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.45);
+}
+
+.exam-quick-tabs .pill-badge {
+  background: rgba(0, 0, 0, 0.45);
+  color: #00e5ff;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.exam-quick-tabs .tabs-auto-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exam-quick-tabs .auto-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}

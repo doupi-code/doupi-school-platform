@@ -1,0 +1,16 @@
+<view class="hx-tabbar">
+  <view
+    class="hx-tabbar-item"
+    wx:for="{{list}}"
+    wx:key="pagePath"
+    data-index="{{index}}"
+    bindtap="switchTab"
+  >
+    <image
+      class="hx-tabbar-icon {{selected === index ? 'hx-tabbar-icon--active' : 'hx-tabbar-icon--inactive'}}"
+      src="{{selected === index ? item.iconActive : item.icon}}"
+      mode="aspectFit"
+    />
+    <view class="hx-tabbar-text {{selected === index ? 'hx-tabbar-text--active' : ''}}">{{item.text}}</view>
+  </view>
+</view>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsFaqMapper">
+    
+    <resultMap type="CmsFaq" id="CmsFaqResult">
+        <id     property="faqId"      column="faq_id"      />
+        <result property="category"   column="category"    />
+        <result property="question"   column="question"    />
+        <result property="answer"     column="answer"      />
+        <result property="status"     column="status"      />
+        <result property="sortOrder"  column="sort_order"  />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectFaqVo">
+        select faq_id, category, question, answer, status, sort_order, create_time, update_time
+        from doupi_cms_faq
+    </sql>
+
+    <select id="selectFaqList" parameterType="CmsFaq" resultMap="CmsFaqResult">
+        <include refid="selectFaqVo"/>
+        <where>
+            <if test="question != null and question != ''">
+                and question like concat('%', #{question}, '%')
+            </if>
+            <if test="category != null and category != ''">
+                and category = #{category}
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+        </where>
+        order by sort_order asc, faq_id desc
+    </select>
+
+    <select id="selectFaqById" parameterType="Long" resultMap="CmsFaqResult">
+        <include refid="selectFaqVo"/>
+        where faq_id = #{faqId}
+    </select>
+
+    <insert id="insertFaq" parameterType="CmsFaq" useGeneratedKeys="true" keyProperty="faqId">
+        insert into doupi_cms_faq (
+            category, question, answer, status, sort_order, create_time
+        ) values (
+            coalesce(#{category}, '报名'), 
+            #{question}, #{answer}, 
+            coalesce(#{status}, '0'), 
+            coalesce(#{sortOrder}, 0), 
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateFaq" parameterType="CmsFaq">
+        update doupi_cms_faq
+        <set>
+            <if test="category != null and category != ''">category = #{category},</if>
+            <if test="question != null and question != ''">question = #{question},</if>
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = sysdate()
+        </set>
+        where faq_id = #{faqId}
+    </update>
+
+    <delete id="deleteFaqById" parameterType="Long">
+        delete from doupi_cms_faq where faq_id = #{faqId}
+    </delete>
+
+    <delete id="deleteFaqByIds" parameterType="String">
+        delete from doupi_cms_faq where faq_id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -1,0 +1,40 @@
+/*
+ * @Author       : jry
+ * @Description  :
+ * @version      : 4.0
+ * @Date         : 2021-08-30 14:00:21
+ * @LastAuthor   : jry
+ * @lastTime     : 2024-08-30 14:00:58
+ * @FilePath     : /uview-ultra/libs/config/props/textarea
+ */
+export default {
+	// textarea 组件
+	textarea: {
+		value: '',
+		placeholder: '',
+		placeholderClass: 'textarea-placeholder',
+		placeholderStyle: 'color: #c0c4cc',
+		height: 70,
+		// 与 uni-app textarea 原生默认值保持一致：return 表示回车换行；
+		// 取 done/go/next/search/send 时回车会触发 confirm 且不换行
+		confirmType: 'return',
+		// 点击键盘右下角按钮时是否保持键盘不收起，confirmType 非 return 时有效
+		confirmHold: false,
+		disabled: false,
+		count: false,
+		focus: false,
+		autoHeight: false,
+		fixed: false,
+		cursorSpacing: 0,
+		cursor: '',
+		showConfirmBar: true,
+		selectionStart: -1,
+		selectionEnd: -1,
+		adjustPosition: true,
+		disableDefaultPadding: false,
+		holdKeyboard: false,
+		maxlength: 140,
+		border: 'surround',
+		formatter: function() {}
+	}
+} as UTSJSONObject

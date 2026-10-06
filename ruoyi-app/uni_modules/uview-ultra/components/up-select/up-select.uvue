@@ -1,0 +1,323 @@
+﻿<template>
+	<view class="up-select">
+		<view :class="['up-select__content', disabled ? 'up-select__content--disabled' : '']">
+			<view class="up-select__label" @click="openSelect">
+				<slot name="text" :currentLabel="currentLabel">
+					<text class="up-select__text" v-if="showOptionsLabel">
+						{{ currentLabel }}
+					</text>
+					<text class="up-select__text" v-else>
+						{{ label }}
+					</text>
+				</slot>
+				<slot name="icon">
+					<up-icon name="arrow-down" :size="iconSize" :color="iconColor"></up-icon>
+				</slot>
+			</view>
+			<up-overlay :show="isOpen" @click="overlayClick" v-if="overlay" :zIndex="zIndex" :duration="duration + 50"
+				:customStyle="overlayStyle" :opacity="overlayOpacity" @touchmove.stop.prevent="stopOverlayTouchMove"></up-overlay>
+			<view class="up-select__options__wrap"
+				:style="optionsWrapStyle">
+				<view class="up-select__options" v-if="isOpen">
+					<slot name="options">
+						<view class="up-select__options-item" :class="getOptionClass(item)"
+							:key="index" v-for="(item, index) in options" @click="selectItem(item)">
+							<slot name="optionItem" :item="item">
+								<text class="up-select__item-text" :style="{color: itemColor}">
+									{{ getOptionLabel(item) }}
+								</text>
+							</slot>
+						</view>
+					</slot>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { computed, getCurrentInstance, nextTick, onMounted, ref } from 'vue'
+import type { PropType } from 'vue';
+import { getWindowInfo, upGetRect } from '../../libs/function/index.uts';
+
+function createOptions(): UTSJSONObject[] {
+	return [] as UTSJSONObject[];
+}
+
+function createEmptyObject(): UTSJSONObject {
+	return {} as UTSJSONObject;
+}
+
+function valueToString(value: any | null): string {
+	return value == null ? '' : value.toString();
+}
+
+function normalizeNumber(value: any | null, fallback: number = 0): number {
+	if (typeof value === 'number') {
+		return value;
+	}
+	if (value == null) {
+		return fallback;
+	}
+	const parsed = parseFloat(value.toString());
+	return isNaN(parsed) ? fallback : parsed;
+}
+
+defineOptions({
+	styleIsolation: 'app-and-page',
+	name: 'up-select'
+})
+
+const props = defineProps({
+	maxHeight: {
+		type: String,
+		default: '90vh'
+	},
+	overlay: {
+		type: Boolean,
+		default: true
+	},
+	// 遮罩透明度，下拉框的遮罩默认比弹窗浅，避免整页压暗；传 0 即为完全透明
+	overlayOpacity: {
+		type: Number,
+		default: 0.15
+	},
+	overlayStyle: {
+		type: Object as PropType<UTSJSONObject>,
+		default(): UTSJSONObject {
+			return {} as UTSJSONObject;
+		}
+	},
+	duration: {
+		type: Number,
+		default: 300
+	},
+	label: {
+		type: String,
+		default: '选项'
+	},
+	options: {
+		type: Array as PropType<UTSJSONObject[]>,
+		default(): UTSJSONObject[] {
+			return [] as UTSJSONObject[];
+		}
+	},
+	keyName: {
+		type: String,
+		default: 'id'
+	},
+	labelName: {
+		type: String,
+		default: 'name'
+	},
+	showOptionsLabel: {
+		type: Boolean,
+		default: false
+	},
+	current: {
+		type: [String, Number],
+		default: ''
+	},
+	zIndex: {
+		type: Number,
+		default: 11000
+	},
+	itemColor: {
+		type: String,
+		default: '#333333'
+	},
+	iconColor: {
+		type: String,
+		default: ''
+	},
+	iconSize: {
+		type: String,
+		default: '13px'
+	},
+	disabled: {
+		type: Boolean,
+		default: false
+	}
+})
+
+const emit = defineEmits(['update:current', 'select'])
+const instance = getCurrentInstance()!.proxy!
+const isOpen = ref(false)
+const optionsWrapLeft = ref('auto')
+const optionsWrapRight = ref('auto')
+const optionsWrapTop = ref('0px')
+const optionsWrapMinWidth = ref('100px')
+const optionsWrapMaxHeight = ref('90vh')
+
+const currentLabel = computed((): string => {
+	const options = props.options as UTSJSONObject[];
+	for (let i = 0; i < options.length; i++) {
+		const item = options[i] as UTSJSONObject;
+		if (valueToString(item[props.keyName]) == valueToString(props.current)) {
+			return valueToString(item[props.labelName]);
+		}
+	}
+	return '';
+})
+
+const optionsWrapStyle = computed((): UTSJSONObject => {
+	return {
+		overflowY: 'auto',
+		position: 'fixed',
+		zIndex: props.zIndex + 1,
+		left: optionsWrapLeft.value,
+		right: optionsWrapRight.value,
+		top: optionsWrapTop.value,
+		minWidth: optionsWrapMinWidth.value,
+		maxHeight: optionsWrapMaxHeight.value
+	} as UTSJSONObject
+})
+
+const getOptionClass = (item: UTSJSONObject): string => {
+	return valueToString(item[props.keyName]) == valueToString(props.current) ? 'up-select__options-item--active' : ''
+}
+
+const getOptionLabel = (item: UTSJSONObject): string => {
+	return valueToString(item[props.labelName])
+}
+
+const adjustOptionsWrapPosition = (): void => {
+	const wi = getWindowInfo();
+	const windowWidth = wi.windowWidth;
+	const windowHeight = wi.windowHeight;
+	upGetRect('.up-select__label', false, instance).then((rect: NodeInfo) => {
+		const left = normalizeNumber(rect.left, 0);
+		const top = normalizeNumber(rect.top, 0);
+		const width = Math.max(100, normalizeNumber(rect.width, 100));
+		const height = normalizeNumber(rect.height, 0);
+		const dropdownTop = top + height;
+		const availableHeight = Math.max(80, windowHeight - dropdownTop - 8);
+		optionsWrapTop.value = dropdownTop.toString() + 'px';
+		optionsWrapMinWidth.value = width.toString() + 'px';
+		optionsWrapMaxHeight.value = availableHeight.toString() + 'px';
+		if (left + width > windowWidth) {
+			optionsWrapLeft.value = 'auto';
+			optionsWrapRight.value = '0px';
+		} else {
+			optionsWrapLeft.value = left.toString() + 'px';
+			optionsWrapRight.value = 'auto';
+		}
+	});
+}
+
+const openSelect = (): void => {
+	if (props.disabled) {
+		return;
+	}
+	isOpen.value = true;
+	nextTick(() => {
+		if (isOpen.value) {
+			adjustOptionsWrapPosition();
+		}
+	});
+}
+
+const closeSelect = (): void => {
+	isOpen.value = false;
+}
+
+const overlayClick = (): void => {
+	isOpen.value = false;
+}
+
+const selectItem = (item: UTSJSONObject): void => {
+	isOpen.value = false;
+	emit('update:current', item[props.keyName]);
+	emit('select', item);
+}
+
+const stopOverlayTouchMove = (e: UniEvent): void => {
+	e.stopPropagation()
+}
+
+onMounted(() => {
+	if (props.maxHeight != null && props.maxHeight != '') {
+		optionsWrapMaxHeight.value = props.maxHeight
+	}
+})
+
+defineExpose({
+	isOpen,
+	optionsWrapLeft,
+	optionsWrapRight,
+	optionsWrapTop,
+	optionsWrapMinWidth,
+	optionsWrapMaxHeight,
+	currentLabel,
+	optionsWrapStyle,
+	getOptionClass,
+	getOptionLabel,
+	openSelect,
+	closeSelect,
+	overlayClick,
+	selectItem,
+	adjustOptionsWrapPosition,
+	stopOverlayTouchMove
+})
+</script>
+
+<style lang="scss" scoped>
+	.up-select__content {
+		position: relative;
+	}
+
+	.up-select__content--disabled {
+		opacity: 0.6;
+		pointer-events: none;
+	}
+
+	.up-select__label {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	/* #ifdef H5 */
+	.up-select__label:hover {
+		cursor: pointer;
+	}
+	/* #endif */
+
+	.up-select__text {
+		margin-right: 2px;
+	}
+
+	.up-select__options__wrap {
+		position: fixed;
+		top: 0;
+		left: 0;
+	}
+
+	.up-select__options {
+		min-width: 100px;
+		box-sizing: border-box;
+		border-radius: 4px;
+		border: 1px solid #f1f1f1;
+		background-color: #fff;
+	}
+
+	.up-select__options-item {
+		padding: 10px 12px;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* #ifdef H5 */
+	.up-select__options-item:hover {
+		background-color: #f7f7f7;
+		cursor: pointer;
+	}
+
+	.up-select__item-text:hover {
+		cursor: pointer;
+	}
+	/* #endif */
+</style>
+

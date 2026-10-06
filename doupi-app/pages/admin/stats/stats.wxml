@@ -1,0 +1,114 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}" bindrefresherrefresh="onPullDownRefresh" refresher-enabled refresher-triggered="{{false}}">
+
+    <!-- 时间维度切换 -->
+    <view class="time-tabs">
+      <view
+        class="time-tab {{currentTab === index ? 'active' : ''}}"
+        wx:for="{{timeTabs}}"
+        wx:key="*this"
+        data-index="{{index}}"
+        bindtap="onTimeTab"
+      >{{item}}</view>
+    </view>
+
+    <view class="scope-tip">
+      <text class="scope-tip__text">按当前账号权限统计。数据范围：超级管理员/管理员=全平台；主任=有效绑定老师及本人；老师=本人。</text>
+    </view>
+
+    <!-- 核心数据卡片 -->
+    <view class="overview-grid">
+      <view class="overview-card" wx:for="{{overviewCards}}" wx:key="title">
+        <view class="overview-card__icon" style="background-color: {{item.bgColor}};">
+          <t-icon name="{{item.icon}}" size="28rpx" color="{{item.color}}"></t-icon>
+        </view>
+        <text class="card-value">{{item.value}}</text>
+        <text class="card-label">{{item.title}}</text>
+        <view class="card-trend {{item.trend === 'up' ? 'trend-up' : 'trend-down'}}" wx:if="{{item.change}}">
+          <t-icon class="trend-icon" name="{{item.trend === 'up' ? 'chevron-up' : 'chevron-down'}}" size="20rpx" color="{{item.trend === 'up' ? '#52C41A' : '#F5222D'}}"></t-icon>
+          <text class="trend-text">{{item.change}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 招生老师数据 -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">招生老师概况</text>
+        <text class="section-link" bindtap="goToTeacherOverview">详情</text>
+      </view>
+      <view class="teacher-grid">
+        <view class="teacher-item" wx:for="{{teacherStats}}" wx:key="name">
+          <text class="teacher-value">{{item.value}}</text>
+          <text class="teacher-label">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 预约来源分布 -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">预约来源分布</text>
+        <text class="section-link" bindtap="goToSourceDetailMenu">详情</text>
+      </view>
+      <view class="source-list">
+        <view class="source-item source-item--clickable" wx:for="{{sourceData}}" wx:key="label" data-source="{{item.source}}" bindtap="goToSourceDetail">
+          <view class="source-left">
+            <view class="source-color" style="background-color: {{item.color}};"></view>
+            <text class="source-label">{{item.label}}</text>
+          </view>
+          <view class="source-right">
+            <text class="source-count">{{item.value}}</text>
+            <text class="source-percent">{{item.percentText}}</text>
+          </view>
+          <view class="source-bar-track">
+            <view class="source-bar-fill" style="width: {{item.percentWidth}}; background-color: {{item.color}};"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 状态分布 + 排行榜 双栏布局 -->
+    <view class="dual-row">
+      <!-- 状态分布 -->
+      <view class="section-card half-card">
+        <view class="section-header">
+          <text class="section-title">状态分布</text>
+          <text class="section-link" bindtap="goToStatusDetailMenu">详情</text>
+        </view>
+        <view class="status-list">
+          <view class="status-item status-item--clickable" wx:for="{{statusData}}" wx:key="label" data-status="{{item.status}}" bindtap="goToStatusDetail">
+            <view class="status-left">
+              <view class="status-dot" style="background-color: {{item.color}};"></view>
+              <text class="status-label">{{item.label}}</text>
+            </view>
+            <text class="status-count">{{item.count}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 老师排行榜 -->
+      <view class="section-card half-card">
+        <view class="section-header">
+          <text class="section-title">老师排行</text>
+          <text class="section-link" bindtap="goToRankingDetail">详情</text>
+        </view>
+        <view class="rank-list">
+          <view class="rank-item rank-item--clickable" wx:for="{{rankingList}}" wx:key="teacherId" bindtap="goToTeacherRankItem">
+            <text class="rank-num {{index < 3 ? 'rank-top' : ''}}">{{item.rank}}</text>
+            <view class="rank-main">
+              <text class="rank-name">{{item.name}}</text>
+              <view class="rank-meta">
+                <text class="rank-meta__item">预约 {{item.appointmentCount}}</text>
+                <text class="rank-meta__dot">/</text>
+                <text class="rank-meta__item">接待 {{item.receptionCount}}</text>
+              </view>
+            </view>
+            <text class="rank-count">总 {{item.totalCount}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+  </scroll-view>
+</view>

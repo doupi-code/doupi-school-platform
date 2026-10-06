@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.edu.mapper.EduPrintRecordMapper">
+    
+    <resultMap type="EduPrintRecord" id="EduPrintRecordResult">
+        <result property="printId"    column="print_id"    />
+        <result property="printName"    column="print_name"    />
+        <result property="paperGoodsId"    column="paper_goods_id"    />
+        <result property="paperType"    column="paper_type"    />
+        <result property="printCount"    column="print_count"    />
+        <result property="pageCount"    column="page_count"    />
+        <result property="printSide"    column="print_side"    />
+        <result property="totalPages"    column="total_pages"    />
+        <result property="teacherId"    column="teacher_id"    />
+        <result property="grade"        column="grade"         />
+        <result property="classId"      column="class_id"      />
+        <result property="className"    column="class_name"    />
+        <result property="operator"    column="operator"    />
+        <result property="printTime"    column="print_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="status"    column="status"    />
+        <result property="outId"    column="out_id"    />
+        <result property="attachment"    column="attachment"    />
+        <result property="resultImg"    column="result_img"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+        <result property="teacherName"    column="teacher_name"    />
+        <result property="paperGoodsName"    column="paper_goods_name"    />
+        <result property="outNo"    column="out_no"    />
+    </resultMap>
+
+    <sql id="selectEduPrintRecordVo">
+        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.total_pages, r.teacher_id, r.grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
+               coalesce(u.nick_name, t.teacher_name) as teacher_name,
+               g.goods_name as paper_goods_name,
+               o.out_no
+        from edu_print_record r
+        left join sys_user u on r.teacher_id = u.user_id
+        left join edu_teacher t on r.teacher_id = t.teacher_id
+        left join edu_class c on r.class_id = c.class_id
+        left join edu_goods g on r.paper_goods_id = g.goods_id
+        left join edu_stock_out o on r.out_id = o.out_id
+    </sql>
+
+    <select id="selectEduPrintRecordList" parameterType="EduPrintRecord" resultMap="EduPrintRecordResult">
+        <include refid="selectEduPrintRecordVo"/>
+        <where>  
+            and r.del_flag = '0'
+            <if test="printName != null  and printName != ''"> and r.print_name like concat('%', #{printName}, '%')</if>
+            <if test="paperGoodsId != null "> and r.paper_goods_id = #{paperGoodsId}</if>
+            <if test="paperType != null  and paperType != ''"> and r.paper_type = #{paperType}</if>
+            <if test="printSide != null  and printSide != ''"> and r.print_side = #{printSide}</if>
+            <if test="teacherId != null "> and r.teacher_id = #{teacherId}</if>
+            <if test="grade != null and grade != ''"> and r.grade = #{grade}</if>
+            <if test="classId != null "> and r.class_id = #{classId}</if>
+            <if test="operator != null  and operator != ''"> and r.operator like concat('%', #{operator}, '%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''"><!-- 开始时间检索 -->
+                and date_format(r.print_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''"><!-- 结束时间检索 -->
+                and date_format(r.print_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+            <if test="status != null  and status != ''"> and r.status = #{status}</if>
+            <if test="params.excludeCancelled != null and params.excludeCancelled == 'true'"> and r.status != '2'</if>
+            <if test="outId != null"> and r.out_id = #{outId}</if>
+            <if test="outNo != null and outNo != ''"> and o.out_no like concat('%', #{outNo}, '%')</if>
+            <if test="printId != null"> and r.print_id = #{printId}</if>
+        </where>
+        order by r.print_id desc
+    </select>
+    
+    <select id="selectEduPrintRecordByPrintId" parameterType="Long" resultMap="EduPrintRecordResult">
+        <include refid="selectEduPrintRecordVo"/>
+        where r.print_id = #{printId}
+    </select>
+
+    <select id="selectEduPrintRecordByOutId" parameterType="Long" resultMap="EduPrintRecordResult">
+        <include refid="selectEduPrintRecordVo"/>
+        where r.out_id = #{outId} and r.del_flag = '0'
+        limit 1
+    </select>
+
+    <insert id="insertEduPrintRecord" parameterType="EduPrintRecord" useGeneratedKeys="true" keyProperty="printId">
+        insert into edu_print_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="printName != null and printName != ''">print_name,</if>
+            <if test="paperGoodsId != null">paper_goods_id,</if>
+            <if test="paperType != null">paper_type,</if>
+            <if test="printCount != null">print_count,</if>
+            <if test="pageCount != null">page_count,</if>
+            <if test="printSide != null and printSide != ''">print_side,</if>
+            <if test="totalPages != null">total_pages,</if>
+            <if test="teacherId != null">teacher_id,</if>
+            <if test="grade != null and grade != ''">grade,</if>
+            <if test="classId != null">class_id,</if>
+            <if test="className != null and className != ''">class_name,</if>
+            <if test="operator != null and operator != ''">operator,</if>
+            <if test="printTime != null">print_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="outId != null">out_id,</if>
+            <if test="attachment != null and attachment != ''">attachment,</if>
+            <if test="resultImg != null and resultImg != ''">result_img,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="printName != null and printName != ''">#{printName},</if>
+            <if test="paperGoodsId != null">#{paperGoodsId},</if>
+            <if test="paperType != null">#{paperType},</if>
+            <if test="printCount != null">#{printCount},</if>
+            <if test="pageCount != null">#{pageCount},</if>
+            <if test="printSide != null and printSide != ''">#{printSide},</if>
+            <if test="totalPages != null">#{totalPages},</if>
+            <if test="teacherId != null">#{teacherId},</if>
+            <if test="grade != null and grade != ''">#{grade},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="className != null and className != ''">#{className},</if>
+            <if test="operator != null and operator != ''">#{operator},</if>
+            <if test="printTime != null">#{printTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="outId != null">#{outId},</if>
+            <if test="attachment != null and attachment != ''">#{attachment},</if>
+            <if test="resultImg != null and resultImg != ''">#{resultImg},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduPrintRecord" parameterType="EduPrintRecord">
+        update edu_print_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="printName != null and printName != ''">print_name = #{printName},</if>
+            <if test="paperGoodsId != null">paper_goods_id = #{paperGoodsId},</if>
+            <if test="paperType != null">paper_type = #{paperType},</if>
+            <if test="printCount != null">print_count = #{printCount},</if>
+            <if test="pageCount != null">page_count = #{pageCount},</if>
+            <if test="printSide != null and printSide != ''">print_side = #{printSide},</if>
+            <if test="totalPages != null">total_pages = #{totalPages},</if>
+            <if test="teacherId != null">teacher_id = #{teacherId},</if>
+            <if test="grade != null">grade = #{grade},</if>
+            <if test="classId != null">class_id = #{classId},</if>
+            <if test="className != null">class_name = #{className},</if>
+            <if test="operator != null and operator != ''">operator = #{operator},</if>
+            <if test="printTime != null">print_time = #{printTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="outId != null">out_id = #{outId},</if>
+            <if test="attachment != null">attachment = #{attachment},</if>
+            <if test="resultImg != null">result_img = #{resultImg},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where print_id = #{printId}
+    </update>
+
+    <update id="deleteEduPrintRecordByPrintId" parameterType="Long">
+        update edu_print_record set del_flag = '2' where print_id = #{printId}
+    </update>
+
+    <update id="deleteEduPrintRecordByPrintIds" parameterType="String">
+        update edu_print_record set del_flag = '2' where print_id in 
+        <foreach item="printId" collection="array" open="(" separator="," close=")">
+            #{printId}
+        </foreach>
+    </update>
+
+    <select id="selectPrintSummary" parameterType="EduPrintRecord" resultType="java.util.Map">
+        select 
+            coalesce(sum(case when status != '2' then 1 else 0 end), 0) as totalJobs,
+            coalesce(sum(case when status != '2' then print_count else 0 end), 0) as totalPrintCount,
+            coalesce(sum(case when status != '2' then total_pages else 0 end), 0) as totalPages,
+            coalesce(sum(case when status = '1' then 1 else 0 end), 0) as completedJobs,
+            coalesce(sum(case when status = '1' then print_count else 0 end), 0) as completedPrintCount,
+            coalesce(sum(case when status = '1' then total_pages else 0 end), 0) as completedPages,
+            coalesce(sum(case when status = '0' then 1 else 0 end), 0) as pendingJobs,
+            coalesce(sum(case when status = '0' then print_count else 0 end), 0) as pendingPrintCount,
+            coalesce(sum(case when status = '0' then total_pages else 0 end), 0) as pendingPages,
+            coalesce(sum(case when status = '2' then 1 else 0 end), 0) as cancelledJobs,
+            coalesce(sum(case when status = '2' then total_pages else 0 end), 0) as cancelledPages
+        from edu_print_record
+        <where>
+            and del_flag = '0'
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="printName != null and printName != ''"> and print_name like concat('%', #{printName}, '%')</if>
+            <if test="paperType != null and paperType != ''"> and paper_type = #{paperType}</if>
+            <if test="grade != null and grade != ''"> and grade = #{grade}</if>
+            <if test="teacherId != null"> and teacher_id = #{teacherId}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(print_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(print_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectPaperTypeStats" parameterType="EduPrintRecord" resultType="java.util.Map">
+        select 
+            coalesce(paper_type, '未指定') as paperType,
+            count(1) as jobCount,
+            coalesce(sum(total_pages), 0) as totalPages,
+            coalesce(sum(print_count), 0) as totalPrintCount
+        from edu_print_record
+        <where>
+            and del_flag = '0'
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="status == null or status == ''"> and status != '2'</if>
+            <if test="printName != null and printName != ''"> and print_name like concat('%', #{printName}, '%')</if>
+            <if test="grade != null and grade != ''"> and grade = #{grade}</if>
+            <if test="teacherId != null"> and teacher_id = #{teacherId}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(print_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(print_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        group by paper_type
+        order by totalPages desc
+    </select>
+
+    <select id="selectGradePrintStats" parameterType="EduPrintRecord" resultType="java.util.Map">
+        select 
+            coalesce(nullif(grade, ''), '全校通用') as grade,
+            count(1) as jobCount,
+            coalesce(sum(total_pages), 0) as totalPages,
+            coalesce(sum(print_count), 0) as totalPrintCount
+        from edu_print_record
+        <where>
+            and del_flag = '0'
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="status == null or status == ''"> and status != '2'</if>
+            <if test="printName != null and printName != ''"> and print_name like concat('%', #{printName}, '%')</if>
+            <if test="paperType != null and paperType != ''"> and paper_type = #{paperType}</if>
+            <if test="teacherId != null"> and teacher_id = #{teacherId}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(print_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(print_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        group by grade
+        order by totalPages desc
+    </select>
+
+    <select id="selectTeacherPrintStats" parameterType="EduPrintRecord" resultType="java.util.Map">
+        select 
+            coalesce(u.nick_name, t.teacher_name, '未知教师') as teacherName,
+            coalesce(u.subject, t.subject, '学科通用') as subject,
+            count(1) as jobCount,
+            coalesce(sum(r.total_pages), 0) as totalPages,
+            coalesce(sum(r.print_count), 0) as totalPrintCount
+        from edu_print_record r
+        left join sys_user u on r.teacher_id = u.user_id
+        left join edu_teacher t on r.teacher_id = t.teacher_id
+        <where>
+            and r.del_flag = '0'
+            <if test="status != null and status != ''"> and r.status = #{status}</if>
+            <if test="status == null or status == ''"> and r.status != '2'</if>
+            <if test="printName != null and printName != ''"> and r.print_name like concat('%', #{printName}, '%')</if>
+            <if test="grade != null and grade != ''"> and r.grade = #{grade}</if>
+            <if test="paperType != null and paperType != ''"> and r.paper_type = #{paperType}</if>
+            <if test="teacherId != null"> and r.teacher_id = #{teacherId}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                and date_format(r.print_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                and date_format(r.print_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        group by r.teacher_id, coalesce(u.nick_name, t.teacher_name), coalesce(u.subject, t.subject)
+        order by totalPages desc
+        limit 10
+    </select>
+
+    <select id="selectMonthlyPrintStats" resultType="java.util.Map">
+        select 
+            date_format(print_time, '%Y-%m') as month,
+            count(1) as jobCount,
+            coalesce(sum(total_pages), 0) as totalPages,
+            coalesce(sum(print_count), 0) as totalPrintCount
+        from edu_print_record
+        where del_flag = '0'
+          and status != '2'
+          and print_time &gt;= date_sub(curdate(), interval 6 month)
+        group by month
+        order by month asc
+    </select>
+</mapper>

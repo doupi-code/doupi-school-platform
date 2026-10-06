@@ -1,0 +1,238 @@
+<template>
+  <scroll-view class="app-hub-page" scroll-y="true">
+    <!-- 顶部搜索框 (使用 up-search 官方组件) -->
+    <view class="search-header">
+      <up-search 
+        v-model="keyword" 
+        placeholder="搜索校务功能或应用" 
+        :showAction="false"
+        shape="round"
+      ></up-search>
+    </view>
+
+    <!-- 应用分组 1：招生与访校协同 (已打通真实业务) -->
+    <view class="hub-section">
+      <view class="hub-header">
+        <text class="hub-title">招生与访校迎新</text>
+        <text class="hub-count">4 个应用</text>
+      </view>
+      <view class="hub-grid">
+        <view class="hub-item" @click="navTo('/pages/work/recruit/verify')">
+          <view class="hub-icon-wrap bg-blue">
+            <image class="hub-svg" src="/static/icons/profile-camera.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">现场核销</text>
+          <text class="hub-sub">扫码/码校验</text>
+        </view>
+
+        <view class="hub-item" @click="navTo('/pages/work/recruit/list')">
+          <view class="hub-icon-wrap bg-orange">
+            <image class="hub-svg" src="/static/icons/figma-calendar-blue.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">预约审批</text>
+          <text class="hub-sub">批复与改期</text>
+        </view>
+
+        <view class="hub-item" @click="handleComing">
+          <view class="hub-icon-wrap bg-cyan">
+            <image class="hub-svg" src="/static/icons/figma-qrcode.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">招生码分配</text>
+          <text class="hub-sub">渠道来源绑定</text>
+        </view>
+
+        <view class="hub-item" @click="handleComing">
+          <view class="hub-icon-wrap bg-green">
+            <image class="hub-svg" src="/static/icons/mine-settings.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">招生大盘</text>
+          <text class="hub-sub">到校转化报表</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 应用分组 2：教务与教学保障 -->
+    <view class="hub-section">
+      <view class="hub-header">
+        <text class="hub-title">教务与教学</text>
+        <text class="hub-count">3 个应用</text>
+      </view>
+      <view class="hub-grid">
+        <view class="hub-item" @click="navTo('/pages/work/print/list')">
+          <view class="hub-icon-wrap bg-purple">
+            <image class="hub-svg" src="/static/icons/settings-file.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">试卷文印</text>
+          <text class="hub-sub">印制申请流转</text>
+        </view>
+
+        <view class="hub-item" @click="handleComing">
+          <view class="hub-icon-wrap bg-pink">
+            <image class="hub-svg" src="/static/icons/shield.png" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">试卷OCR解析</text>
+          <text class="hub-sub">智能识别录入</text>
+        </view>
+
+        <view class="hub-item" @click="navTo('/pages/work/user/list')">
+          <view class="hub-icon-wrap bg-indigo">
+            <image class="hub-svg" src="/static/icons/settings-user.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">班级与职工</text>
+          <text class="hub-sub">花名册档案</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 应用分组 3：物资与仓储管理 -->
+    <view class="hub-section">
+      <view class="hub-header">
+        <text class="hub-title">物资与后勤</text>
+        <text class="hub-count">3 个应用</text>
+      </view>
+      <view class="hub-grid">
+        <view class="hub-item" @click="navTo('/pages/work/stock/out')">
+          <view class="hub-icon-wrap bg-yellow">
+            <image class="hub-svg" src="/static/icons/settings.png" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">物品领用出库</text>
+          <text class="hub-sub">出库申请审批</text>
+        </view>
+
+        <view class="hub-item" @click="navTo('/pages/work/stock/goods')">
+          <view class="hub-icon-wrap bg-teal">
+            <image class="hub-svg" src="/static/icons/shield.png" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">物资库存盘点</text>
+          <text class="hub-sub">实时数量规格</text>
+        </view>
+
+        <view class="hub-item" @click="navTo('/pages/work/stock/goods')">
+          <view class="hub-icon-wrap bg-red">
+            <image class="hub-svg" src="/static/icons/profile-warning.svg" mode="aspectFit"></image>
+          </view>
+          <text class="hub-name">库存预警</text>
+          <text class="hub-sub">耗材临界提示</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+export default {
+  data() {
+    return {
+      keyword: ''
+    }
+  },
+  methods: {
+    navTo(url: string) {
+      uni.navigateTo({ url })
+    },
+    handleComing() {
+      uni.showToast({ title: '移动端原生模块对接中', icon: 'none' })
+    }
+  }
+}
+</script>
+
+<style>
+.app-hub-page {
+  flex: 1;
+  background-color: #F2F3F7;
+  flex-direction: column;
+}
+
+.search-header {
+  background-color: #FFFFFF;
+  padding: 10px 16px;
+  border-bottom: 1px solid #F2F3F5;
+}
+
+/* 分组大卡片 */
+.hub-section {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 14px;
+  background-color: #FFFFFF;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
+}
+
+.hub-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.hub-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.hub-count {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.hub-grid {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.hub-item {
+  width: 25%;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-direction: column;
+}
+
+.hub-icon-wrap {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.bg-blue { background-color: #E8F3FF; }
+.bg-orange { background-color: #FFF7E6; }
+.bg-cyan { background-color: #E6FFFB; }
+.bg-green { background-color: #E6FFED; }
+.bg-purple { background-color: #F9F0FF; }
+.bg-pink { background-color: #FFF0F6; }
+.bg-indigo { background-color: #F0F5FF; }
+.bg-yellow { background-color: #FEFFE6; }
+.bg-red { background-color: #FFF1F0; }
+.bg-teal { background-color: #E6FFFB; }
+
+.hub-svg {
+  width: 24px;
+  height: 24px;
+}
+
+.hub-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1D2129;
+  margin-bottom: 2px;
+}
+
+.hub-sub {
+  font-size: 10px;
+  color: #86909C;
+}
+
+.bottom-spacer {
+  height: 20px;
+}
+</style>

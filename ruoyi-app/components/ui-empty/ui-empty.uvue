@@ -1,0 +1,52 @@
+<template>
+  <view class="ui-empty">
+    <image class="ui-empty__img" :src="icon" mode="aspectFit"></image>
+    <text class="ui-empty__text">{{ text }}</text>
+    <view v-if="$slots['default'] != null" class="ui-empty__action">
+      <slot></slot>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiEmpty',
+  props: {
+    text: {
+      type: String,
+      default: '暂无相关数据'
+    },
+    icon: {
+      type: String,
+      default: '/static/icons/empty-default.svg'
+    }
+  }
+}
+</script>
+
+<style>
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.ui-empty__img {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+
+.ui-empty__text {
+  font-size: 14px;
+  color: #86909C;
+  text-align: center;
+}
+
+.ui-empty__action {
+  margin-top: 16px;
+}
+</style>

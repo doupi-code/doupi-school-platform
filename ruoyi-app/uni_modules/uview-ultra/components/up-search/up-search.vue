@@ -1,0 +1,347 @@
+<template>
+	<view
+	    class="up-search"
+		:class="[iconPosition === 'right' && 'up-search__reverse']"
+	    @tap="clickHandler"
+	    :style="[{
+			margin: margin,
+		}, addStyle(customStyle)]"
+	>
+		<view
+		    class="up-search__content"
+		    :style="{
+				backgroundColor: bgColor,
+				borderRadius: shape == 'round' ? '100px' : '4px',
+				borderColor: borderColor,
+				'--up-search-placeholder-color': placeholderColor,
+			}"
+		>
+			<template v-if="$slots.label || label !== null">
+				<slot name="label">
+					<text class="up-search__content__label">{{ label }}</text>
+				</slot>
+			</template>
+			<view class="up-search__content__icon">
+				<up-icon
+					@tap="clickIcon"
+				    :size="searchIconSize"
+				    :name="searchIcon"
+				    :color="searchIconColor ? searchIconColor : color"
+				></up-icon>
+			</view>
+			<input
+			    confirm-type="search"
+			    @blur="blurFunc"
+			    :value="keyword"
+			    @confirm="search"
+			    @input="inputChange"
+			    :disabled="disabled"
+			    @focus="getFocus"
+			    :focus="focus"
+			    :maxlength="maxlength"
+				:adjust-position="adjustPosition"
+				:auto-blur="autoBlur"
+			    placeholder-class="up-search__content__input--placeholder"
+			    :placeholder="placeholder"
+			    :placeholder-style="`color: ${placeholderColor}`"
+			    class="up-search__content__input"
+			    type="text"
+			    :style="[{
+					pointerEvents: disabled ? 'none' : 'auto',
+					textAlign: inputAlign,
+					color: color,
+					backgroundColor: bgColor,
+					height: addUnit(height)
+				}, inputStyle]"
+			/>
+			<view
+			    class="up-search__content__icon up-search__content__close"
+			    v-if="isShowClear"
+			    @click="clear"
+			>
+				<up-icon
+				    name="close"
+				    size="11"
+				    color="#ffffff"
+					customStyle="line-height: 12px"
+				></up-icon>
+			</view>
+            <slot name="inputRight"></slot>
+		</view>
+		<text
+		    :style="[actionStyle]"
+		    class="up-search__action"
+		    :class="[(showActionBtn || show) && 'up-search__action--active']"
+		    @tap.stop.prevent="custom"
+		>{{ actionText }}</text>
+	</view>
+</template>
+
+<script setup>
+import { computed, nextTick, ref, watch } from 'vue'
+import { props as searchProps } from './props.js'
+import { commonProps } from '../../libs/composable/useUltraUI.js'
+import { addUnit, addStyle } from '../../libs/function/index.js'
+/**
+ * search 搜索框
+ * @description 搜索组件，集成了常见搜索框所需功能，用户可以一键引入，开箱即用。
+ * @tutorial https://uview-plus.jiangruyi.com/components/search.html
+ * @property {String}			shape				搜索框形状，round-圆形，square-方形（默认 'round' ）
+ * @property {String}			bgColor				搜索框背景颜色（默认 '#f2f2f2' ）
+ * @property {String}			placeholder			占位文字内容（默认 '请输入关键字' ）
+ * @property {Boolean}			clearabled			是否启用清除控件（默认 true ）
+ * @property {Boolean}			focus				是否自动获得焦点（默认 false ）
+ * @property {Boolean}			showAction			是否显示右侧控件（默认 true ）
+ * @property {Object}			actionStyle			右侧控件的样式，对象形式
+ * @property {String}			actionText			右侧控件文字（默认 '搜索' ）
+ * @property {String}			inputAlign			输入框内容水平对齐方式 （默认 'left' ）
+ * @property {Object}			inputStyle			自定义输入框样式，对象形式
+ * @property {Boolean}			disabled			是否启用输入框（默认 false ）
+ * @property {String}			borderColor			边框颜色，配置了颜色，才会有边框 (默认 'transparent' )
+ * @property {String}			searchIconColor		搜索图标的颜色，默认同输入框字体颜色 (默认 '#909399' )
+ * @property {Number | String}	searchIconSize 搜索图标的字体，默认22
+ * @property {String}			color				输入框字体颜色（默认 '#606266' ）
+ * @property {String}			placeholderColor	placeholder的颜色（默认 '#909399' ）
+ * @property {String}			searchIcon			输入框左边的图标，可以为uView图标名称或图片路径  (默认 'search' )
+ * @property {String}			iconPosition		输入框图标位置，left-左边, right-右边  (默认 'left' )
+ * @property {String}			margin				组件与其他上下左右元素之间的距离，带单位的字符串形式，如"30px"   (默认 '0' )
+ * @property {Boolean} 			animation			是否开启动画，见上方说明（默认 false ）
+ * @property {String}			value				输入框初始值
+ * @property {String | Number}	maxlength			输入框最大能输入的长度，-1为不限制长度  (默认 '-1' )
+ * @property {String | Number}	height				输入框高度，单位px（默认 64 ）
+ * @property {String | Number}	label				搜索框左边显示内容
+ * @property {Boolean}	        adjustPosition	    键盘弹起时，是否自动上推页面
+ * @property {Boolean}	        autoBlur	        键盘收起时，是否自动失去焦点
+ * @property {Boolean}	        onlyClearableOnFocused	是否仅在聚焦时显示清除控件（默认 true ）
+ * @property {Object}			customStyle			定义需要用到的外部样式
+ *
+ * @event {Function} change 输入框内容发生变化时触发
+ * @event {Function} search 用户确定搜索时触发，用户按回车键，或者手机键盘右下角的"搜索"键时触发
+ * @event {Function} custom 用户点击右侧控件时触发
+ * @event {Function} clear 用户点击清除按钮时触发
+ * @example <up-search placeholder="日照香炉生紫烟" v-model="keyword"></up-search>
+ */
+defineOptions({
+	name: 'up-search',
+	// #ifdef MP-WEIXIN
+	options: {
+		virtualHost: true
+	}
+	// #endif
+})
+
+const props = defineProps({
+	...commonProps,
+	...searchProps.props
+})
+const emit = defineEmits(['clear', 'search', 'custom', 'focus', 'blur', 'click', 'clickIcon', 'update:modelValue', 'change'])
+
+const keyword = ref('')
+const show = ref(false)
+const focused = ref(props.focus)
+
+watch(keyword, (nVal) => {
+	// #ifdef VUE3
+	emit('update:modelValue', nVal)
+	// #endif
+	// #ifdef VUE2
+	emit('input', nVal)
+	// #endif
+	emit('change', nVal)
+})
+
+// #ifdef VUE3
+watch(() => props.modelValue, (nVal) => {
+	keyword.value = nVal
+}, { immediate: true })
+// #endif
+// #ifdef VUE2
+watch(() => props.value, (nVal) => {
+	keyword.value = nVal
+}, { immediate: true })
+// #endif
+
+const showActionBtn = computed(() => !props.animation && props.showAction)
+const isShowClear = computed(() => {
+	const { clearabled, onlyClearableOnFocused } = props
+	if (!clearabled) return false
+	if (onlyClearableOnFocused) {
+		return !!focused.value && keyword.value !== ''
+	}
+	return keyword.value !== ''
+})
+
+function inputChange(e) {
+	keyword.value = e.detail.value
+}
+
+function clear() {
+	keyword.value = ''
+	nextTick(() => {
+		emit('clear')
+	})
+}
+
+function search(e) {
+	emit('search', e.detail.value)
+	try {
+		uni.hideKeyboard()
+	} catch (err) {}
+}
+
+function custom() {
+	emit('custom', keyword.value)
+	try {
+		uni.hideKeyboard()
+	} catch (err) {}
+}
+
+function getFocus() {
+	focused.value = true
+	if (props.animation && props.showAction) show.value = true
+	emit('focus', keyword.value)
+}
+
+function blurFunc() {
+	setTimeout(() => {
+		focused.value = false
+	}, 100)
+	show.value = false
+	emit('blur', keyword.value)
+}
+
+function clickHandler() {
+	if (props.disabled) emit('click')
+}
+
+function clickIcon() {
+	emit('clickIcon', keyword.value)
+	try {
+		uni.hideKeyboard()
+	} catch (err) {}
+}
+
+defineExpose({
+	clear
+})
+</script>
+
+
+<style lang="scss">
+/**
+ * placeholder-class 指定的类不能写在 scoped 中：小程序端 placeholder 节点由 input 内部渲染，
+ * 不会带上 scoped 的 data-v- 类，编译出的 .xxx--placeholder.data-v-xxx 永远匹配不到它，
+ * placeholderColor 就只剩内联 placeholder-style 一条通路，而真机上首次渲染并不总会应用它，
+ * 表现为“输入内容后颜色才生效”。颜色统一由 --up-search-placeholder-color 变量传入。
+ */
+$up-search-input-placeholder-color: $up-tips-color !default;
+
+.up-search__content__input--placeholder {
+	color: var(--up-search-placeholder-color, #{$up-search-input-placeholder-color});
+}
+</style>
+
+<style lang="scss" scoped>
+$up-search-content-padding: 0 10px !default;
+$up-search-label-color: $up-main-color !default;
+$up-search-label-font-size: 14px !default;
+$up-search-label-margin: 0 4px !default;
+$up-search-close-size: 20px !default;
+$up-search-close-radius: 100px !default;
+$up-search-close-bgColor: #C6C7CB !default;
+$up-search-close-transform: scale(0.82) !default;
+$up-search-input-font-size: 14px !default;
+$up-search-input-margin: 0 5px !default;
+$up-search-input-color: $up-main-color !default;
+$up-search-input-placeholder-color: $up-tips-color !default;
+$up-search-action-font-size: 14px !default;
+$up-search-action-color: $up-main-color !default;
+$up-search-action-width: 0 !default;
+$up-search-action-active-width: 40px !default;
+$up-search-action-margin-left: 5px !default;
+
+/* #ifdef H5 */
+// iOS15在H5下，hx的某些版本，input type=search时，会多了一个搜索图标，进行移除
+[type="search"]::-webkit-search-decoration {
+    display: none;
+}
+/* #endif */
+
+.up-search {
+	@include flex(row);
+	align-items: center;
+	flex: 1;
+
+	&__content {
+		@include flex;
+		align-items: center;
+		padding: $up-search-content-padding;
+		flex: 1;
+		justify-content: space-between;
+		border-width: 1px;
+		border-color: transparent;
+		border-style: solid;
+		overflow: hidden;
+
+		&__icon {
+			@include flex;
+			align-items: center;
+		}
+
+		&__label {
+			color: $up-search-label-color;
+			font-size: $up-search-label-font-size;
+			margin: $up-search-label-margin;
+		}
+
+		&__close {
+			width: $up-search-close-size;
+			height: $up-search-close-size;
+			border-top-left-radius: $up-search-close-radius;
+			border-top-right-radius: $up-search-close-radius;
+			border-bottom-left-radius: $up-search-close-radius;
+			border-bottom-right-radius: $up-search-close-radius;
+			background-color: $up-search-close-bgColor;
+			@include flex(row);
+			align-items: center;
+			justify-content: center;
+			transform: $up-search-close-transform;
+		}
+
+		&__input {
+			flex: 1;
+			font-size: $up-search-input-font-size;
+			line-height: 1;
+			margin: $up-search-input-margin;
+			color: $up-search-input-color;
+
+		}
+	}
+
+	&__action {
+		font-size: $up-search-action-font-size;
+		color: $up-search-action-color;
+		width: $up-search-action-width;
+		overflow: hidden;
+		transition-property: width;
+		transition-duration: 0.3s;
+		/* #ifndef APP-NVUE */
+		white-space: nowrap;
+		/* #endif */
+		text-align: center;
+
+		&--active {
+			width: $up-search-action-active-width;
+			margin-left: $up-search-action-margin-left;
+		}
+	}
+
+	&__reverse &__content__icon {
+		order: 3;
+	}
+
+	&__reverse &__content__close {
+		order: 2;
+	}
+}
+</style>

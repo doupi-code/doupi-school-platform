@@ -1,0 +1,17 @@
+<view class="custom-nav-bar {{transparent ? 'transparent' : ''}}" style="background-color: {{backgroundColor}}">
+  <view class="custom-nav-bar-content">
+    <!-- 左侧操作区：返回按钮 -->
+    <view class="custom-nav-bar-left" wx:if="{{showBack}}" bindtap="onBack">
+      <text class="back-icon">&#x2039;</text>
+      <text wx:if="{{backText}}" class="back-text">{{backText}}</text>
+    </view>
+
+    <!-- 中间标题区 -->
+    <text class="custom-nav-bar-title">{{title}}</text>
+
+    <!-- 右侧操作区：自定义插槽 -->
+    <view class="custom-nav-bar-right">
+      <slot name="right"></slot>
+    </view>
+  </view>
+</view>

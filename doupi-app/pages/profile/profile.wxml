@@ -1,0 +1,182 @@
+<view class="mine-page">
+  <view class="impersonation-banner" wx:if="{{impersonating}}">
+    <text class="impersonation-banner__text">{{impersonateHint}}</text>
+    <view class="impersonation-banner__btn" bindtap="onExitImpersonation">退出并登出</view>
+  </view>
+  <view class="profile-header">
+    <view class="profile-header__user-row">
+      <view class="profile-header__avatar-wrap">
+        <image
+          class="profile-header__avatar"
+          src="{{userInfo.avatar || iconMap.avatar}}"
+          mode="aspectFill"
+        />
+      </view>
+
+      <view class="profile-header__info">
+        <text class="profile-header__name">{{userInfo.name}}</text>
+        <view class="profile-header__phone-row">
+          <image class="profile-header__phone-icon" src="{{iconMap.phone}}" mode="aspectFit" />
+          <text class="profile-header__phone">{{userInfo.phone}}</text>
+        </view>
+        <view
+          wx:if="{{!phoneBound}}"
+          class="profile-header__phone-action"
+          bindtap="onRepairPhoneLogin"
+        >
+          去补绑手机号
+        </view>
+      </view>
+
+      <view class="profile-header__settings" bindtap="onNavigateToSettings">
+        <t-icon name="setting-1" size="44rpx" color="#FFFFFF" />
+      </view>
+    </view>
+  </view>
+
+  <view class="appointment-section" wx:if="{{userInfo.role >= 1 && userInfo.role <= 4}}">
+    <view class="appointment-section__header">
+      <text class="appointment-section__title">{{userInfo.role === 4 ? '我的预约' : '最近预约'}}</text>
+      <text wx:if="{{showAppointmentScrollHint}}" class="appointment-section__scroll-hint">上下滑动查看更多</text>
+    </view>
+
+    <scroll-view class="appointment-scroll" scroll-y>
+      <view class="parent-appointments" wx:if="{{(userInfo.role === 4 ? uncheckedAppointmentsPreview.length : recentAdminAppointmentsPreview.length) > 0}}">
+        <view
+          wx:for="{{userInfo.role === 4 ? uncheckedAppointmentsPreview : recentAdminAppointmentsPreview}}"
+          wx:key="id"
+          class="appointment-card-list"
+          data-id="{{item.id}}"
+          bindtap="onNavigateToAppointmentDetail"
+        >
+          <view class="card-header">
+            <view
+              class="status-tag {{item.status === '待核销' ? 'status-pending' : (item.status === '已核销' ? 'status-completed' : 'status-cancelled')}}"
+            >
+              <view class="status-dot"></view>
+              <text>{{item.status}}</text>
+            </view>
+          </view>
+
+          <view class="info-list">
+            <view class="info-row">
+              <view class="info-icon-wrap">
+                <t-icon name="calendar" size="28rpx" color="#999999"></t-icon>
+              </view>
+              <text class="info-label">参观日期</text>
+              <text class="info-value">{{item.visitDate}}</text>
+            </view>
+            <view class="info-row">
+              <view class="info-icon-wrap">
+                <t-icon name="time" size="28rpx" color="#999999"></t-icon>
+              </view>
+              <text class="info-label">参观时间</text>
+              <text class="info-value highlight">{{item.visitTime}}</text>
+            </view>
+            <view class="info-row">
+              <view class="info-icon-wrap">
+                <t-icon name="user" size="28rpx" color="#999999"></t-icon>
+              </view>
+              <text class="info-label">学生姓名</text>
+              <text class="info-value">{{item.studentName}}</text>
+            </view>
+            <view class="info-row">
+              <view class="info-icon-wrap">
+                <t-icon name="ticket" size="28rpx" color="#999999"></t-icon>
+              </view>
+              <text class="info-label">预约号</text>
+              <text class="info-value">{{item.appointmentNumber}}</text>
+            </view>
+          </view>
+
+          <view class="card-actions" wx:if="{{userInfo.role === 4 && item.status === '待核销'}}">
+            <view
+              class="action-btn action-btn--cancel"
+              data-id="{{item.id}}"
+              catchtap="onCancelAppointment"
+            >
+              <text>取消预约</text>
+            </view>
+            <view
+              class="action-btn action-btn--detail"
+              data-id="{{item.id}}"
+              catchtap="onNavigateToAppointmentDetail"
+            >
+              <text>查看详情</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="parent-appointments__footer">
+          <view wx:if="{{userInfo.role === 4}}" class="parent-appointments__all" bindtap="onNavigateToAppointmentList">我的预约</view>
+          <view wx:else class="parent-appointments__all" bindtap="onNavigateToRecentAppointmentList">查看全部</view>
+        </view>
+      </view>
+
+      <view class="appointment-section__empty" wx:else>
+        <image class="appointment-empty__icon" src="{{iconMap.empty}}" mode="aspectFit" />
+        <text class="appointment-empty__text">{{userInfo.role === 4 ? displayText.noUncheckedAppointments : displayText.noRecentAppointments}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="function-list">
+    <view
+      wx:if="{{showAdminEntryCard}}"
+      class="admin-entry-card"
+      bindtap="onNavigateToAdmin"
+      hover-class="admin-entry-card--active"
+    >
+      <view class="admin-entry-card__left">
+        <text class="admin-entry-card__title">{{adminEntryTitle}}</text>
+        <text class="admin-entry-card__desc">{{adminEntryDesc}}</text>
+      </view>
+      <view class="admin-entry-card__right">
+        <image class="admin-entry-card__icon" src="{{iconMap.admin}}" mode="aspectFit" />
+      </view>
+    </view>
+
+    <view wx:if="{{showAdminEntryCard}}" class="function-item__divider"></view>
+
+    <!-- 消息通知：风格对齐“工作台入口”，支持未读角标 -->
+    <view
+      class="message-entry-card"
+      bindtap="onNavigateToNotification"
+      hover-class="message-entry-card--active"
+    >
+      <view class="message-entry-card__left">
+        <text class="message-entry-card__title">消息通知</text>
+        <text class="message-entry-card__desc">系统通知、预约提醒与状态变更</text>
+      </view>
+      <view class="message-entry-card__right">
+        <view class="message-entry-card__icon-wrap">
+          <t-icon name="notification" size="44rpx" color="#3088F4"></t-icon>
+          <view wx:if="{{unreadMessageCount > 0}}" class="message-entry-card__badge">
+            <text class="message-entry-card__badge-text">{{unreadMessageCount > 99 ? '99+' : unreadMessageCount}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="function-item__divider"></view>
+
+  </view>
+
+  <profile-edit-modal
+    visible="{{showProfileEditModal}}"
+    force="{{forceProfileEditModal}}"
+    bind:close="onProfileEditModalClose"
+    bind:saved="onProfileEditModalSaved"
+  />
+
+  <view class="cancel-modal-mask" wx:if="{{showCancelModal}}" catchtouchmove="preventMove">
+    <view class="cancel-modal">
+      <text class="cancel-modal__title">确认取消预约</text>
+      <text class="cancel-modal__content">取消后将无法恢复，请确认是否继续？</text>
+      <view class="cancel-modal__actions">
+        <view class="cancel-modal__btn cancel-modal__btn--secondary" bindtap="onCancelModalClose">再想想</view>
+        <view class="cancel-modal__btn cancel-modal__btn--danger" bindtap="onConfirmCancel">确认取消</view>
+      </view>
+    </view>
+  </view>
+</view>

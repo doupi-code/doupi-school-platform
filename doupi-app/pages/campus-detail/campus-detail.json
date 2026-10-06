@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "校园详情",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

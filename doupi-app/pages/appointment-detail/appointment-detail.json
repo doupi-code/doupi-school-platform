@@ -1,0 +1,1 @@
+{"usingComponents": {"t-button": "tdesign-miniprogram/button/button", "t-dialog": "tdesign-miniprogram/dialog/dialog", "t-icon": "tdesign-miniprogram/icon/icon", "t-qrcode": "tdesign-miniprogram/qrcode/qrcode", "status-tag": "/components/status-tag/index"}, "navigationBarTitleText": "预约详情"}

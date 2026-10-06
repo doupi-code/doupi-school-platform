@@ -1,0 +1,334 @@
+<template>
+  <scroll-view class="profile-page" scroll-y="true">
+    <!-- 顶部个人名片 -->
+    <view class="profile-hero">
+      <view class="hero-card">
+        <image class="avatar-hero" :src="userStore.avatar || '/static/icons/default-avatar.png'" mode="aspectFill"></image>
+        <view class="meta-column">
+          <view class="name-tag-row">
+            <text class="user-realname">{{ userStore.name || '龙涛' }}</text>
+            <text class="role-badge">正式教工</text>
+          </view>
+          <text class="job-title">{{ userStore.deptName || '管理部' }} · {{ userStore.roleName || '管理员' }}</text>
+          <text class="campus-title">所属校区：汉外华襄校区</text>
+        </view>
+      </view>
+
+      <!-- 个人业务统计指标 -->
+      <view class="metric-row">
+        <view class="metric-box">
+          <text class="metric-value">48</text>
+          <text class="metric-label">我的核销</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric-box">
+          <text class="metric-value text-orange">3</text>
+          <text class="metric-label">待办审批</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric-box">
+          <text class="metric-value text-green">100%</text>
+          <text class="metric-label">出勤率</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 账号与安全分组 (专业矢量图标) -->
+    <view class="inset-group">
+      <text class="group-caption">账号与安全</text>
+      <view class="group-card">
+        <view class="cell-line" @click="navTo('/pages/mine/info')">
+          <image class="cell-vector-icon" src="/static/icons/settings-user.svg" mode="aspectFit"></image>
+          <text class="cell-txt">修改个人资料</text>
+          <image class="chevron-right" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+        </view>
+
+        <view class="cell-line" @click="navTo('/pages/mine/password')">
+          <image class="cell-vector-icon" src="/static/icons/settings-lock.svg" mode="aspectFit"></image>
+          <text class="cell-txt">修改登录密码</text>
+          <image class="chevron-right" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+
+    <!-- 系统偏好设置 (专业矢量图标) -->
+    <view class="inset-group">
+      <text class="group-caption">系统与维护</text>
+      <view class="group-card">
+        <view class="cell-line" @click="handleClearCache">
+          <image class="cell-vector-icon" src="/static/icons/mine-settings.svg" mode="aspectFit"></image>
+          <text class="cell-txt">清理运行缓存</text>
+          <text class="cell-sub">2.4 MB</text>
+          <image class="chevron-right" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+        </view>
+
+        <view class="cell-line" @click="handleAbout">
+          <image class="cell-vector-icon" src="/static/icons/settings-info.svg" mode="aspectFit"></image>
+          <text class="cell-txt">关于工作台</text>
+          <text class="cell-sub">uni-app x 原生版</text>
+          <image class="chevron-right" src="/static/icons/settings-chevron-right.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+
+    <!-- 退出登录按钮 (使用 up-button 官方组件) -->
+    <view class="action-footer">
+      <up-button 
+        type="error" 
+        plain 
+        shape="circle" 
+        size="large"
+        icon="/static/icons/settings-logout.svg"
+        text="退出当前账号"
+        @click="handleLogout"
+      ></up-button>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+import { userStore, clearUserSession } from '@/store/index'
+import { logout } from '@/api/login'
+
+export default {
+  data() {
+    return {
+      userStore
+    }
+  },
+  methods: {
+    navTo(url: string) {
+      uni.navigateTo({ url })
+    },
+    handleClearCache() {
+      uni.showModal({
+        title: '清理缓存',
+        content: '确定要释放本地运行缓存吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.showToast({ title: '已释放 2.4 MB 缓存', icon: 'success' })
+          }
+        }
+      })
+    },
+    handleAbout() {
+      uni.showModal({
+        title: '关于工作台',
+        content: '豆皮智慧校园移动管理工作台\n版本：v1.0.0 (uni-app x)\n原生渲染引擎，支持鸿蒙 HarmonyOS NEXT、iOS、Android',
+        showCancel: false
+      })
+    },
+    handleLogout() {
+      uni.showModal({
+        title: '确认退出',
+        content: '确定要注销并返回登录页面吗？',
+        success: (res) => {
+          if (res.confirm) {
+            logout().catch(() => {})
+            clearUserSession()
+            uni.reLaunch({ url: '/pages/login/login' })
+          }
+        }
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.profile-page {
+  flex: 1;
+  background-color: #f2f3f7;
+  flex-direction: column;
+}
+
+/* 顶部名片区 */
+.profile-hero {
+  background-color: #165dff;
+  padding-top: 36px;
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: 20px;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  flex-direction: column;
+}
+
+.hero-card {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.avatar-hero {
+  width: 60px;
+  height: 60px;
+  border-radius: 30px;
+  border: 2px solid #ffffff;
+  background-color: #ffffff;
+  margin-right: 14px;
+}
+
+.meta-column {
+  flex-direction: column;
+}
+
+.name-tag-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.user-realname {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.role-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 10px;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 10px;
+}
+
+.job-title {
+  color: #e8f3ff;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.campus-title {
+  color: #e8f3ff;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* 指标行 */
+.metric-row {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.metric-box {
+  align-items: center;
+  flex-direction: column;
+}
+
+.metric-value {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.text-orange { color: #ffa940; }
+.text-green { color: #73d13d; }
+
+.metric-label {
+  color: #e8f3ff;
+  font-size: 11px;
+}
+
+.metric-divider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 缩进分组卡片 */
+.inset-group {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 16px;
+  flex-direction: column;
+}
+
+.group-caption {
+  font-size: 13px;
+  font-weight: 500;
+  color: #86909c;
+  margin-left: 4px;
+  margin-bottom: 8px;
+}
+
+.group-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
+}
+
+.cell-line {
+  flex-direction: row;
+  align-items: center;
+  padding-top: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f7f8fa;
+}
+
+.cell-vector-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+}
+
+.cell-txt {
+  flex: 1;
+  font-size: 15px;
+  color: #1d2129;
+}
+
+.cell-sub {
+  font-size: 12px;
+  color: #86909c;
+  margin-right: 6px;
+}
+
+.chevron-right {
+  width: 14px;
+  height: 14px;
+  opacity: 0.4;
+}
+
+/* 退出登录按钮 (严格水平垂直居中) */
+.action-footer {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 24px;
+  margin-bottom: 30px;
+}
+
+.signout-button {
+  height: 48px;
+  background-color: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #ffccc7;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.signout-text {
+  color: #ff4d4f;
+  font-size: 15px;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+}
+</style>

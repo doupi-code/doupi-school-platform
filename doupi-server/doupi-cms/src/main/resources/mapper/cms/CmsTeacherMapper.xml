@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.cms.mapper.CmsTeacherMapper">
+    
+    <resultMap type="CmsTeacher" id="CmsTeacherResult">
+        <id     property="teacherId"    column="teacher_id"    />
+        <result property="slug"         column="slug"          />
+        <result property="name"         column="name"          />
+        <result property="subject"      column="subject"       />
+        <result property="title"        column="title"         />
+        <result property="category"     column="category"      />
+        <result property="groupName"    column="group_name"    />
+        <result property="tags"         column="tags"          />
+        <result property="bio"          column="bio"           />
+        <result property="quote"        column="quote"         />
+        <result property="years"        column="years"         />
+        <result property="achievement"  column="achievement"   />
+        <result property="avatarUrl"    column="avatar_url"    />
+        <result property="status"       column="status"        />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectTeacherVo">
+        select teacher_id, slug, name, subject, title, category, group_name, tags, bio, quote, years, achievement, avatar_url, status, sort_order, create_time, update_time
+        from doupi_cms_teacher
+    </sql>
+
+    <select id="selectTeacherList" parameterType="CmsTeacher" resultMap="CmsTeacherResult">
+        <include refid="selectTeacherVo"/>
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="subject != null and subject != ''">
+                and subject = #{subject}
+            </if>
+            <if test="category != null and category != ''">
+                and category = #{category}
+            </if>
+            <if test="groupName != null and groupName != ''">
+                and group_name = #{groupName}
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+        </where>
+        order by sort_order asc, teacher_id asc
+    </select>
+
+    <select id="selectTeacherById" parameterType="Long" resultMap="CmsTeacherResult">
+        <include refid="selectTeacherVo"/>
+        where teacher_id = #{teacherId}
+    </select>
+
+    <insert id="insertTeacher" parameterType="CmsTeacher" useGeneratedKeys="true" keyProperty="teacherId">
+        insert into doupi_cms_teacher (
+            slug, name, subject, title, category, group_name, tags, bio, quote, years, achievement, avatar_url, status, sort_order, create_time
+        ) values (
+            coalesce(#{slug}, concat('t-', uuid_short())),
+            #{name}, #{subject}, #{title}, 
+            coalesce(#{category}, 'special'), 
+            coalesce(#{groupName}, 'faculty'), 
+            coalesce(#{tags}, ''), 
+            #{bio}, #{quote}, 
+            coalesce(#{years}, 10), 
+            #{achievement}, #{avatarUrl}, 
+            coalesce(#{status}, '0'), 
+            coalesce(#{sortOrder}, 0), 
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateTeacher" parameterType="CmsTeacher">
+        update doupi_cms_teacher
+        <set>
+            <if test="slug != null and slug != ''">slug = #{slug},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="subject != null and subject != ''">subject = #{subject},</if>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="groupName != null">group_name = #{groupName},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="bio != null">bio = #{bio},</if>
+            <if test="quote != null">quote = #{quote},</if>
+            <if test="years != null">years = #{years},</if>
+            <if test="achievement != null">achievement = #{achievement},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = sysdate()
+        </set>
+        where teacher_id = #{teacherId}
+    </update>
+
+    <delete id="deleteTeacherById" parameterType="Long">
+        delete from doupi_cms_teacher where teacher_id = #{teacherId}
+    </delete>
+
+    <delete id="deleteTeacherByIds" parameterType="String">
+        delete from doupi_cms_teacher where teacher_id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

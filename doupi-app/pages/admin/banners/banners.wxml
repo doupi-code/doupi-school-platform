@@ -1,0 +1,82 @@
+<view class="page">
+  <view class="page-header">
+    <view>
+      <text class="page-title">轮播图管理</text>
+      <text class="page-desc">首页顶部轮播图从 `banners` 集合读取，建议尺寸 750x360，最多建议 5 张。</text>
+    </view>
+    <view class="header-actions">
+      <view class="header-btn ghost" bindtap="onRefreshTap">刷新</view>
+      <view class="header-btn primary" bindtap="onAddTap">添加轮播图</view>
+    </view>
+  </view>
+
+  <view class="list-panel">
+    <view wx:if="{{loading && list.length === 0}}" class="panel-empty">加载中...</view>
+
+    <view wx:elif="{{list.length > 0}}" class="banner-list">
+      <view class="banner-item" wx:for="{{list}}" wx:key="id">
+        <image
+          class="banner-image"
+          src="{{item.previewUrl}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="onPreviewTap"
+        ></image>
+
+        <view class="banner-body">
+          <view class="field">
+            <text class="label">标题</text>
+            <input
+              class="input"
+              placeholder="可选"
+              value="{{item.title}}"
+              data-index="{{index}}"
+              data-field="title"
+              bindinput="onFieldInput"
+              bindblur="onFieldBlur"
+            />
+          </view>
+          <view class="field">
+            <text class="label">跳转链接</text>
+            <input
+              class="input"
+              placeholder="可选：填写页面路径或 https 链接"
+              value="{{item.link_url}}"
+              data-index="{{index}}"
+              data-field="link_url"
+              bindinput="onFieldInput"
+              bindblur="onFieldBlur"
+            />
+          </view>
+
+          <view class="meta-row">
+            <view class="meta-left">
+              <text class="meta-text">排序：{{index + 1}}</text>
+              <text class="meta-tag {{item.status === 'active' ? 'active' : 'disabled'}}">
+                {{item.status === 'active' ? '启用' : '停用'}}
+              </text>
+            </view>
+            <switch
+              checked="{{item.status === 'active'}}"
+              color="#3088F4"
+              data-index="{{index}}"
+              bindchange="onStatusChange"
+            />
+          </view>
+        </view>
+
+        <view class="banner-actions">
+          <view class="action-btn" data-index="{{index}}" bindtap="onMoveUpTap">上移</view>
+          <view class="action-btn" data-index="{{index}}" bindtap="onMoveDownTap">下移</view>
+          <view class="action-btn danger" data-index="{{index}}" bindtap="onDeleteTap">删除</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="panel-empty">
+      <text>暂无轮播图</text>
+      <view class="empty-btn" bindtap="onAddTap">去添加</view>
+    </view>
+  </view>
+</view>
+

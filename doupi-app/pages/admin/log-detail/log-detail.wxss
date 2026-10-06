@@ -1,0 +1,65 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+}
+
+.content {
+  height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 20rpx;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1rpx solid #f0f0f0;
+  padding: 12rpx 0;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  width: 200rpx;
+  color: #888;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.value {
+  flex: 1;
+  color: #333;
+  font-size: 24rpx;
+  word-break: break-all;
+}
+
+.json {
+  font-size: 22rpx;
+  color: #555;
+  line-height: 1.6;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.loading {
+  text-align: center;
+  color: #999;
+  font-size: 26rpx;
+  padding: 120rpx 0;
+}

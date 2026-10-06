@@ -1,0 +1,83 @@
+<template>
+  <scroll-view class="notice-detail-page" scroll-y="true">
+    <view class="detail-card">
+      <text class="detail-title">{{ title }}</text>
+      <view class="meta-row">
+        <text class="meta-author">发布人：系统管理员</text>
+        <text class="meta-time">2026-09-15</text>
+      </view>
+      <view class="divider"></view>
+      <text class="content-text">{{ content }}</text>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+export default {
+  data() {
+    return {
+      id: '',
+      title: '校园综合管理系统全面升级原生性能的公告',
+      content: '尊敬的全体教职工与管理员：\n\n为了给广大师生提供更为极致流畅的移动端体验，我校移动综合管理系统已正式由传统 Webview 架构升级为 uni-app x 新一代纯原生渲染架构。\n\n新架构深度适配华为 HarmonyOS NEXT 纯血鸿蒙、Apple iOS 以及 Google Android 系统，具备零卡顿、毫秒级响应等原生优势。请大家在日常办公与预约核销中积极使用，若遇到问题可随时联系网络信息中心反馈。'
+    }
+  },
+  onLoad(options: any) {
+    if (options != null && options.id != null) {
+      this.id = options.id.toString()
+    }
+  }
+}
+</script>
+
+<style>
+.notice-detail-page {
+  flex: 1;
+  background-color: #f6f7f9;
+  flex-direction: column;
+}
+
+.detail-card {
+  background-color: #ffffff;
+  margin: 16px;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.detail-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1d2129;
+  line-height: 24px;
+  margin-bottom: 12px;
+}
+
+.meta-row {
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.meta-author {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.meta-time {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.divider {
+  height: 1px;
+  background-color: #f2f3f5;
+  margin-bottom: 16px;
+}
+
+.content-text {
+  font-size: 14px;
+  color: #333333;
+  line-height: 24px;
+}
+</style>

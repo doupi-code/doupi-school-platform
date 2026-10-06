@@ -1,0 +1,165 @@
+<template>
+	<view
+		class="up-line-progress"
+		:style="rootStyle"
+	>
+		<view
+			class="up-line-progress__background"
+			:style="backgroundStyle"
+		>
+		</view>
+		<view
+			class="up-line-progress__line"
+			:style="progressStyle"
+		>
+			<slot>
+				<text v-if="showText && percentageValue >= 10" class="up-line-progress__text">{{ innerPercentage + '%' }}</text>
+			</slot>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue'
+	import { addUnit, addStyle, sleep, range, upGetRect } from '../../libs/function/index.uts'
+	import defProps from './lineProgress.uts'
+
+	function normalizeNumber(value: any | null, defaultValue: number = 0): number {
+		if (typeof value === 'number') {
+			return value
+		}
+		if (value == null) {
+			return defaultValue
+		}
+		const parsed = parseFloat(value.toString())
+		return isNaN(parsed) ? defaultValue : parsed
+	}
+
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-line-progress'
+	})
+
+	const props = defineProps({
+		activeColor: {
+			type: String,
+			default: defProps.getString('lineProgress.activeColor')
+		},
+		inactiveColor: {
+			type: String,
+			default: defProps.getString('lineProgress.inactiveColor')
+		},
+		percentage: {
+			type: [String, Number],
+			default: defProps.getNumber('lineProgress.percentage')
+		},
+		showText: {
+			type: Boolean,
+			default: defProps.getBoolean('lineProgress.showText')
+		},
+		height: {
+			type: [String, Number],
+			default: defProps.getNumber('lineProgress.height')
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		}
+	})
+
+	const instance = getCurrentInstance()!.proxy!
+	const lineWidth = ref('0px')
+
+	const rootStyle = computed((): UTSJSONObject => {
+		return addStyle(props.customStyle) as UTSJSONObject
+	})
+
+	const percentageValue = computed((): number => {
+		return normalizeNumber(props.percentage, 0)
+	})
+
+	const innerPercentage = computed((): number => {
+		return range(0, 100, percentageValue.value)
+	})
+
+	const backgroundStyle = computed((): UTSJSONObject => {
+		return {
+			backgroundColor: props.inactiveColor,
+			height: addUnit(props.height)
+		} as UTSJSONObject
+	})
+
+	const progressStyle = computed((): UTSJSONObject => {
+		return {
+			width: lineWidth.value,
+			backgroundColor: props.activeColor,
+			height: addUnit(props.height)
+		} as UTSJSONObject
+	})
+
+	const resizeProgressWidth = (): void => {
+		upGetRect('.up-line-progress__background', false, instance).then((size: NodeInfo) => {
+			const width = size.width != null ? size.width : 0
+			lineWidth.value = (width * innerPercentage.value / 100).toString() + 'px'
+		})
+	}
+
+	const init = (): void => {
+		sleep(20).then(() => {
+			resizeProgressWidth()
+		})
+	}
+
+	watch((): any => props.percentage, () => {
+		resizeProgressWidth()
+	})
+
+	watch((): any => props.height, () => {
+		resizeProgressWidth()
+	})
+
+	onMounted(() => {
+		init()
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+
+	.up-line-progress {
+		align-items: stretch;
+		position: relative;
+		@include flex(row);
+		flex: 1;
+		overflow: hidden;
+		border-radius: 100px;
+
+		&__background {
+			background-color: #ececec;
+			border-radius: 100px;
+			flex: 1;
+		}
+
+		&__line {
+			position: absolute;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			align-items: center;
+			@include flex(row);
+			color: #ffffff;
+			border-radius: 100px;
+			transition: width 0.5s ease;
+			justify-content: flex-end;
+		}
+
+		&__text {
+			font-size: 10px;
+			align-items: center;
+			text-align: right;
+			color: #FFFFFF;
+			margin-right: 5px;
+			transform: scale(0.9);
+		}
+	}
+</style>

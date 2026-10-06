@@ -1,0 +1,64 @@
+import { getToken, removeToken } from '@/utils/auth'
+import config from '@/config/index'
+
+export type RequestOptions = {
+  url: string
+  method?: string
+  data?: any
+  header?: any
+}
+
+export function request(options: RequestOptions): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    let headers: any = options.header != null ? options.header : {}
+    if (token != '') {
+      headers[config.tokenKey] = config.tokenPrefix + token
+    }
+
+    let reqUrl = options.url
+    if (!reqUrl.startsWith('http://') && !reqUrl.startsWith('https://')) {
+      reqUrl = config.baseUrl + reqUrl
+    }
+
+    uni.request({
+      url: reqUrl,
+      method: (options.method != null ? options.method : 'GET'),
+      data: options.data != null ? options.data : {},
+      header: headers,
+      success: (res) => {
+        const statusCode = res.statusCode
+        const resData = res.data
+        if (statusCode === 401) {
+          uni.showToast({ title: '登录已过期', icon: 'none' })
+          removeToken()
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/login/login' })
+          }, 1200)
+          reject('401')
+          return
+        }
+        resolve(resData)
+      },
+      fail: (err) => {
+        uni.showToast({ title: '网络连接失败', icon: 'none' })
+        reject(err)
+      }
+    })
+  })
+}
+
+export default {
+  get(url: string, data?: any): Promise<any> {
+    return request({ url, method: 'GET', data })
+  },
+  post(url: string, data?: any): Promise<any> {
+    return request({ url, method: 'POST', data })
+  },
+  put(url: string, data?: any): Promise<any> {
+    return request({ url, method: 'PUT', data })
+  },
+  delete(url: string, data?: any): Promise<any> {
+    return request({ url, method: 'DELETE', data })
+  }
+}

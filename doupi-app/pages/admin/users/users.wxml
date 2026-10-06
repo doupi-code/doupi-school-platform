@@ -1,0 +1,293 @@
+<view class="page">
+  <!-- 搜索和筛选区域 -->
+  <view class="search-bar">
+    <!-- 搜索框 -->
+    <view class="search-box">
+      <t-icon name="search" size="32rpx" color="#999999"></t-icon>
+      <input
+        class="search-input"
+        placeholder="搜索姓名、手机号"
+        value="{{searchKeyword}}"
+        bindinput="handleSearch"
+      />
+    </view>
+
+    <!-- 筛选按钮 -->
+    <view class="filter-btn" bindtap="toggleRoleFilter">
+      <t-icon name="filter" size="32rpx" color="#666666"></t-icon>
+      <text>{{roleMap[selectedRole]}}</text>
+    </view>
+
+    <!-- 角色筛选下拉框 -->
+    <view class="filter-dropdown" wx:if="{{showRoleFilter}}">
+      <view class="dropdown-mask" bindtap="toggleRoleFilter"></view>
+      <view class="dropdown-menu">
+        <view
+          class="dropdown-item {{selectedRole === item.value ? 'active' : ''}}"
+          wx:for="{{roleOptions}}"
+          wx:key="value"
+          data-role="{{item.value}}"
+          bindtap="selectRole"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view
+    scroll-y
+    class="content"
+    enhanced
+    show-scrollbar="{{false}}"
+    lower-threshold="160"
+    bindscrolltolower="onUsersScrollToLower"
+  >
+    <view class="content-inner">
+    <view class="toolbar-row">
+      <button class="batch-action-btn" bindtap="goBatchUsers">
+        <t-icon name="user-add" size="28rpx" color="#FFFFFF"></t-icon>
+        <text>{{displayText.btnBatchUserManage}}</text>
+      </button>
+    </view>
+
+    <!-- 统计信息 -->
+    <text class="result-count">已加载 {{filteredUsers.length}} / {{total}} 位用户</text>
+
+    <!-- 用户列表 -->
+    <view class="user-card" wx:for="{{filteredUsers}}" wx:key="id">
+      <!-- 卡片头部：头像、姓名、手机号、角色标签、状态标签、更多操作 -->
+      <view class="card-header">
+        <view class="header-left">
+          <!-- 用户头像 -->
+          <view class="avatar-box">
+            <image
+              wx:if="{{item.avatar}}"
+              class="avatar-img"
+              src="{{item.avatar}}"
+              mode="aspectFill"
+            />
+            <t-icon wx:else name="user" size="40rpx" color="#9AA0A6"></t-icon>
+          </view>
+
+          <!-- 用户基本信息 -->
+          <view class="user-info">
+            <view class="name-row">
+              <text class="user-name">{{item.name}}</text>
+              <!-- 禁用状态标签 -->
+              <text class="status-disabled-tag" wx:if="{{item.status === 0}}">{{displayText.statusDisabled}}</text>
+            </view>
+            <view class="phone-row">
+              <t-icon name="phone" size="28rpx" color="#999999"></t-icon>
+              <text class="user-phone">{{item.phone}}</text>
+            </view>
+            <view class="phone-row" wx:if="{{item.phoneStatus === 'released' && item.phoneReleasedMask}}">
+              <text class="user-phone released">原手机号：{{item.phoneReleasedMask}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="header-right">
+          <view class="role-tag role-{{item.role}}">
+            <text>{{item.roleText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 卡片内容：预约次数、注册时间、最近登录 -->
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">{{displayText.labelAppointmentCount}}</text>
+          <text class="info-value">{{item.appointmentCount}}次</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">{{displayText.labelRegisterTime}}</text>
+          <text class="info-value time">{{item.registerDate}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">{{displayText.labelLastLogin}}</text>
+          <text class="info-value time">{{item.lastLoginDate}}</text>
+        </view>
+      </view>
+
+      <view class="card-actions">
+        <view class="action-btn" data-id="{{item.id}}" bindtap="openUserDetail">
+          <t-icon name="view" size="24rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.btnDetail}}</text>
+        </view>
+        <view class="action-btn" data-id="{{item.id}}" bindtap="openEditRole">
+          <t-icon name="edit" size="24rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.btnEditRole}}</text>
+        </view>
+        <view class="action-btn {{item.status === 1 ? 'warn' : 'success'}}" data-id="{{item.id}}" bindtap="openToggleStatus">
+          <t-icon wx:if="{{item.status === 1}}" name="close-circle" size="24rpx" color="#FA8C16"></t-icon>
+          <t-icon wx:else name="check-circle" size="24rpx" color="#52C41A"></t-icon>
+          <text>{{item.status === 1 ? '禁用' : '启用'}}</text>
+        </view>
+        <view class="action-btn danger" data-id="{{item.id}}" bindtap="openDeleteConfirm">
+          <t-icon name="delete" size="24rpx" color="#FF4D4F"></t-icon>
+          <text>{{displayText.btnDelete}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{filteredUsers.length === 0}}">
+      <text class="empty-text">{{displayText.noUsers}}</text>
+      <text class="empty-desc">{{emptyHint}}</text>
+    </view>
+
+    <view class="load-state" wx:if="{{loading && users.length > 0}}">
+      <text>加载中...</text>
+    </view>
+    <view class="load-state" wx:elif="{{users.length >= total && total > 0}}">
+      <text>已加载全部</text>
+    </view>
+    <view class="bottom-spacer"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 用户详情弹窗 -->
+  <view class="modal-overlay" wx:if="{{showUserDetail}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.titleUserDetail}}</text>
+      </view>
+      <view class="modal-body">
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelName}}</text>
+          <text class="detail-value">{{currentUser.name}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelPhone}}</text>
+          <text class="detail-value">{{currentUser.fullPhone}}</text>
+        </view>
+        <view class="detail-row" wx:if="{{currentUser.phoneStatus === 'released' && currentUser.phoneReleasedMask}}">
+          <text class="detail-label">原手机号</text>
+          <text class="detail-value">{{currentUser.phoneReleasedMask}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelRole}}</text>
+          <text class="detail-value">{{currentUser.roleText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelStatus}}</text>
+          <text class="detail-value">{{currentUser.statusText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelAppointmentCount}}</text>
+          <text class="detail-value">{{currentUser.appointmentCount}}次</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelRegisterTime}}</text>
+          <text class="detail-value time">{{currentUser.registerDate}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelLastLogin}}</text>
+          <text class="detail-value time">{{currentUser.lastLoginDate}}</text>
+        </view>
+      </view>
+      <view class="modal-footer modal-footer-flex">
+        <button class="btn-secondary" bindtap="closeUserDetail">{{displayText.btnClose}}</button>
+        <button class="btn-primary" bindtap="startSupportView">代维查看</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑角色弹窗 -->
+  <view class="modal-overlay" wx:if="{{showEditModal}}">
+    <view class="modal-content modal-small">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.titleEditRole}}</text>
+      </view>
+      <view class="modal-body">
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelName}}</text>
+          <text class="detail-value">{{currentUser.name}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelPhone}}</text>
+          <text class="detail-value">{{currentUser.phone}}</text>
+        </view>
+        <view class="role-select-row">
+          <text class="detail-label">{{displayText.labelRole}}</text>
+          <view class="role-options">
+            <view
+              class="role-option {{currentUser.role === 1 ? 'selected' : ''}}"
+              data-role="1"
+              bindtap="handleEditRole"
+            >
+              <text>{{displayText.roleAdmin}}</text>
+            </view>
+            <view
+              class="role-option {{currentUser.role === 2 ? 'selected' : ''}}"
+              data-role="2"
+              bindtap="handleEditRole"
+            >
+              <text>{{displayText.roleDirector}}</text>
+            </view>
+            <view
+              class="role-option {{currentUser.role === 3 ? 'selected' : ''}}"
+              data-role="3"
+              bindtap="handleEditRole"
+            >
+              <text>{{displayText.roleTeacher}}</text>
+            </view>
+            <view
+              class="role-option {{currentUser.role === 4 ? 'selected' : ''}}"
+              data-role="4"
+              bindtap="handleEditRole"
+            >
+              <text>{{displayText.roleParent}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn-secondary" bindtap="closeEditModal">{{displayText.btnClose}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 删除确认弹窗 -->
+  <view class="modal-overlay" wx:if="{{showDeleteConfirm}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.titleDeleteUser}}</text>
+      </view>
+      <view class="modal-body">
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelName}}</text>
+          <text class="detail-value">{{currentUser.name}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelPhone}}</text>
+          <text class="detail-value">{{currentUser.fullPhone}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelRole}}</text>
+          <text class="detail-value">{{currentUser.roleText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelStatus}}</text>
+          <text class="detail-value">{{currentUser.statusText}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelAppointmentCount}}</text>
+          <text class="detail-value">{{currentUser.appointmentCount}}次</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelRegisterTime}}</text>
+          <text class="detail-value time">{{currentUser.registerDate}}</text>
+        </view>
+        <view class="detail-row">
+          <text class="detail-label">{{displayText.labelLastLogin}}</text>
+          <text class="detail-value time">{{currentUser.lastLoginDate}}</text>
+        </view>
+      </view>
+      <view class="modal-footer modal-footer-flex">
+        <button class="btn-secondary" bindtap="closeDeleteConfirm">{{displayText.btnCancel}}</button>
+        <button class="btn-danger" bindtap="confirmDelete">{{displayText.btnConfirmDelete}}</button>
+      </view>
+    </view>
+  </view>
+</view>

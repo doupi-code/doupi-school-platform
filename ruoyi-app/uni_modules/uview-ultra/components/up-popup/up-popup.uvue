@@ -1,0 +1,433 @@
+<template>
+	<view class="up-popup" :class="[customClass, pageInline ? 'up-popup--page-inline' : '']">
+		<up-overlay
+			:show="show && !pageInline"
+			@click="overlayClick"
+			v-if="overlay && !pageInline"
+			:zIndex="zIndex"
+			:duration="overlayDuration"
+			:customStyle="overlayStyle"
+			:opacity="overlayOpacity"
+		></up-overlay>
+		<up-transition
+			:show="pageInline ? true : show"
+			:customStyle="transitionStyle"
+			:mode="pageInline ? 'none' : position"
+			:duration="duration"
+			@afterEnter="afterEnter"
+			@afterLeave="afterLeave"
+			@click="clickHandler"
+		>
+			<view
+				class="up-popup__content"
+				:style="[contentStyle]"
+				@tap.stop="stopContentTap"
+			>
+				<up-status-bar v-if="safeAreaInsetTop"></up-status-bar>
+				<slot></slot>
+				<view
+					v-if="closeable"
+					@tap.stop="close"
+					class="up-popup__content__close"
+					:class="['up-popup__content__close--' + closeIconPos]"
+					hover-class="up-popup__content__close--hover"
+					hover-stay-time="150"
+				>
+					<up-icon
+						name="close"
+						color="#909399"
+						size="18"
+						bold
+					></up-icon>
+				</view>
+				<up-safe-bottom v-if="safeAreaInsetBottom"></up-safe-bottom>
+			</view>
+		</up-transition>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, nextTick, ref, watch } from 'vue'
+	import defProps from './popup.uts'
+	import { addUnit, addStyle, deepMerge } from '../../libs/function/index.uts';
+	/**
+	 * popup 弹窗
+	 * @description 弹出层容器，用于展示弹窗、信息提示等内容，支持上、下、左、右和中部弹出。组件只提供容器，内部内容由用户自定义
+	 * @tutorial https://ijry.github.io/uview-plus/components/popup.html
+	 * @property {Boolean}			show				是否展示弹窗 (默认 false )
+	 * @property {Boolean}			overlay				是否显示遮罩 （默认 true ）
+	 * @property {String}			mode				弹出方向（默认 'bottom' ）
+	 * @property {String | Number}	duration			动画时长，单位ms （默认 300 ）
+	 * @property {String | Number}	overlayDuration		遮罩层动画时长，单位ms （默认 350 ）
+	 * @property {Boolean}			closeable			是否显示关闭图标（默认 false ）
+	 * @property {Object | String}	overlayStyle		自定义遮罩的样式
+	 * @property {String | Number}	overlayOpacity		遮罩透明度，0-1之间（默认 0.5）
+	 * @property {Boolean}			closeOnClickOverlay	点击遮罩是否关闭弹窗 （默认  true ）
+	 * @property {String | Number}	zIndex				层级 （默认 10075 ）
+	 * @property {Boolean}			safeAreaInsetBottom	是否为iPhoneX留出底部安全距离 （默认 true ）
+	 * @property {Boolean}			safeAreaInsetTop	是否留出顶部安全距离（状态栏高度） （默认 false ）
+	 * @property {String}			closeIconPos		自定义关闭图标位置（默认 'top-right' ）
+	 * @property {String | Number}	round				圆角值（默认 0）
+	 * @property {Boolean}			zoom				当mode=center时 是否开启缩放（默认 true ）
+	 * @property {Object}			customStyle			组件的样式，对象形式
+	 * @event {Function} open 弹出层打开（进场动画结束后）
+	 * @event {Function} close 弹出层收起（关闭动作发生时，离场动画开始前；外部直接将show置为false时也会触发）
+	 * @event {Function} closed 弹出层已关闭（离场动画结束、弹窗真正消失后）
+	 * @example <up-popup v-model="show"><text>出淤泥而不染，濯清涟而不妖</text></up-popup>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-popup'
+	})
+
+	const props = defineProps({
+		// 是否展示弹窗
+		show: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.show')
+		},
+		// 是否显示遮罩
+		overlay: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.overlay')
+		},
+		// 弹出的方向，可选值为 top bottom right left center
+		mode: {
+			type: String,
+			default: defProps.getString('popup.mode')
+		},
+		// 动画时长，单位ms
+		duration: {
+			type: [String, Number],
+			default: defProps.getAny('popup.duration')
+		},
+		// 是否显示关闭图标
+		closeable: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.closeable')
+		},
+		// 自定义遮罩的样式
+		overlayStyle: {
+			type: [Object, String],
+			default: defProps.getAny('popup.overlayStyle')
+		},
+		// 点击遮罩是否关闭弹窗
+		closeOnClickOverlay: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.closeOnClickOverlay')
+		},
+		// 层级
+		zIndex: {
+			type: [String, Number],
+			default: defProps.getAny('popup.zIndex')
+		},
+		// 是否为iPhoneX留出底部安全距离
+		safeAreaInsetBottom: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.safeAreaInsetBottom')
+		},
+		// 是否留出顶部安全距离（状态栏高度）
+		safeAreaInsetTop: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.safeAreaInsetTop')
+		},
+		// 自定义关闭图标位置，top-left为左上角，top-right为右上角，bottom-left为左下角，bottom-right为右下角
+		closeIconPos: {
+			type: String,
+			default: defProps.getString('popup.closeIconPos')
+		},
+		// 是否显示圆角
+		round: {
+			type: [Boolean, String, Number],
+			default: defProps.getAny('popup.round')
+		},
+		// mode=center，也即中部弹出时，是否使用缩放模式
+		zoom: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.zoom')
+		},
+		// 弹窗背景色，设置为transparent可去除白色背景
+		bgColor: {
+			type: String,
+			default: defProps.getString('popup.bgColor')
+		},
+		// 遮罩的透明度，0-1之间
+		overlayOpacity: {
+			type: [Number, String],
+			default: defProps.getAny('popup.overlayOpacity')
+		},
+		// 是否内联在页面中（不使用弹窗形式）
+		pageInline: {
+			type: Boolean,
+			default: defProps.getBoolean('popup.pageInline')
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		},
+		customClass: {
+			type: String,
+			default: ''
+		}
+	})
+
+	const emit = defineEmits(['open', 'close', 'closed', 'click', 'update:show'])
+	// close事件是否已由组件内部的关闭动作发出，避免show变化时重复发出
+	const closeEmitted = ref(false)
+
+	watch((): boolean => props.show, (newValue: boolean, oldValue: boolean) => {
+		if (newValue) {
+			closeEmitted.value = false
+		} else if (oldValue) {
+			// 外部直接将show置为false时，组件内部没有走过关闭动作，
+			// 此处补发close，保证任意关闭方式都能被监听到
+			if (closeEmitted.value) {
+				// 本次关闭已由内部动作发出过close，消费标记即可
+				closeEmitted.value = false
+			} else {
+				emit('close')
+			}
+			// pageInline模式下transition的show恒为true，不会执行离场动画，
+			// 收不到afterLeave，此处补发closed
+			if (props.pageInline) {
+				emit('closed')
+			}
+		}
+	})
+	const durationValue = computed((): number => {
+		const value = props.duration != null ? parseInt(props.duration.toString()) : 300
+		return isNaN(value) ? 300 : value
+	})
+	const zIndexValue = computed((): number => {
+		const value = props.zIndex != null ? parseInt(props.zIndex.toString()) : 10075
+		return isNaN(value) ? 10075 : value
+	})
+	const overlayDuration = ref(durationValue.value + 50)
+
+	const transitionStyle = computed((): UTSJSONObject => {
+		const style = {
+			display: 'flex',
+		} as UTSJSONObject
+		if (!props.pageInline) {
+			style['zIndex'] = zIndexValue.value + 1
+			style['position'] = 'fixed'
+		}
+		style[props.mode] = 0
+		if (props.mode === 'left') {
+			return deepMerge(style, {
+				bottom: 0,
+				top: 0,
+			})
+		} else if (props.mode === 'right') {
+			return deepMerge(style, {
+				bottom: 0,
+				top: 0,
+			})
+		} else if (props.mode === 'top') {
+			return deepMerge(style, {
+				left: 0,
+				right: 0
+			})
+		} else if (props.mode === 'bottom') {
+			return deepMerge(style, {
+				left: 0,
+				right: 0,
+			})
+		} else if (props.mode === 'center') {
+			return deepMerge(style, {
+				alignItems: 'center',
+				'justify-content': 'center',
+				top: 0,
+				left: 0,
+				right: 0,
+				bottom: 0
+			})
+		}
+		return {}
+	})
+
+	const contentStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (props.mode !== 'center') {
+			style['flex'] = 1
+		}
+		// 背景色，一般用于设置为transparent，去除默认的白色背景
+		if (props.bgColor != '') {
+			style['backgroundColor'] = props.bgColor
+		}
+		if(props.round != '') {
+			const value = addUnit(props.round)
+			if(props.mode === 'top') {
+				style['borderBottomLeftRadius'] = value
+				style['borderBottomRightRadius'] = value
+			} else if(props.mode === 'bottom') {
+				style['borderTopLeftRadius'] = value
+				style['borderTopRightRadius'] = value
+			} else if(props.mode === 'center') {
+				style['borderRadius'] = value
+			}
+		}
+		return deepMerge(style, addStyle(props.customStyle))
+	})
+
+	const position = computed((): string => {
+		if (props.mode === 'center') {
+			return props.zoom ? 'fade-zoom' : 'fade'
+		}
+		if (props.mode === 'left') {
+			return 'slide-left'
+		}
+		if (props.mode === 'right') {
+			return 'slide-right'
+		}
+		if (props.mode === 'bottom') {
+			return 'slide-up'
+		}
+		if (props.mode === 'top') {
+			return 'slide-down'
+		}
+		return ''
+	})
+
+	const stopContentTap = (e: UniEvent): void => {
+		e.stopPropagation()
+	}
+
+	// 发出close事件。标记仅在本次更新周期内有效，
+	// 用于抑制紧随其后的show变化导致watch重复补发close
+	const emitClose = (): void => {
+		closeEmitted.value = true
+		emit('close')
+		nextTick(() => {
+			closeEmitted.value = false
+		})
+	}
+
+	// 点击遮罩
+	const overlayClick = (): void => {
+		if (props.closeOnClickOverlay) {
+			emit('update:show', false)
+			emitClose()
+		}
+	}
+
+	const close = (_e: any): void => {
+		emit('update:show', false)
+		emitClose()
+	}
+
+	const afterEnter = (): void => {
+		emit('open')
+	}
+
+	// 离场动画结束，弹窗已真正消失
+	const afterLeave = (): void => {
+		emit('closed')
+	}
+
+	const clickHandler = (): void => {
+		// 由于中部弹出时，其up-transition占据了整个页面相当于遮罩，此时需要发出遮罩点击事件，是否无法通过点击遮罩关闭弹窗
+		if(props.mode === 'center') {
+			overlayClick()
+		}
+		emit('click')
+	}
+
+	defineExpose({
+		overlayDuration,
+		transitionStyle,
+		contentStyle,
+		position,
+		stopContentTap,
+		overlayClick,
+		close,
+		afterEnter,
+		afterLeave,
+		clickHandler
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+	$up-popup-content-background-color: #fff !default;
+
+	/* 根节点默认脱离文档流，避免 uni-app-x 下 flex:1 在 show=false 时仍占满剩余高度 */
+	.up-popup {
+		position: absolute;
+		top: 0;
+		left: 0;
+
+		&--page-inline {
+			position: relative;
+			flex: 1;
+		}
+
+		&__content {
+			background-color: $up-popup-content-background-color;
+			position: relative;
+
+			&--round-top {
+				border-top-left-radius: 0;
+				border-top-right-radius: 0;
+				border-bottom-left-radius: 10px;
+				border-bottom-right-radius: 10px;
+			}
+
+			&--round-left {
+				border-top-left-radius: 0;
+				border-top-right-radius: 10px;
+				border-bottom-left-radius: 0;
+				border-bottom-right-radius: 10px;
+			}
+
+			&--round-right {
+				border-top-left-radius: 10px;
+				border-top-right-radius: 0;
+				border-bottom-left-radius: 10px;
+				border-bottom-right-radius: 0;
+			}
+
+			&--round-bottom {
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				border-bottom-left-radius: 0;
+				border-bottom-right-radius: 0;
+			}
+
+			&--round-center {
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				border-bottom-left-radius: 10px;
+				border-bottom-right-radius: 10px;
+			}
+
+			&__close {
+				position: absolute;
+
+				&--hover {
+					opacity: 0.4;
+				}
+			}
+
+			&__close--top-left {
+				top: 15px;
+				left: 15px;
+			}
+
+			&__close--top-right {
+				top: 15px;
+				right: 15px;
+			}
+
+			&__close--bottom-left {
+				bottom: 15px;
+				left: 15px;
+			}
+
+			&__close--bottom-right {
+				right: 15px;
+				bottom: 15px;
+			}
+		}
+	}
+</style>

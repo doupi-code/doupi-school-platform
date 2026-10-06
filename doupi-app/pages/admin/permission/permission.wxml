@@ -1,0 +1,121 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <!-- 角色Tab切换 -->
+    <view class="role-tabs">
+      <view
+        class="role-tab {{currentRoleTab === index ? 'active' : ''}}"
+        wx:for="{{roleTabs}}"
+        wx:key="key"
+        data-index="{{index}}"
+        bindtap="onRoleTabChange"
+      >
+        <view class="tab-icon-wrap">
+          <t-icon
+            name="{{item.key === 'admin' ? 'secured' : (item.key === 'director' ? 'usergroup' : 'user')}}"
+            size="30rpx"
+            color="{{currentRoleTab === index ? '#FFFFFF' : (item.key === 'admin' ? '#FA8C16' : (item.key === 'director' ? '#722ED1' : '#3088F4'))}}"
+          ></t-icon>
+        </view>
+        <text class="tab-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <!-- 角色信息卡片 -->
+    <view class="card role-info-card">
+      <view class="role-info-header">
+        <view class="role-name-row">
+          <text class="role-name">{{rolePermissions[roleTabs[currentRoleTab].key].name}}</text>
+          <view class="permission-count">
+            <text class="count-num">{{getEnabledCount(roleTabs[currentRoleTab].key)}}</text>
+            <text class="count-sep">/</text>
+            <text class="count-total">{{getTotalCount(roleTabs[currentRoleTab].key)}}</text>
+          </view>
+        </view>
+        <text class="role-desc">{{rolePermissions[roleTabs[currentRoleTab].key].description}}</text>
+      </view>
+
+      <view class="role-actions">
+        <view
+          class="action-btn enable"
+          data-role="{{roleTabs[currentRoleTab].key}}"
+          bindtap="enableAll"
+        >
+          <text class="action-text">{{displayText.btnEnableAll}}</text>
+        </view>
+        <view
+          class="action-btn disable"
+          data-role="{{roleTabs[currentRoleTab].key}}"
+          bindtap="disableAll"
+        >
+          <text class="action-text">{{displayText.btnDisableAll}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 权限列表 -->
+    <view class="card permissions-card">
+      <view class="card-header">
+        <text class="card-title">{{displayText.permissionListTitle}}</text>
+        <text class="card-hint">{{displayText.permissionListHint}}</text>
+      </view>
+
+      <view class="perm-tree-group" wx:for="{{currentPermissionTree}}" wx:key="groupKey">
+        <view class="perm-tree-title">{{item.groupName}}</view>
+        <view class="perm-group-child" wx:for="{{item.children}}" wx:key="key" wx:for-item="child">
+          <view class="perm-item {{child.locked ? 'locked' : ''}}">
+            <view class="perm-left">
+              <view class="perm-icon-wrap">
+                <view class="perm-status-dot {{child.enabled ? 'on' : 'off'}}"></view>
+              </view>
+              <view class="perm-info">
+                <view class="perm-name-row">
+                  <text class="perm-name">{{child.name}}</text>
+                  <view class="locked-badge" wx:if="{{child.locked}}">{{displayText.lockedLabel}}</view>
+                </view>
+                <text class="perm-desc">{{child.desc}}</text>
+              </view>
+            </view>
+            <switch
+              class="perm-switch"
+              checked="{{child.enabled}}"
+              disabled="{{child.locked}}"
+              data-role="{{roleTabs[currentRoleTab].key}}"
+              data-perm="{{child.key}}"
+              bindchange="onPermissionToggle"
+              color="#3088F4"
+            />
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 权限说明卡片 -->
+    <view class="card help-card">
+      <view class="help-item">
+        <view class="help-dot green"></view>
+        <text class="help-text">{{displayText.permissionHelpEnabledDot}}</text>
+      </view>
+      <view class="help-item">
+        <view class="help-dot gray"></view>
+        <text class="help-text">{{displayText.permissionHelpDisabledDot}}</text>
+      </view>
+      <view class="help-item">
+        <view class="help-badge-sample">{{displayText.lockedLabel}}</view>
+        <text class="help-text">{{displayText.permissionHelpLocked}}</text>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- 底部按钮区域 -->
+  <view class="bottom-area">
+    <button
+      class="save-btn {{saving ? 'disabled' : ''}}"
+      bindtap="savePermissions"
+      disabled="{{saving}}"
+    >
+      {{saving ? displayText.saving : displayText.btnSavePermissionConfig}}
+    </button>
+  </view>
+</view>

@@ -1,0 +1,736 @@
+/**
+ * 预约详情页面样式 - 美化增强版
+ * 设计规范：卡片圆角24rpx，主色#3088F4，背景#F5F6F8
+ * 新增：状态横幅、时间线、图标系统、动画效果
+ */
+
+/* ==================== 页面容器 ==================== */
+
+.page-container {
+  min-height: 100vh;
+  background-color: #F5F6F8;
+  padding: 0 24rpx;
+  padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
+}
+
+.bottom-spacer {
+  height: 32rpx;
+}
+
+/* ==================== 状态横幅 ==================== */
+
+.status-banner {
+  margin: 20rpx -24rpx 0;
+  padding: 36rpx 32rpx;
+  border-radius: 0 0 32rpx 32rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-banner::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -20%;
+  width: 300rpx;
+  height: 300rpx;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.status-banner.pending {
+  background: linear-gradient(135deg, #FF8C00 0%, #FA541C 100%);
+}
+
+.status-banner.verified {
+  background: linear-gradient(135deg, #52C41A 0%, #389E0D 100%);
+}
+
+.status-banner.cancelled {
+  background: linear-gradient(135deg, #FF4D4F 0%, #CF1322 100%);
+}
+
+.status-banner.completed {
+  background: linear-gradient(135deg, #3088F4 0%, #1E6FE6 100%);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.banner-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10rpx);
+}
+
+.banner-text {
+  flex: 1;
+}
+
+.banner-title {
+  font-size: 34rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.banner-subtitle {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.85);
+  display: block;
+}
+
+.status-banner.cancelled .banner-cancel-reason-wrap {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.25);
+}
+
+.banner-cancel-reason-label {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 8rpx;
+}
+
+.banner-cancel-reason-value {
+  display: block;
+  font-size: 26rpx;
+  color: #ffffff;
+  line-height: 1.55;
+  word-break: break-all;
+}
+
+/* ==================== 信息卡片通用样式 ==================== */
+
+.info-card {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-top: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.info-card:active {
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片头部区域 */
+.card-header-section {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 2rpx solid #F5F6F8;
+}
+
+.header-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
+  background-color: #EBF4FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon.student-icon {
+  background-color: #F6FFED;
+}
+
+.header-icon.parent-icon {
+  background-color: #FFFBE6;
+}
+
+.header-icon.audit-icon {
+  background-color: #FFF1F0;
+}
+
+.header-icon.timeline-icon {
+  background-color: #EBF4FF;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  flex: 1;
+}
+
+/* 审核标签 */
+.audit-badge {
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.audit-badge.pass {
+  background-color: #F6FFED;
+  color: #52C41A;
+}
+
+.audit-badge.reject {
+  background-color: #FFF1F0;
+  color: #FF4D4F;
+}
+
+/* ==================== 预约号卡片 ==================== */
+
+.appointment-number-card {
+  background: linear-gradient(135deg, #EBF4FF 0%, #E8F2FE 100%);
+  border: 2rpx solid #BAE0FF;
+  margin-top: 20rpx;
+}
+
+.card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appointment-number-info {
+  flex: 1;
+}
+
+.appointment-label {
+  font-size: 24rpx;
+  color: #666666;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.appointment-value {
+  font-size: 38rpx;
+  color: #3088F4;
+  font-weight: 700;
+  letter-spacing: 3rpx;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+}
+
+.copy-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 12rpx 20rpx;
+  background-color: #FFFFFF;
+  border-radius: 14rpx;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
+  background-color: #F5F6F8;
+}
+
+.copy-text {
+  font-size: 20rpx;
+  color: #3088F4;
+  font-weight: 500;
+}
+
+/* ==================== 信息列表 ==================== */
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1.5;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 200rpx;
+}
+
+.info-label {
+  font-size: 28rpx;
+  color: #888888;
+}
+
+.info-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333333;
+  text-align: right;
+  word-break: break-all;
+}
+
+.info-value.bold {
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.info-value.highlight {
+  color: #3088F4;
+  font-weight: 500;
+}
+
+.info-value.font-mono {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  letter-spacing: 1rpx;
+}
+
+.info-value-small {
+  font-size: 26rpx;
+}
+
+.info-value.phone {
+  color: #3088F4;
+  font-weight: 500;
+}
+
+.phone-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.call-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background-color: #EBF4FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.call-btn:active {
+  background-color: #D6E9FF;
+  transform: scale(0.95);
+}
+
+/* ==================== 时间线组件 ==================== */
+
+.timeline-card {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-top: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.timeline {
+  padding-left: 8rpx;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 24rpx;
+  position: relative;
+}
+
+.timeline-item + .timeline-item {
+  margin-top: 8rpx;
+}
+
+.timeline-dot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 8rpx;
+}
+
+.timeline-dot {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background-color: #E8E8E8;
+  border: 4rpx solid #F5F6F8;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-item.done .timeline-dot {
+  background-color: #52C41A;
+  border-color: #B7EB8F;
+}
+
+.timeline-item.active .timeline-dot {
+  background-color: #3088F4;
+  border-color: #91D5FF;
+  box-shadow: 0 0 0 6rpx rgba(48, 136, 244, 0.15);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    box-shadow: 0 0 0 6rpx rgba(48, 136, 244, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 12rpx rgba(48, 136, 244, 0.08);
+  }
+}
+
+.timeline-line {
+  width: 4rpx;
+  flex: 1;
+  background-color: #E8E8E8;
+  min-height: 40rpx;
+  margin-top: 8rpx;
+  border-radius: 2rpx;
+}
+
+.timeline-item.done .timeline-line {
+  background-color: #B7EB8F;
+}
+
+.timeline-item.active .timeline-line {
+  background: linear-gradient(180deg, #91D5FF 0%, #E8E8E8 100%);
+}
+
+.timeline-content {
+  flex: 1;
+  padding-top: 4rpx;
+  padding-bottom: 20rpx;
+}
+
+.timeline-title {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.timeline-item.done .timeline-title {
+  color: #333333;
+}
+
+.timeline-item:not(.done):not(.active) .timeline-title {
+  color: #999999;
+}
+
+.timeline-desc {
+  font-size: 24rpx;
+  color: #888888;
+  display: block;
+  line-height: 1.5;
+}
+
+.timeline-time {
+  font-size: 22rpx;
+  color: #BBBBBB;
+  display: block;
+  margin-top: 6rpx;
+}
+
+/* ==================== 温馨提示卡片 ==================== */
+
+.tips-card {
+  background: linear-gradient(135deg, #E6F7FF 0%, #F0F9FF 100%);
+  border: 2rpx solid #91D5FF;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-top: 20rpx;
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.tips-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1890FF;
+}
+
+.tips-content {
+  font-size: 26rpx;
+  color: #1890FF;
+  line-height: 1.8;
+}
+
+/* ==================== 操作按钮区域 ==================== */
+
+.action-section {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ffffff;
+  padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 24rpx;
+}
+
+.cancel-btn {
+  flex: 1 !important;
+  height: 96rpx !important;
+  border-radius: 20rpx !important;
+  font-size: 30rpx !important;
+  font-weight: 500 !important;
+  background-color: #FFF5F5 !important;
+  color: #FF4D4F !important;
+  border: 2rpx solid #FFD9D9 !important;
+  line-height: 92rpx !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.cancel-btn:active {
+  background-color: #FFECEC !important;
+  border-color: #FFBFBF !important;
+}
+
+.qrcode-btn {
+  flex: 1.5 !important;
+  height: 96rpx !important;
+  border-radius: 20rpx !important;
+  font-size: 30rpx !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, #3088F4 0%, #1E6FE6 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  line-height: 92rpx !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: 0 8rpx 28rpx rgba(48, 136, 244, 0.35) !important;
+}
+
+.qrcode-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 16rpx rgba(48, 136, 244, 0.45) !important;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+/* ==================== 二维码弹窗样式 ==================== */
+
+.qrcode-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.qrcode-mask.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.qrcode-dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% - 80rpx);
+  max-width: 640rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  transform: translate(-50%, -50%) scale(0.96);
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.qrcode-dialog.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.qrcode-content {
+  text-align: center;
+  padding: 48rpx 36rpx;
+}
+
+.qrcode-header {
+  margin-bottom: 32rpx;
+}
+
+.qrcode-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.qrcode-subtitle {
+  font-size: 26rpx;
+  color: #888888;
+  display: block;
+}
+
+.qrcode-box {
+  background-color: #ffffff;
+  padding: 32rpx;
+  border-radius: 24rpx;
+  border: 4rpx solid #E8F2FE;
+  margin-bottom: 28rpx;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qrcode-td {
+  padding: 0 !important;
+  border: 0 !important;
+  box-sizing: border-box;
+  border-radius: 16rpx;
+}
+
+.qrcode-placeholder {
+  width: 384rpx;
+  height: 384rpx;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #3088F4 0%, #2670D4 100%);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.qrcode-footer {
+  padding: 0 16rpx;
+}
+
+.qrcode-appointment-number {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.appointment-label {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.appointment-number {
+  font-size: 30rpx;
+  color: #3088F4;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+.qrcode-validity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.qrcode-validity .t-icon {
+  display: block;
+}
+
+.qrcode-validity text {
+  font-size: 22rpx;
+  color: #BBBBBB;
+}
+
+.qrcode-dialog-footer {
+  width: 100%;
+  padding: 0 36rpx 36rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.qrcode-close-btn {
+  width: 60%;
+  min-width: 240rpx;
+}
+
+/* ==================== 取消确认弹窗样式 ==================== */
+
+.cancel-dialog .t-dialog__header {
+  text-align: center !important;
+}
+
+.cancel-dialog .t-dialog__body {
+  text-align: center !important;
+  padding: 32rpx 40rpx !important;
+}
+
+/* ==================== 响应式适配 ==================== */
+
+@media (max-width: 320rpx) {
+  .banner-title {
+    font-size: 30rpx;
+  }
+
+  .card-title {
+    font-size: 28rpx;
+  }
+
+  .info-label,
+  .info-value {
+    font-size: 26rpx;
+  }
+
+  .item-left {
+    min-width: 160rpx;
+  }
+
+  .appointment-value {
+    font-size: 32rpx;
+  }
+
+  .cancel-btn,
+  .qrcode-btn {
+    height: 88rpx !important;
+    font-size: 28rpx !important;
+  }
+
+  .timeline-dot {
+    width: 28rpx;
+    height: 28rpx;
+  }
+
+  .timeline-title {
+    font-size: 26rpx;
+  }
+}

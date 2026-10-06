@@ -1,0 +1,86 @@
+<view class="home-page">
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <t-loading theme="circular" size="50rpx" text="加载中..." />
+  </view>
+
+  <view wx:else class="home-content">
+    <view wx:if="{{banners.length > 0}}" class="hero-swiper">
+      <swiper
+        class="hero-swiper__inner"
+        autoplay="{{true}}"
+        interval="{{3000}}"
+        duration="{{500}}"
+        circular="{{true}}"
+        current="{{currentSlide}}"
+        bindchange="handleSwiperChange"
+        indicator-dots="{{false}}"
+      >
+        <swiper-item wx:for="{{banners}}" wx:key="index">
+          <image class="hero-image" src="{{item}}" mode="aspectFill" lazy-load />
+        </swiper-item>
+      </swiper>
+      <view class="hero-dots" wx:if="{{banners.length > 1}}">
+        <view
+          wx:for="{{banners}}"
+          wx:key="index"
+          class="hero-dot {{index === currentSlide ? 'hero-dot--active' : ''}}"
+        ></view>
+      </view>
+    </view>
+    <view wx:else class="hero-placeholder"></view>
+
+    <view class="section section-campus">
+      <view class="section-title">校园介绍</view>
+      <view class="campus-card" bindtap="goToCampusDetail">
+        <image wx:if="{{campusCard.image}}" class="campus-image" src="{{campusCard.image}}" mode="aspectFill" lazy-load />
+        <view wx:else class="campus-image campus-image-placeholder"></view>
+        <view class="campus-content">
+          <t-cell
+            title="{{campusCard.name}}"
+            description="{{campusCard.description}}"
+            hover="{{false}}"
+            arrow="{{false}}"
+            t-class="campus-cell"
+            t-class-title="campus-cell__title"
+            t-class-description="campus-cell__desc"
+          />
+        </view>
+      </view>
+    </view>
+
+    <view class="section section-quick">
+      <view class="section-title">快速入口</view>
+      <view class="quick-grid">
+        <block wx:if="{{userRole === 4 || userRole === 0}}">
+          <view class="quick-item quick-item-light" hover-class="quick-item-active" bindtap="handleScanCode">
+            <view class="quick-icon quick-icon-gray">
+              <image class="quick-icon-image" src="/images/icons/figma-qrcode.svg" mode="aspectFit" />
+            </view>
+            <view class="quick-text">扫码预约</view>
+          </view>
+          <view class="quick-item quick-item-blue" hover-class="quick-item-active" bindtap="goToBookingList">
+            <view class="quick-icon quick-icon-primary">
+              <image class="quick-icon-image" src="/images/icons/figma-calendar-white.svg" mode="aspectFit" />
+            </view>
+            <view class="quick-text">我的预约</view>
+          </view>
+        </block>
+
+        <block wx:else>
+          <view class="quick-item quick-item-light" hover-class="quick-item-active" bindtap="goToTeacherQrcode">
+            <view class="quick-icon quick-icon-gray">
+              <image class="quick-icon-image" src="/images/icons/figma-qrcode.svg" mode="aspectFit" />
+            </view>
+            <view class="quick-text">招生二维码</view>
+          </view>
+          <view class="quick-item quick-item-blue" hover-class="quick-item-active" bindtap="onVerifyBookingScan">
+            <view class="quick-icon quick-icon-primary">
+              <image class="quick-icon-image" src="/images/icons/figma-qrcode.svg" mode="aspectFit" />
+            </view>
+            <view class="quick-text">核销预约</view>
+          </view>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

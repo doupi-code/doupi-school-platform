@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "关于我们配置",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "绑定审核",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.stock.mapper.StockReportMapper">
+
+    <select id="getMonthlyInAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(item.amount), 0)
+        FROM edu_stock_in doc
+        JOIN edu_stock_in_item item ON doc.in_id = item.in_id
+        WHERE doc.status = '1' AND doc.del_flag = '0'
+          AND DATE_FORMAT(doc.in_time, '%Y-%m') = #{month}
+    </select>
+
+    <select id="getMonthlyOutAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(item.quantity * COALESCE(
+          (SELECT price FROM edu_stock_in_item WHERE goods_id = item.goods_id ORDER BY item_id DESC LIMIT 1), 0)
+        ), 0)
+        FROM edu_stock_out doc
+        JOIN edu_stock_out_item item ON doc.out_id = item.out_id
+        WHERE doc.status = '1' AND doc.del_flag = '0'
+          AND DATE_FORMAT(doc.out_time, '%Y-%m') = #{month}
+    </select>
+
+    <select id="getTotalStockAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(g.stock_num * COALESCE(
+          (SELECT price FROM edu_stock_in_item WHERE goods_id = g.goods_id ORDER BY item_id DESC LIMIT 1), 0)
+        ), 0)
+        FROM edu_goods g
+        WHERE g.del_flag = '0'
+    </select>
+
+    <select id="getWarnLowCount" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM edu_goods
+        WHERE del_flag = '0' AND stock_num &lt; warn_low
+    </select>
+
+    <select id="selectCategoryStockSummary" resultType="java.util.Map">
+        SELECT 
+          category,
+          CASE category 
+            WHEN '1' THEN '教师办公品'
+            WHEN '2' THEN '学生教材'
+            WHEN '3' THEN '文印耗材'
+            ELSE '其他'
+          END AS name,
+          COALESCE(SUM(stock_num), 0) AS stockNum,
+          COUNT(goods_id) AS goodsCount
+        FROM edu_goods
+        WHERE del_flag = '0'
+        GROUP BY category
+        ORDER BY category
+    </select>
+
+    <select id="selectMonthlyInSummary" resultType="java.util.Map">
+        SELECT 
+          DATE_FORMAT(doc.in_time, '%Y-%m') AS ym,
+          COUNT(DISTINCT doc.in_id) AS inOrders,
+          COALESCE(SUM(item.quantity), 0) AS inQty,
+          COALESCE(SUM(item.amount), 0) AS inAmount
+        FROM edu_stock_in doc
+        JOIN edu_stock_in_item item ON doc.in_id = item.in_id
+        WHERE doc.status = '1' AND doc.del_flag = '0'
+        <if test="beginMonth != null and beginMonth != ''">
+          AND DATE_FORMAT(doc.in_time, '%Y-%m') &gt;= #{beginMonth}
+        </if>
+        GROUP BY ym
+        ORDER BY ym ASC
+    </select>
+
+    <select id="selectMonthlyOutSummary" resultType="java.util.Map">
+        SELECT 
+          DATE_FORMAT(doc.out_time, '%Y-%m') AS ym,
+          COUNT(DISTINCT doc.out_id) AS outOrders,
+          COALESCE(SUM(item.quantity), 0) AS outQty,
+          COALESCE(SUM(item.quantity * COALESCE(
+            (SELECT price FROM edu_stock_in_item WHERE goods_id = item.goods_id ORDER BY item_id DESC LIMIT 1), 0)
+          ), 0) AS outAmount
+        FROM edu_stock_out doc
+        JOIN edu_stock_out_item item ON doc.out_id = item.out_id
+        WHERE doc.status = '1' AND doc.del_flag = '0'
+        <if test="beginMonth != null and beginMonth != ''">
+          AND DATE_FORMAT(doc.out_time, '%Y-%m') &gt;= #{beginMonth}
+        </if>
+        GROUP BY ym
+        ORDER BY ym ASC
+    </select>
+
+    <select id="selectStockDetailList" parameterType="java.util.Map" resultType="com.doupi.stock.domain.vo.StockDetailVo">
+        SELECT * FROM (
+          SELECT 
+            '入库' AS docType,
+            CASE doc.in_type 
+              WHEN '1' THEN '采购入库'
+              WHEN '2' THEN '调拨入库'
+              WHEN '3' THEN '其他入库'
+              ELSE '入库'
+            END AS bizType,
+            doc.in_no AS docNo,
+            doc.in_time AS docTime,
+            g.goods_name AS goodsName,
+            CASE g.category 
+              WHEN '1' THEN '教师办公品'
+              WHEN '2' THEN '学生教材'
+              WHEN '3' THEN '文印耗材'
+              ELSE '其他'
+            END AS categoryName,
+            g.category AS category,
+            g.spec AS spec,
+            g.unit AS unit,
+            item.quantity AS quantity,
+            item.price AS price,
+            item.amount AS amount,
+            doc.operator AS operator,
+            sup.supplier_name AS target,
+            doc.remark AS remark
+          FROM edu_stock_in doc
+          JOIN edu_stock_in_item item ON doc.in_id = item.in_id
+          JOIN edu_goods g ON item.goods_id = g.goods_id
+          LEFT JOIN edu_supplier sup ON doc.supplier_id = sup.supplier_id
+          WHERE doc.status = '1' AND doc.del_flag = '0'
+
+          UNION ALL
+
+          SELECT 
+            '出库' AS docType,
+            CASE doc.out_type 
+              WHEN '1' THEN '教师领用'
+              WHEN '2' THEN '学生领书'
+              WHEN '3' THEN '耗材出库'
+              ELSE '出库'
+            END AS bizType,
+            doc.out_no AS docNo,
+            doc.out_time AS docTime,
+            g.goods_name AS goodsName,
+            CASE g.category 
+              WHEN '1' THEN '教师办公品'
+              WHEN '2' THEN '学生教材'
+              WHEN '3' THEN '文印耗材'
+              ELSE '其他'
+            END AS categoryName,
+            g.category AS category,
+            g.spec AS spec,
+            g.unit AS unit,
+            item.quantity AS quantity,
+            COALESCE((SELECT price FROM edu_stock_in_item WHERE goods_id = g.goods_id ORDER BY item_id DESC LIMIT 1), 0) AS price,
+            (item.quantity * COALESCE((SELECT price FROM edu_stock_in_item WHERE goods_id = g.goods_id ORDER BY item_id DESC LIMIT 1), 0)) AS amount,
+            doc.operator AS operator,
+            CASE doc.out_type
+              WHEN '1' THEN doc.receiver
+              WHEN '2' THEN (SELECT CONCAT(grade, ' ', class_name) FROM edu_class WHERE class_id = doc.class_id)
+              ELSE doc.receiver
+            END AS target,
+            doc.remark AS remark
+          FROM edu_stock_out doc
+          JOIN edu_stock_out_item item ON doc.out_id = item.out_id
+          JOIN edu_goods g ON item.goods_id = g.goods_id
+          WHERE doc.status = '1' AND doc.del_flag = '0'
+        ) t
+        <where>
+          <if test="docType != null and docType != ''">
+            AND t.docType = #{docType}
+          </if>
+          <if test="category != null and category != ''">
+            AND t.category = #{category}
+          </if>
+          <if test="operator != null and operator != ''">
+            AND t.operator LIKE CONCAT('%', #{operator}, '%')
+          </if>
+          <if test="goodsName != null and goodsName != ''">
+            AND t.goodsName LIKE CONCAT('%', #{goodsName}, '%')
+          </if>
+          <if test="params != null and params.beginTime != null and params.beginTime != ''">
+            AND t.docTime &gt;= #{params.beginTime}
+          </if>
+          <if test="params != null and params.endTime != null and params.endTime != ''">
+            AND t.docTime &lt;= #{params.endTime}
+          </if>
+        </where>
+        ORDER BY t.docTime DESC
+    </select>
+
+</mapper>

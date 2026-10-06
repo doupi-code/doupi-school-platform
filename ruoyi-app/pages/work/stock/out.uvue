@@ -1,0 +1,292 @@
+<template>
+  <scroll-view class="stock-out-page" scroll-y="true">
+    <!-- 顶部状态切换 (使用 up-tabs 组件) -->
+    <view class="seg-header">
+      <up-tabs 
+        :list="tabs" 
+        lineColor="#165DFF"
+        activeStyle="color: #165DFF; font-weight: bold;"
+        @click="handleTabClick"
+      ></up-tabs>
+    </view>
+
+    <!-- 列表展示 (使用 up-tag, up-button 组件) -->
+    <view class="list-container">
+      <view 
+        class="stock-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index"
+      >
+        <view class="card-head">
+          <text class="card-title">{{ item.title }}</text>
+          <text class="card-extra">单号: {{ item.outNo }}</text>
+        </view>
+
+        <view class="out-meta-row">
+          <up-tag 
+            :type="getStatusTagType(item.status)" 
+            :text="formatStatus(item.status)" 
+            size="mini"
+          ></up-tag>
+          <text class="out-time">{{ item.applyTime }}</text>
+        </view>
+
+        <view class="out-detail-box">
+          <view class="detail-row">
+            <text class="detail-lbl">领用人员：</text>
+            <text class="detail-txt">{{ item.applicant }} ({{ item.deptName }})</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-lbl">出库用途：</text>
+            <text class="detail-txt">{{ item.purpose }}</text>
+          </view>
+          <view class="detail-row">
+            <text class="detail-lbl">领用明细：</text>
+            <text class="detail-txt text-blue">{{ item.itemsSummary }}</text>
+          </view>
+        </view>
+
+        <!-- 卡片底部动作栏 (使用 up-button 组件) -->
+        <view class="card-footer">
+          <view class="footer-btns">
+            <up-button 
+              v-if="item.status === 'WAIT_APPROVE'" 
+              type="primary" 
+              size="mini" 
+              shape="circle"
+              text="同意出库" 
+              @click="handleApprove(item)"
+            ></up-button>
+            <up-button 
+              v-if="item.status === 'APPROVED'" 
+              type="success" 
+              size="mini" 
+              shape="circle"
+              text="库房发料" 
+              @click="handleDeliver(item)"
+            ></up-button>
+            <up-button 
+              type="info" 
+              size="mini" 
+              shape="circle"
+              text="单据详情" 
+              @click="handleViewDetail(item)"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="data" 
+        text="暂无领料出库单据"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+type StockOutItem = {
+  outId: number
+  outNo: string
+  title: string
+  applicant: string
+  deptName: string
+  purpose: string
+  itemsSummary: string
+  status: string
+  applyTime: string
+}
+
+export default {
+  data() {
+    return {
+      currentTab: '',
+      tabs: [
+        { name: '全部', value: '' },
+        { name: '待审批', value: 'WAIT_APPROVE' },
+        { name: '待发料', value: 'APPROVED' },
+        { name: '已出库', value: 'DELIVERED' }
+      ],
+      list: [
+        {
+          outId: 1,
+          outNo: 'OUT2026100501',
+          title: '高三年级模考文具与备品领用申请',
+          applicant: '陈老师',
+          deptName: '高三年级组',
+          purpose: '高三年级全真模拟考场统一分发',
+          itemsSummary: '2B铅笔 300支、得力橡皮 300块、草稿纸 15包',
+          status: 'WAIT_APPROVE',
+          applyTime: '今天 10:15'
+        },
+        {
+          outId: 2,
+          outNo: 'OUT2026100402',
+          title: '学校开放日校园导引与宣传物料领料',
+          applicant: '李老师',
+          deptName: '招生宣传处',
+          purpose: '本周六家长开放日现场签到处布置',
+          itemsSummary: '宣传折页套装 200套、工作人员胸牌 30个',
+          status: 'APPROVED',
+          applyTime: '昨天 16:30'
+        },
+        {
+          outId: 3,
+          outNo: 'OUT2026100301',
+          title: '信息技术机房网络水晶头与跳线领用',
+          applicant: '赵工程师',
+          deptName: '网络信息中心',
+          purpose: '第三微机教室网线更换维护',
+          itemsSummary: '超五类水晶头 100个、六类千兆跳线 40根',
+          status: 'DELIVERED',
+          applyTime: '10-03 14:00'
+        }
+      ] as StockOutItem[]
+    }
+  },
+  computed: {
+    filteredList(): StockOutItem[] {
+      if (this.currentTab === '') {
+        return this.list
+      }
+      return this.list.filter((item: StockOutItem): boolean => item.status === this.currentTab)
+    }
+  },
+  methods: {
+    handleTabClick(item: any) {
+      const obj = item as UTSJSONObject
+      if (obj != null && obj['value'] != null) {
+        this.currentTab = obj['value'] as string
+      }
+    },
+    formatStatus(status: string): string {
+      if (status === 'WAIT_APPROVE') return '待审批'
+      if (status === 'APPROVED') return '待发料'
+      if (status === 'DELIVERED') return '已出库'
+      return '已撤销'
+    },
+    getStatusTagType(status: string): string {
+      if (status === 'WAIT_APPROVE') return 'warning'
+      if (status === 'APPROVED') return 'primary'
+      if (status === 'DELIVERED') return 'success'
+      return 'info'
+    },
+    handleApprove(item: StockOutItem) {
+      item.status = 'APPROVED'
+      uni.showToast({ title: '已同意出库，等待发料', icon: 'success' })
+    },
+    handleDeliver(item: StockOutItem) {
+      item.status = 'DELIVERED'
+      uni.showToast({ title: '发料出库完成', icon: 'success' })
+    },
+    handleViewDetail(item: StockOutItem) {
+      uni.showToast({ title: '单号: ' + item.outNo, icon: 'none' })
+    }
+  }
+}
+</script>
+
+<style>
+.stock-out-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.seg-header {
+  background-color: #FFFFFF;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid #F2F3F5;
+}
+
+.list-container {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.stock-card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.card-head {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1D2129;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.card-extra {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.out-meta-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.out-time {
+  font-size: 12px;
+  color: #86909C;
+  margin-left: auto;
+}
+
+.out-detail-box {
+  flex-direction: column;
+  background-color: #F7F8FA;
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 4px;
+}
+
+.detail-row {
+  flex-direction: row;
+  align-items: baseline;
+}
+
+.detail-lbl {
+  font-size: 13px;
+  color: #86909C;
+}
+
+.detail-txt {
+  font-size: 13px;
+  color: #1D2129;
+}
+
+.text-blue {
+  color: #165DFF;
+  font-weight: 500;
+}
+
+.card-footer {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #F2F3F5;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.footer-btns {
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+}
+</style>

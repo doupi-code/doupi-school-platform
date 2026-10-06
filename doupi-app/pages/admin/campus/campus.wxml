@@ -1,0 +1,97 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">{{displayText.titleBasicInfo}}</text>
+      </view>
+
+      <view class="form-group">
+        <label class="form-label required">{{displayText.labelCampusTitle}}</label>
+        <input
+          class="form-input"
+          placeholder="{{displayText.placeholderCampusTitle}}"
+          value="{{formData.title}}"
+          data-field="title"
+          bindinput="onInputChange"
+        />
+      </view>
+
+      <view class="form-group">
+        <label class="form-label required">{{displayText.labelCampusSummary}}</label>
+        <textarea
+          class="form-textarea summary-textarea"
+          placeholder="{{displayText.placeholderCampusSummary}}"
+          value="{{formData.summary}}"
+          data-field="summary"
+          bindinput="onInputChange"
+          maxlength="200"
+          auto-height
+        ></textarea>
+        <text class="char-count">{{formData.summary.length}}/200</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">{{displayText.titleCampusCover}}</text>
+      </view>
+      <text class="upload-hint">{{displayText.coverHint}}</text>
+
+      <view class="cover-wrap" wx:if="{{coverPreviewUrl}}">
+        <image class="cover-image" src="{{coverPreviewUrl}}" mode="aspectFill" bindtap="previewCover"></image>
+        <view class="cover-actions">
+          <view class="cover-action primary" bindtap="chooseCover">{{displayText.btnReplaceCover}}</view>
+          <view class="cover-action danger" bindtap="deleteCover">{{displayText.btnDeleteCover}}</view>
+        </view>
+      </view>
+
+      <view class="cover-empty" wx:else bindtap="chooseCover">
+        <text class="cover-empty-icon">+</text>
+        <text class="cover-empty-text">{{displayText.btnAddCover}}</text>
+        <text class="cover-empty-desc">{{displayText.noCover}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-header">
+        <text class="card-title">{{displayText.titleCampusContent}}</text>
+      </view>
+      <text class="upload-hint">{{displayText.contentHint}}</text>
+
+      <view class="editor-toolbar">
+        <view class="toolbar-btn" data-type="bold" bindtap="formatRichText">{{displayText.btnBold}}</view>
+        <view class="toolbar-btn" data-type="italic" bindtap="formatRichText">{{displayText.btnItalic}}</view>
+        <view class="toolbar-btn" data-type="underline" bindtap="formatRichText">{{displayText.btnUnderline}}</view>
+        <view class="toolbar-btn" data-type="list" bindtap="formatRichText">{{displayText.btnList}}</view>
+        <view class="toolbar-btn" data-type="insertDivider" bindtap="formatRichText">{{displayText.btnDivider}}</view>
+        <view class="toolbar-btn action" bindtap="insertImage">{{displayText.btnInsertImage}}</view>
+        <view class="toolbar-btn action" bindtap="insertVideo">{{displayText.btnInsertVideo}}</view>
+      </view>
+
+      <view class="editor-wrap">
+        <editor
+          id="campus-editor"
+          class="editor"
+          placeholder="{{displayText.placeholderCampusContent}}"
+          bindready="onEditorReady"
+          bindinput="onEditorInput"
+        ></editor>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <view class="bottom-area">
+    <view class="btn-row">
+      <button class="reset-btn" bindtap="resetForm" disabled="{{saving}}">{{displayText.btnReset}}</button>
+      <button
+        class="save-btn {{saving ? 'disabled' : ''}}"
+        bindtap="saveCampusInfo"
+        disabled="{{saving}}"
+      >
+        {{saving ? displayText.saving : displayText.btnSaveInfo}}
+      </button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,51 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <!-- 顶部端模式标识与快速切回门户 -->
+    <view class="portal-switch-banner" bindtap="handleBackToPortal">
+      <view class="portal-switch-banner__left">
+        <text class="portal-switch-banner__badge">教师工作台</text>
+        <text class="portal-switch-banner__text">返回家长访校门户首页</text>
+      </view>
+      <text class="portal-switch-banner__btn">去首页 ›</text>
+    </view>
+
+    <view class="scope-tip">
+      <text class="scope-tip__text">数据范围：超级管理员/管理员=全平台；主任=有效绑定老师及本人；老师=本人。</text>
+    </view>
+
+    <!-- 模块化功能（含宫格） -->
+    <view class="module-list">
+      <view class="module-card" wx:for="{{moduleSections}}" wx:key="id" wx:for-item="module">
+        <view class="module-header">
+          <view>
+            <text class="module-title">{{module.title}}</text>
+            <text class="module-desc">{{module.desc}}</text>
+          </view>
+          <view class="module-stats" wx:if="{{module.stats.length > 0}}">
+            <view class="stat-chip {{stat.isAlert ? 'alert' : ''}}" wx:for="{{module.stats}}" wx:key="label" wx:for-item="stat">
+              <text class="stat-value {{stat.isAlert ? 'alert' : ''}}">{{stat.value}}</text>
+              <text class="stat-label {{stat.isAlert ? 'alert' : ''}}">{{stat.label}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="module-grid">
+          <view
+            class="module-item"
+            wx:for="{{module.items}}"
+            wx:key="id"
+            wx:for-item="subItem"
+            data-id="{{subItem.id}}"
+            bindtap="handleModuleTap"
+          >
+            <view class="module-icon" style="background-color: {{subItem.color}}10;">
+              <t-icon name="{{subItem.icon}}" size="30rpx" color="{{subItem.color}}"></t-icon>
+            </view>
+            <text class="module-item-title">{{subItem.title}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+</view>

@@ -1,0 +1,564 @@
+<template>
+    <view class="up-goods-sku"> 
+        <view @click="open">
+            <slot name="trigger"></slot>
+        </view>
+        <up-popup
+            v-model:show="show"
+            mode="bottom"
+            :closeable="pageInline ? false : closeable"
+            :pageInline="pageInline"
+            :border-radius="20"
+            @close="close"
+            @closed="closedHandler"
+        >
+            <view class="up-goods-sku-container" :style="{padding: pageInline ? '0px' : ''}">
+                <view class="up-goods-sku__header">
+                    <slot name="header">
+                        <view class="up-goods-sku__header__image">
+                            <image :src="goodsImage" mode="aspectFill"></image>
+                        </view>
+                        <view class="up-goods-sku__header__info">
+                            <view class="up-goods-sku__header__info__price">
+                                <text class="up-goods-sku__header__info__price__symbol">¥</text>
+                                <text class="up-goods-sku__header__info__price__value">{{ price }}</text>
+                            </view>
+                            <view class="up-goods-sku__header__info__stock">库存 {{ stock }} 件</view>
+                            <view class="up-goods-sku__header__info__selected">已选: {{ selectedSkuText }}</view>
+                        </view>
+                    </slot>
+                </view>
+                
+                <scroll-view class="up-goods-sku__content" direction="vertical">
+                    <view v-for="(treeItem, index) in skuTreeList" :key="index" class="up-goods-sku__content__item">
+                        <view class="up-goods-sku__content__item__title">{{ getTreeLabel(treeItem) }}</view>
+                        <view class="up-goods-sku__content__item__list">
+                            <view 
+                                v-for="(leafItem, leafIndex) in getTreeChildren(treeItem)" 
+                                :key="leafIndex"
+                                class="up-goods-sku__content__item__list__item"
+                                :class="{
+                                    'up-goods-sku__content__item__list__item--active': isSelected(getTreeName(treeItem), getLeafId(leafItem)),
+                                    'up-goods-sku__content__item__list__item--disabled': isDisabled(getTreeName(treeItem), getLeafId(leafItem))
+                                }"
+                                @click="onSkuClick(getTreeName(treeItem), leafItem)"
+                            >
+                                <text>{{ getLeafName(leafItem) }}</text>
+                            </view>
+                        </view>
+                    </view>
+                    
+                    <view class="up-goods-sku__content__count">
+                        <view class="up-goods-sku__content__count__title">购买数量</view>
+                        <view class="up-goods-sku__content__count__control">
+                            <up-number-box 
+                                v-model="buyNum" 
+                                :min="1" 
+                                :max="maxBuyNum"
+                                :disabled="!canBuy"
+                                @change="onNumChange"
+                            ></up-number-box>
+                        </view>
+                    </view>
+                </scroll-view>
+                
+                <view class="up-goods-sku__footer">
+                    <up-button 
+                        type="primary" 
+                        :disabled="!canBuy" 
+                        @click="onConfirm"
+                    >
+                        {{ confirmText }}
+                    </up-button>
+                </view>
+            </view>
+        </up-popup>
+    </view>
+</template>
+
+<script setup lang="uts">
+	import type { PropType } from 'vue'
+	import { computed, ref } from 'vue'
+	function emptySkuList(): Array<UTSJSONObject> {
+		return [] as Array<UTSJSONObject>
+	}
+	function emptyStringList(): Array<string> {
+		return [] as Array<string>
+	}
+	function emptyObject(): UTSJSONObject {
+		return {} as UTSJSONObject
+	}
+	function normalizeNumber(value: any | null, defaultValue: number = 0): number {
+		if (typeof value === 'number') {
+			return value
+		}
+		if (value == null) {
+			return defaultValue
+		}
+		const parsed = parseFloat(value.toString())
+		return isNaN(parsed) ? defaultValue : parsed
+	}
+	function hasValue(value: any | null): boolean {
+		return value != null && value.toString().length > 0
+	}
+	function sameValue(left: any | null, right: any | null): boolean {
+		if (left == null || right == null) {
+			return left == right
+		}
+		return left.toString() == right.toString()
+	}
+	function getFirstNumber(obj: UTSJSONObject | null, firstKey: string, secondKey: string, defaultValue: number = 0): number {
+		if (obj == null) {
+			return defaultValue
+		}
+		const firstValue = obj[firstKey]
+		if (hasValue(firstValue)) {
+			return normalizeNumber(firstValue, defaultValue)
+		}
+		const secondValue = obj[secondKey]
+		if (hasValue(secondValue)) {
+			return normalizeNumber(secondValue, defaultValue)
+		}
+		return defaultValue
+	}
+	defineOptions({
+	styleIsolation: 'app-and-page',
+	name: 'up-goods-sku'
+	})
+
+const props = defineProps({
+		// 商品信息
+		goodsInfo: {
+			type: Object as PropType<UTSJSONObject>,
+			default(): UTSJSONObject {
+				return {} as UTSJSONObject
+			}
+		},
+		// SKU树形结构
+		skuTree: {
+			type: Array as PropType<Array<UTSJSONObject>>,
+			default(): Array<UTSJSONObject> {
+				return [] as Array<UTSJSONObject>
+			}
+		},
+		// SKU列表
+		skuList: {
+			type: Array as PropType<Array<UTSJSONObject>>,
+			default(): Array<UTSJSONObject> {
+				return [] as Array<UTSJSONObject>
+			}
+		},
+		// 最大购买数量
+		maxBuy: {
+			type: Number,
+			default: 999
+		},
+		// 确认按钮文字
+		confirmText: {
+			type: String,
+			default: '确定'
+		},
+		// 是否显示关闭弹窗按钮
+		closeable: {
+			type: Boolean,
+			default: true
+		},
+		// 是否页面内联模式
+		pageInline: {
+			type: Boolean,
+			default: false
+		}
+})
+
+const emit = defineEmits(['open', 'confirm', 'close', 'closed'])
+const show = ref(props.pageInline)
+const selectedSku = ref(emptyObject())
+const buyNum = ref(1)
+
+const skuTreeList = computed((): Array<UTSJSONObject> => {
+	return props.skuTree as Array<UTSJSONObject>
+})
+
+const skuDataList = computed((): Array<UTSJSONObject> => {
+	return props.skuList as Array<UTSJSONObject>
+})
+
+const getSkuComb = (selectedSkuValue: UTSJSONObject): UTSJSONObject | null => {
+	const selected = emptyObject()
+	const selectedKeys = UTSJSONObject.keys(selectedSkuValue)
+	for (let selectedIndex = 0; selectedIndex < selectedKeys.length; selectedIndex++) {
+		const key = selectedKeys[selectedIndex]
+		if (hasValue(selectedSkuValue[key])) {
+			selected[key] = selectedSkuValue[key]
+		}
+	}
+	if (UTSJSONObject.keys(selected).length !== skuTreeList.value.length) {
+		return null
+	}
+	const list = skuDataList.value
+	for (let i = 0; i < list.length; i++) {
+		const sku = list[i]
+		let match = true
+		const keys = UTSJSONObject.keys(selected)
+		for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+			const key = keys[keyIndex]
+			if (!sameValue(sku[key], selected[key])) {
+				match = false
+				break
+			}
+		}
+		if (match) {
+			return sku
+		}
+	}
+	return null
+}
+
+const getSelectedSkuComb = (): UTSJSONObject | null => {
+	return getSkuComb(selectedSku.value as UTSJSONObject)
+}
+
+const getTreeLabel = (treeItem: UTSJSONObject): string => {
+	const value = treeItem['label']
+	return value == null ? '' : value.toString()
+}
+
+const getTreeName = (treeItem: UTSJSONObject): string => {
+	const value = treeItem['name']
+	return value == null ? '' : value.toString()
+}
+
+const getTreeChildren = (treeItem: UTSJSONObject): Array<UTSJSONObject> => {
+	const children = treeItem['children'] as Array<UTSJSONObject> | null
+	return children == null ? emptySkuList() : children
+}
+
+const getLeafId = (leafItem: UTSJSONObject): any | null => {
+	return leafItem['id']
+}
+
+const getLeafName = (leafItem: UTSJSONObject): string => {
+	const value = leafItem['name']
+	return value == null ? '' : value.toString()
+}
+
+const getSelectedCount = (selectedSkuValue: UTSJSONObject): number => {
+	let count = 0
+	const keys = UTSJSONObject.keys(selectedSkuValue)
+	for (let i = 0; i < keys.length; i++) {
+		if (hasValue(selectedSkuValue[keys[i]])) {
+			count++
+		}
+	}
+	return count
+}
+
+const price = computed((): number => {
+	const selectedSkuComb = getSelectedSkuComb()
+	if (selectedSkuComb != null) {
+		return getFirstNumber(selectedSkuComb, 'price', 'price_fee', 0)
+	}
+	return getFirstNumber(props.goodsInfo as UTSJSONObject | null, 'price', 'price_fee', 0)
+})
+
+const stock = computed((): number => {
+	const selectedSkuComb = getSelectedSkuComb()
+	if (selectedSkuComb != null) {
+		return getFirstNumber(selectedSkuComb, 'stock', 'quantity', 0)
+	}
+	return getFirstNumber(props.goodsInfo as UTSJSONObject | null, 'stock', 'quantity', 0)
+})
+
+const goodsImage = computed((): string => {
+	const goods = props.goodsInfo as UTSJSONObject | null
+	if (goods == null) {
+		return ''
+	}
+	const image = goods['image']
+	if (image != null && image.toString().length > 0) {
+		return image.toString()
+	}
+	const picture = goods['picture']
+	return picture == null ? '' : picture.toString()
+})
+
+const maxBuyNum = computed((): number => {
+	const stockValue = stock.value
+	return stockValue > props.maxBuy ? props.maxBuy : stockValue
+})
+
+const canBuy = computed((): boolean => {
+	const selectedSkuCount = getSelectedCount(selectedSku.value as UTSJSONObject)
+	const skuTreeCount = skuTreeList.value.length
+	return selectedSkuCount === skuTreeCount && buyNum.value > 0 && stock.value > 0
+})
+
+const selectedSkuText = computed((): string => {
+	const selected = emptyStringList()
+	const selectedSkuValue = selectedSku.value as UTSJSONObject
+	const keys = UTSJSONObject.keys(selectedSkuValue)
+	for (let i = 0; i < keys.length; i++) {
+		const key = keys[i]
+		const value = selectedSkuValue[key]
+		if (hasValue(value)) {
+			const treeList = skuTreeList.value
+			for (let treeIndex = 0; treeIndex < treeList.length; treeIndex++) {
+				const treeItem = treeList[treeIndex]
+				if (getTreeName(treeItem) == key) {
+					const children = getTreeChildren(treeItem)
+					for (let leafIndex = 0; leafIndex < children.length; leafIndex++) {
+						const leafItem = children[leafIndex]
+						if (sameValue(getLeafId(leafItem), value)) {
+							selected.push(getLeafName(leafItem))
+						}
+					}
+				}
+			}
+		}
+	}
+	return selected.join(', ')
+})
+
+const cloneSelectedWithValue = (skuKey: string, skuValueId: any | null): UTSJSONObject => {
+	const tempSelected = emptyObject()
+	const selectedSkuValue = selectedSku.value as UTSJSONObject
+	const keys = UTSJSONObject.keys(selectedSkuValue)
+	for (let i = 0; i < keys.length; i++) {
+		const key = keys[i]
+		tempSelected[key] = selectedSkuValue[key]
+	}
+	tempSelected[skuKey] = skuValueId
+	return tempSelected
+}
+
+const isSelected = (skuKey: string, skuValueId: any | null): boolean => {
+	const selectedSkuValue = selectedSku.value as UTSJSONObject
+	return sameValue(selectedSkuValue[skuKey], skuValueId)
+}
+
+const isDisabled = (skuKey: string, skuValueId: any | null): boolean => {
+	const tempSelected = cloneSelectedWithValue(skuKey, skuValueId)
+	const selectedCount = getSelectedCount(tempSelected)
+	const totalSkuCount = skuTreeList.value.length
+	if (selectedCount === totalSkuCount) {
+		return getSkuComb(tempSelected) == null
+	}
+	const list = skuDataList.value
+	for (let i = 0; i < list.length; i++) {
+		const sku = list[i]
+		let match = true
+		const keys = UTSJSONObject.keys(tempSelected)
+		for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+			const key = keys[keyIndex]
+			if (hasValue(tempSelected[key]) && !sameValue(sku[key], tempSelected[key])) {
+				match = false
+				break
+			}
+		}
+		if (match) {
+			return false
+		}
+	}
+	return true
+}
+
+const onSkuClick = (skuKey: string, skuValue: UTSJSONObject): void => {
+	const skuValueId = getLeafId(skuValue)
+	if (isDisabled(skuKey, skuValueId)) {
+		return
+	}
+	const selectedSkuValue = selectedSku.value as UTSJSONObject
+	if (sameValue(selectedSkuValue[skuKey], skuValueId)) {
+		selectedSkuValue[skuKey] = ''
+	} else {
+		selectedSkuValue[skuKey] = skuValueId
+	}
+}
+
+const onNumChange = (e: UTSJSONObject): void => {
+	buyNum.value = normalizeNumber(e['value'], buyNum.value)
+}
+
+const reset = (): void => {
+	selectedSku.value = emptyObject()
+	buyNum.value = 1
+}
+
+const open = (): void => {
+	show.value = true
+	emit('open')
+}
+
+const close = (): void => {
+	show.value = false
+	emit('close')
+}
+
+// 弹窗离场动画结束，透传给使用者
+const closedHandler = (): void => {
+	emit('closed')
+}
+
+const onConfirm = (): void => {
+	if (canBuy.value == false) {
+		return
+	}
+	const selectedSkuComb = getSelectedSkuComb()
+	emit('confirm', {
+		sku: selectedSkuComb,
+		goodsInfo: props.goodsInfo,
+		num: buyNum.value,
+		selectedText: selectedSkuText.value
+	} as UTSJSONObject)
+}
+
+defineExpose({
+	show,
+	selectedSku,
+	buyNum,
+	skuTreeList,
+	skuDataList,
+	price,
+	stock,
+	goodsImage,
+	maxBuyNum,
+	canBuy,
+	selectedSkuText,
+	getTreeLabel,
+	getTreeName,
+	getTreeChildren,
+	getLeafId,
+	getLeafName,
+	getSelectedCount,
+	cloneSelectedWithValue,
+	isSelected,
+	isDisabled,
+	onSkuClick,
+	onNumChange,
+	getSelectedSkuComb,
+	getSkuComb,
+	reset,
+	open,
+	close,
+	closedHandler,
+	onConfirm
+})
+</script>
+
+<style lang="scss" scoped>
+	.up-goods-sku-container {
+		padding: 4rpx 30rpx;
+	}
+
+	.up-goods-sku {
+		background-color: #fff;
+		overflow: hidden;
+
+		&__header {
+			display: flex;
+            flex-direction: row;
+			padding: 30rpx 0;
+			position: relative;
+			
+			&__image {
+				width: 180rpx;
+				height: 180rpx;
+				border-radius: 10rpx;
+				overflow: hidden;
+				margin-right: 20rpx;
+}
+			
+			&__info {
+				flex: 1;
+				
+				&__price {
+					display: flex;
+                    flex-direction: row;
+					align-items: flex-end;
+					margin-bottom: 20rpx;
+					
+					&__symbol {
+						font-size: 24rpx;
+						color: #fa3534;
+						margin-right: 4rpx;
+					}
+					
+					&__value {
+						font-size: 36rpx;
+						color: #fa3534;
+						font-weight: bold;
+					}
+				}
+				
+				&__stock {
+					font-size: 26rpx;
+					color: #999;
+					margin-bottom: 20rpx;
+				}
+				
+				&__selected {
+					font-size: 26rpx;
+					color: #333;
+				}
+			}
+		}
+		
+		&__content {
+			max-height: 600rpx;
+			padding: 0 30rpx 30rpx 0;
+			
+			&__item {
+				margin-bottom: 30rpx;
+				
+				&__title {
+					font-size: 28rpx;
+					color: #333;
+					margin-bottom: 20rpx;
+				}
+				
+				&__list {
+					display: flex;
+                    flex-direction: row;
+					flex-wrap: wrap;
+					
+					&__item {
+						padding: 10rpx 20rpx;
+						border: 2rpx solid #eee;
+						border-radius: 10rpx;
+						margin-right: 20rpx;
+						margin-bottom: 20rpx;
+						font-size: 26rpx;
+						color: #333;
+						
+						&--active {
+							border-color: #fa3534;
+							color: #fa3534;
+						}
+						
+						&--disabled {
+							color: #ccc;
+							border-color: #eee;
+						}
+					}
+				}
+			}
+			
+			&__count {
+				display: flex;
+                flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				margin-top: 20rpx;
+				
+				&__title {
+					font-size: 28rpx;
+					color: #333;
+				}
+			}
+		}
+		
+		&__footer {
+			padding: 20rpx 0rpx 40rpx 0;
+		}
+	}
+</style>

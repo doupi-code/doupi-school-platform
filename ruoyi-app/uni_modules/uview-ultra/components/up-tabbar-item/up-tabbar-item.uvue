@@ -1,0 +1,554 @@
+<template>
+	<view
+	    class="up-tabbar-item"
+	    :style="rootStyle"
+	    :class="itemClassNames"
+	    @tap="clickHandler"
+	>
+		<view class="up-tabbar-item__content" :class="contentClassNames" :style="midButtonContentStyle">
+			<view
+				ref="up-tabbar-item__icon--mid-button"
+				class="up-tabbar-item__icon"
+				:class="[isMidButton ? 'up-tabbar-item__icon--mid-button' : '']"
+				:style="midButtonShellStyle"
+			>
+				<view v-if="isMidButton" class="up-tabbar-item__mid-button-border" :style="midButtonBorderStyle">
+					<view class="up-tabbar-item__mid-button-border-circle" :style="midButtonBorderCircleStyle"></view>
+				</view>
+				<view v-if="isMidButton" class="up-tabbar-item__mid-button-inner" :style="midButtonInnerStyle"></view>
+				<up-icon
+				    v-if="icon"
+				    :name="icon"
+				    :color="isMidButton ? resolvedMidButtonIconColor : iconColor"
+				    :size="isMidButton ? midButtonIconSize : 20"
+				    :customStyle="midButtonIconStyle"
+				></up-icon>
+				<template v-else>
+					<slot
+					    v-if="isActive"
+					    name="active-icon"
+					/>
+					<slot
+					    v-else
+					    name="inactive-icon"
+					/>
+				</template>
+				<up-badge
+					absolute
+					:offset="badgeOffset"
+				    :customStyle="badgeStyle"
+				    :isDot="dot"
+				    :value="badge != null  ? (dot ? 1 : badge) : 0"
+				    :show="badgeVisible"
+				></up-badge>
+			</view>
+
+			<slot name="text">
+				<text
+				    class="up-tabbar-item__text"
+				    :style="textStyle"
+				>{{ text }}</text>
+			</slot>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue';
+	import defProps from './tabbarItem.uts';
+	import { addStyle, error, sleep, upGetRect } from '../../libs/function/index.uts';
+	import { useUltraUI } from '../../libs/composable/useUltraUI.uts';
+	import { calculateMidButtonBorderClipHeight } from './midButtonGeometry.uts';
+	/**
+	 * TabbarItem 底部导航栏子组件
+	 * @description 此组件提供了自定义tabbar的能力。
+	 * @tutorial https://uview-plus.jiangruyi.com/components/tabbar.html
+	 * @property {String | Number}	name		item标签的名称，作为与up-tabbar的value参数匹配的标识符
+	 * @property {String}			icon		uView内置图标或者绝对路径的图片
+	 * @property {String | Number}	badge		右上角的角标提示信息
+	 * @property {Boolean}			dot			是否显示圆点，将会覆盖badge参数（默认 false ）
+	 * @property {String}			text		描述文本
+	 * @property {Object | String}	badgeStyle	控制徽标的位置，对象或者字符串形式，可以设置top和right属性（默认 'top: 6px;right:2px;' ）
+	 * @property {Object}			customStyle	定义需要用到的外部样式
+	 * 
+	 * @example <up-tabbar :value="value2" :placeholder="false" @change="name => value2 = name" :fixed="false" :safeAreaInsetBottom="false"><up-tabbar-item text="首页" icon="home" dot ></up-tabbar-item></up-tabbar>
+	 */
+	const { parent, parentData, getParentData } = useUltraUI({
+		value: null as string | number | null,
+		activeColor: '',
+		inactiveColor: '',
+		borderColor: '',
+		border: true,
+		midButtonBorderTopOffset: 0.25,
+		tabbarContentTop: 0,
+		tabbarContentMeasured: false
+	} as UTSJSONObject)
+	const instance = getCurrentInstance()!.proxy!
+
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-tabbar-item',
+		options: {
+			virtualHost: true
+		}
+	})
+
+	const props = defineProps({
+		// item标签的名称，作为与u-tabbar的value参数匹配的标识符
+		name: {
+			type: [String, Number],
+			default: (defProps['tabbarItem'] as UTSJSONObject)['name']
+		},
+		// uview-plus内置图标或者绝对路径的图片
+		icon: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['icon']
+		},
+		// 右上角的角标提示信息
+		badge: {
+			type: [String, Number],
+			default: (defProps['tabbarItem'] as UTSJSONObject)['badge']
+		},
+		// 是否显示圆点，将会覆盖badge参数
+		dot: {
+			type: Boolean,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['dot']
+		},
+		// 描述文本
+		text: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['text']
+		},
+		// 控制徽标的位置，对象或者字符串形式，可以设置top和right属性
+		badgeStyle: {
+			type: [UTSJSONObject, String],
+			default: (defProps['tabbarItem'] as UTSJSONObject)['badgeStyle']
+		},
+		// 模式，默认普通模式，midButton中间按钮模式
+		mode: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['mode']
+		},
+		midButtonBgColor: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonBgColor']
+		},
+		midButtonIconColor: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonIconColor']
+		},
+		midButtonIconSize: {
+			type: [String, Number],
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonIconSize']
+		},
+		midButtonBoxShadow: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonBoxShadow']
+		},
+		midButtonInnerBoxShadow: {
+			type: String,
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonInnerBoxShadow']
+		},
+		midButtonOffsetY: {
+			type: [String, Number],
+			default: (defProps['tabbarItem'] as UTSJSONObject)['midButtonOffsetY']
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		}
+	})
+
+	const emit = defineEmits(["click", "change"])
+	const isActive = ref(false)
+	const midButtonBorderClipHeightValue = ref(0)
+	const routeSyncTimer = ref(0 as number)
+	const routeSyncLast = ref('')
+	const slots = useSlots()
+
+	// 计算是否为中间按钮
+	const isMidButton = computed((): boolean => {
+		return props.mode === 'midButton'
+	})
+
+	const hasMidButtonText = computed((): boolean => {
+		return slots['text'] != null || (props.text != null && props.text.length > 0)
+	})
+	const badgeNumber = computed((): number => props.badge != null ? parseInt(props.badge.toString()) : 0)
+	const badgeOffset = computed((): Array<string | number> => [0, props.dot ? '34rpx' : badgeNumber.value > 9 ? '14rpx' : '20rpx'])
+	const badgeVisible = computed((): boolean => props.dot == true || badgeNumber.value > 0)
+
+	const itemClassNames = computed((): Array<string> => {
+		return [
+			isMidButton.value ? 'up-tabbar-item--mid-button' : '',
+			isMidButton.value && !hasMidButtonText.value ? 'up-tabbar-item--mid-button-no-text' : ''
+		]
+	})
+
+	const contentClassNames = computed((): Array<string> => {
+		return [
+			isMidButton.value ? 'up-tabbar-item__content--mid-button' : ''
+		]
+	})
+
+	const rootStyle = computed((): UTSJSONObject => {
+		return addStyle(props.customStyle) as UTSJSONObject
+	})
+
+	const iconColor = computed((): string => {
+		const color = isActive.value ? parentData.value['activeColor'] : parentData.value['inactiveColor']
+		return color != null ? color.toString() : ''
+	})
+
+	const resolvedMidButtonIconColor = computed((): string => {
+		return props.midButtonIconColor != null && props.midButtonIconColor.length > 0 ? props.midButtonIconColor : '#3c9cff'
+	})
+
+	const textStyle = computed((): UTSJSONObject => {
+		return {
+			color: iconColor.value
+		} as UTSJSONObject
+	})
+
+	const midButtonOffsetValue = computed((): number => {
+		const offset = props.midButtonOffsetY != null ? parseFloat(props.midButtonOffsetY.toString()) : -10
+		return isNaN(offset) ? -10 : offset
+	})
+
+	const midButtonContentStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			style['transform'] = 'translateY(' + midButtonOffsetValue.value.toString() + 'px)'
+		}
+		return style
+	})
+
+	const midButtonBorderStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			style['height'] = midButtonBorderClipHeightValue.value.toString() + 'px'
+		}
+		return style
+	})
+
+	const midButtonBorderCircleStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			const borderColor = parentData.value['borderColor']
+			if (borderColor != null && borderColor.toString().length > 0) {
+				style['borderColor'] = borderColor.toString()
+			}
+		}
+		return style
+	})
+
+	const midButtonShellStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			style['boxShadow'] = props.midButtonBoxShadow != null && props.midButtonBoxShadow.length > 0 ? props.midButtonBoxShadow : 'none'
+		}
+		return style
+	})
+
+	const midButtonInnerStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			style['background'] = props.midButtonBgColor != null && props.midButtonBgColor.length > 0 ? props.midButtonBgColor : '#ffffff'
+			style['boxShadow'] = props.midButtonInnerBoxShadow
+		}
+		return style
+	})
+
+	const midButtonIconStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (isMidButton.value) {
+			style['position'] = 'relative'
+			style['zIndex'] = 2
+		}
+		return style
+	})
+
+	const getChildIndexLocal = (): number => {
+		if (parent.value == null) return -1
+		const list = parent.value.$callMethod('getChildren') as ComponentPublicInstance[]
+		for (let i = 0; i < list.length; i++) {
+			if (list[i] === instance) {
+				return i
+			}
+		}
+		return -1
+	}
+
+	const clearRouteSync = (): void => {
+		if (routeSyncTimer.value != 0) {
+			clearInterval(routeSyncTimer.value)
+			routeSyncTimer.value = 0
+		}
+	}
+
+	const getCurrentRoutePath = (): string => {
+		// @ts-ignore
+		const pages = getCurrentPages()
+		if (pages == null || pages.length == 0) return ''
+		const currentPage = pages[pages.length - 1]
+		// @ts-ignore
+		const route = (currentPage != null && currentPage.route != null) ? currentPage.route.toString() : ''
+		if (route == '') return ''
+		return route.startsWith('/') ? route : `/${route}`
+	}
+
+	const normalizeRoutePath = (path: string): string => {
+		return path.replace(/^[#\\/]+/, '')
+	}
+
+	const updateParentData = (): void => {
+		getParentData('up-tabbar', instance, false)
+	}
+
+	const syncActiveByRouteOrValue = (): void => {
+		updateParentData()
+		const index = getChildIndexLocal()
+		const name = props.name != null ? props.name : index
+		const routePath = getCurrentRoutePath()
+		if (typeof name === 'string' && routePath != '') {
+			const isRouteMatch = normalizeRoutePath(name) == normalizeRoutePath(routePath)
+			if (isRouteMatch) {
+				isActive.value = true
+				return
+			}
+		}
+		isActive.value = name === parentData.value['value']
+	}
+
+	const startRouteSync = (): void => {
+		clearRouteSync()
+		if (!(typeof props.name === 'string' && props.name.indexOf('/') > -1)) return
+		routeSyncLast.value = getCurrentRoutePath()
+		routeSyncTimer.value = setInterval(() => {
+			const current = getCurrentRoutePath()
+			if (current != routeSyncLast.value) {
+				routeSyncLast.value = current
+				syncActiveByRouteOrValue()
+			}
+		}, 200) as number
+	}
+
+	const init = (): void => {
+		if (parent.value == null) {
+			updateParentData()
+		}
+		if (parent.value == null) {
+			error('up-tabbar-item必须搭配up-tabbar组件使用')
+		}
+		syncActiveByRouteOrValue()
+	}
+
+	const updateMidButtonBorderClip = async (): Promise<void> => {
+		if (!isMidButton.value || parent.value == null || parentData.value['tabbarContentMeasured'] != true) return
+		await sleep(20)
+		const circleRect = await upGetRect('.up-tabbar-item__icon--mid-button', false, instance)
+		const circleTop = circleRect.top ?? 0
+		const circleHeight = circleRect.height ?? 0
+		const contentTopValue = parentData.value['tabbarContentTop']
+		if (contentTopValue == null || circleHeight <= 0) return
+		const contentTop = parseFloat(contentTopValue.toString())
+		if (!isFinite(contentTop) || !isFinite(circleTop)) return
+		const borderTopOffsetValue = parentData.value['midButtonBorderTopOffset']
+		const borderTopOffset = parentData.value['border'] == true && borderTopOffsetValue != null
+			? parseFloat(borderTopOffsetValue.toString())
+			: 0
+		const clipHeight = calculateMidButtonBorderClipHeight(contentTop, circleTop, borderTopOffset)
+		if (clipHeight != midButtonBorderClipHeightValue.value) {
+			midButtonBorderClipHeightValue.value = clipHeight
+		}
+	}
+
+	const scheduleMidButtonBorderMeasure = (): void => {
+		if (!isMidButton.value) {
+			midButtonBorderClipHeightValue.value = 0
+			return
+		}
+		nextTick(() => {
+			updateMidButtonBorderClip()
+		})
+	}
+
+	// 此方法将会被父组件up-tabbar调用
+	const updateFromParent = (): void => {
+		// 重新初始化
+		init()
+		scheduleMidButtonBorderMeasure()
+	}
+
+	const clickHandler = (): void => {
+		nextTick(() => {
+			const index = getChildIndexLocal()
+			const name = props.name != null ? props.name : index
+			// 点击的item为非激活的item才发出change事件
+			if (parent.value != null && name.toString() != parentData.value['value']?.toString()) {
+				parent.value.$callMethod('emitChange', name)
+			}
+			emit('click', name)
+		})
+	}
+
+	const updateMidButtonLayout = computed((): Array<any | null> => {
+		return [props.mode, props.text, props.midButtonOffsetY] as Array<any | null>
+	})
+
+	watch(updateMidButtonLayout, () => {
+		scheduleMidButtonBorderMeasure()
+	}, { flush: 'post' })
+
+	onMounted(() => {
+		init()
+		startRouteSync()
+		scheduleMidButtonBorderMeasure()
+	})
+
+	onBeforeUnmount(() => {
+		clearRouteSync()
+	})
+
+	defineExpose({
+		isActive,
+		midButtonBorderClipHeightValue,
+		routeSyncTimer,
+		routeSyncLast,
+		parentData,
+		isMidButton,
+		rootStyle,
+		iconColor,
+		textStyle,
+		hasMidButtonText,
+		itemClassNames,
+		contentClassNames,
+		resolvedMidButtonIconColor,
+		midButtonOffsetValue,
+		midButtonContentStyle,
+		midButtonBorderStyle,
+		midButtonBorderCircleStyle,
+		midButtonShellStyle,
+		midButtonInnerStyle,
+		midButtonIconStyle,
+		updateMidButtonLayout,
+		scheduleMidButtonBorderMeasure,
+		updateMidButtonBorderClip,
+		clearRouteSync,
+		getCurrentRoutePath,
+		normalizeRoutePath,
+		syncActiveByRouteOrValue,
+		startRouteSync,
+		init,
+		updateParentData,
+		updateFromParent,
+		clickHandler
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import '../../libs/css/components.scss';
+	
+	.up-tabbar-item {
+		@include flex(column);
+		align-items: center;
+		justify-content: center;
+		flex: 1;
+		/* #ifndef APP-NVUE */
+		width: 100%;
+		height: 100%;
+		/* #endif */
+		/* #ifdef H5 */
+		cursor: pointer;
+		/* #endif */
+		
+		&__icon {
+			@include flex;
+			position: relative;
+			width: 150rpx;
+			justify-content: center;
+		}
+
+		&__content {
+			@include flex(column);
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+			height: 100%;
+
+			&--mid-button {
+				position: relative;
+				z-index: 1;
+			}
+		}
+
+		&__text {
+			margin-top: 2px;
+			font-size: 12px;
+			color: $up-content-color;
+		}
+	}
+	
+	// 中间按钮样式
+	.up-tabbar-item--mid-button {
+		z-index: 2;
+		flex: 1;
+	}
+	
+	.up-tabbar-item__icon--mid-button {
+		width: 64px;
+		height: 64px;
+		border-radius: 999px;
+		background: #ffffff;
+		box-shadow: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		overflow: visible;
+	}
+
+	.up-tabbar-item__mid-button-border {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 64px;
+		box-sizing: border-box;
+		background: transparent;
+		overflow: hidden;
+		pointer-events: none;
+		z-index: 0;
+	}
+
+	.up-tabbar-item__mid-button-border-circle {
+		width: 64px;
+		height: 64px;
+		box-sizing: border-box;
+		background: transparent;
+		border: 1px solid var(--up-border-color, rgba(0, 0, 0, 0.08));
+		border-radius: 999px;
+	}
+
+	.up-tabbar-item__mid-button-inner {
+		position: absolute;
+		left: 6px;
+		top: 6px;
+		right: 6px;
+		bottom: 6px;
+		border-radius: 999px;
+		z-index: 1;
+	}
+
+	.up-tabbar-item--mid-button .up-tabbar-item__text {
+		margin-top: 0;
+		transform: translateY(-4px);
+	}
+
+	/* #ifdef MP */
+	// 由于小程序都使用shadow DOM形式实现，需要给影子宿主设置flex: 1才能让其撑开
+	:host {
+		flex: 1;
+		width: 100%;
+	}
+	/* #endif */
+</style>

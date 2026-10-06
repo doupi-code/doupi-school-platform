@@ -1,0 +1,238 @@
+<template>
+	<view
+		class="up-sticky"
+		:style="[style]"
+	>
+		<view
+		:id="elId"
+			:style="[stickyContent]"
+			class="up-sticky__content"
+		>
+			<slot />
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+	import defProps from './sticky.uts';
+	import { addStyle, deepMerge, getPx, guid, upGetRect } from '../../libs/function/index.uts';
+	import zIndex from '../../libs/config/zIndex.uts';
+	/**
+	 * sticky 吸顶
+	 * @description 该组件与CSS中position: sticky属性实现的效果一致，当组件达到预设的到顶部距离时， 就会固定在指定位置，组件位置大于预设的顶部距离时，会重新按照正常的布局排列。
+	 * @tutorial https://uview-plus.jiangruyi.com/components/sticky.html
+	 * @property {String ｜ Number}	offsetTop		吸顶时与顶部的距离，单位px（默认 0 ）
+	 * @property {String ｜ Number}	customNavHeight	自定义导航栏的高度 （h5 默认44  其他默认 0 ）
+	 * @property {Boolean}			disabled		是否开启吸顶功能 （默认 false ）
+	 * @property {String}			bgColor			组件背景颜色（默认 '#ffffff' ）
+	 * @property {String ｜ Number}	zIndex			吸顶时的z-index值
+	 * @property {String ｜ Number}	index			自定义标识，用于区分是哪一个组件
+	 * @property {Object}			customStyle		组件的样式，对象形式
+	 * @event {Function} fixed		组件吸顶时触发
+	 * @event {Function} unfixed	组件取消吸顶时触发
+	 * @example <up-sticky offsetTop="200"><view>塞下秋来风景异，衡阳雁去无留意</view></up-sticky>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-sticky'
+	})
+
+	const props = defineProps({
+		// 吸顶容器到顶部某个距离的时候，进行吸顶，在H5平台，NavigationBar为44px
+		offsetTop: {
+			type: [String, Number],
+			default: defProps.getAny('sticky.offsetTop')
+		},
+		// 自定义导航栏的高度
+		customNavHeight: {
+			type: [String, Number],
+			// #ifdef H5
+			// H5端的导航栏属于"自定义"导航栏的范畴，因为它是非原生的，与普通元素一致
+			default: 44,
+			// #endif
+			// #ifndef H5
+			default: defProps.getAny('sticky.customNavHeight')
+			// #endif
+		},
+		// 是否开启吸顶功能
+		disabled: {
+			type: Boolean,
+			default: defProps.getBoolean('sticky.disabled')
+		},
+		// 吸顶区域的背景颜色
+		bgColor: {
+			type: String,
+			default: defProps.getString('sticky.bgColor')
+		},
+		// z-index值
+		zIndex: {
+			type: [String, Number],
+			default: defProps.getAny('sticky.zIndex')
+		},
+		// 列表中的索引值
+		index: {
+			type: [String, Number],
+			default: defProps.getAny('sticky.index')
+		},
+		customStyle: {
+			type: [Object, String],
+			default: () => ({})
+		}
+	})
+
+	const instance = getCurrentInstance()!.proxy!
+	const cssSticky = ref(false) // 是否使用css的sticky实现
+	const stickyTop = ref(0) // 吸顶的top值，因为可能受自定义导航栏影响，最终的吸顶值非offsetTop值
+	const elId = guid()
+	const left = ref(0) // js模式时，吸顶的内容因为处于postition: fixed模式，为了和原来保持一致的样式，需要记录并重新设置它的left，height，width属性
+	const width = ref('auto')
+	const height = ref('auto')
+	const fixed = ref(false) // js模式时，是否处于吸顶模式
+	const contentObserver = ref<any | null>(null) // 观察者实例
+	const rafId = ref(0) // requestAnimationFrame ID
+
+	const uZindex = computed((): number => {
+		if (props.zIndex == null || props.zIndex.toString() == '') return zIndex['sticky'] as number
+		const value = parseInt(props.zIndex.toString())
+		return isNaN(value) ? zIndex['sticky'] as number : value
+	})
+
+	// 组件样式
+	const style = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if(!props.disabled) {
+			style['height'] = fixed.value ? height.value + 'px' : 'auto'
+		} else {
+			// 无需吸顶时，设置会默认的relative(nvue)和非nvue的static静态模式即可
+			style['position'] = 'relative'
+		}
+		style['backgroundColor'] = props.bgColor
+		return deepMerge(addStyle(props.customStyle), style)
+	})
+
+	// 吸顶内容的样式
+	const stickyContent = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		if (!cssSticky.value) {
+			style['position'] = fixed.value ? 'fixed' : 'static'
+			style['top'] = stickyTop.value + 'px'
+			style['left'] = left.value + 'px'
+			style['width'] = width.value == 'auto' ? 'auto' : width.value + 'px'
+			style['zIndex'] = uZindex.value
+		}
+		return style
+	})
+
+	const getStickyTop = (): void => {
+		stickyTop.value = (parseFloat(getPx(props.offsetTop)) + parseFloat(getPx(props.customNavHeight)) )
+	}
+
+	const setFixed = (top: number): void => {
+		// 判断是否出于吸顶条件范围
+		const nextFixed = top > stickyTop.value
+		fixed.value = nextFixed
+	}
+
+	const disconnectObserver = (observerName: string): void => {
+		// 断掉观察，释放资源
+		// #ifdef H5 || MP
+		const observer = observerName == 'contentObserver' ? contentObserver.value : null
+		if (observer != null) {
+			observer.disconnect()
+		}
+		// #endif
+	}
+
+	const observeContent = (): void => {
+		// #ifdef H5 || MP
+		// 先断掉之前的观察
+		disconnectObserver('contentObserver')
+		const observer = uni.createIntersectionObserver(instance, {
+			// 检测的区间范围
+			thresholds: [0.95, 0.98, 1]
+		})
+		// 到屏幕顶部的高度时触发
+		observer.relativeToViewport({
+			top: -stickyTop.value
+		})
+		// 绑定观察的元素
+		observer.observe('#' + elId, (res: ObserveResult) => {
+			setFixed(res.boundingClientRect.top)
+		})
+		contentObserver.value = observer
+		// #endif
+	}
+
+	const initObserveContent = (): void => {
+		// 获取吸顶内容的高度，用于在js吸顶模式时，给父元素一个填充高度，防止"塌陷"
+		upGetRect('#' + elId, false, instance).then((res: NodeInfo) => {
+			height.value = (res.height ?? '').toString()
+			left.value = res.left ?? 0
+			width.value = (res.width ?? '').toString()
+			nextTick(() => {
+				// todo等待uni-app-x官方实现createIntersectionObserver对APP的支持
+				// #ifdef H5 || MP
+				//observeContent()
+				// #endif
+
+				// #ifdef APP
+				// todo
+				// #endif
+			})
+		})
+	}
+
+	const init = (): void => {
+		getStickyTop()
+		// 如果不支持css sticky，则使用js方案，此方案性能比不上css方案
+		if (!cssSticky.value) {
+			if (!props.disabled) {
+				initObserveContent()
+			}
+		}
+	}
+
+	watch((): any => props.offsetTop, () => {
+		getStickyTop()
+	})
+
+	onMounted(() => {
+		init()
+	})
+
+	onBeforeUnmount(() => {
+		disconnectObserver('contentObserver')
+		// #ifdef APP
+		if (rafId.value != 0) {
+			cancelAnimationFrame(rafId.value)
+		}
+		// #endif
+	})
+
+	defineExpose({
+		cssSticky,
+		stickyTop,
+		elId,
+		left,
+		width,
+		height,
+		fixed,
+		contentObserver,
+		rafId,
+		style,
+		stickyContent,
+		uZindex,
+		init,
+		initObserveContent,
+		observeContent,
+		setFixed,
+		disconnectObserver,
+		getStickyTop
+	})
+</script>
+
+<style lang="scss" scoped>
+	.up-sticky {
+	}
+</style>

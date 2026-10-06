@@ -1,0 +1,48 @@
+<view class="page">
+  <view wx:if="{{currentStatus}}" class="status-card">
+    <text class="status-card__title">{{currentStatusText}}</text>
+    <text wx:if="{{currentDirectorName}}" class="status-card__desc">当前主任：{{currentDirectorName}}</text>
+  </view>
+
+  <view class="search-bar">
+    <input
+      class="search-input"
+      placeholder="搜索主任姓名或手机号"
+      value="{{keyword}}"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+      confirm-type="search"
+    />
+    <button class="search-btn" bindtap="onSearchConfirm">搜索</button>
+  </view>
+
+  <scroll-view scroll-y class="list-wrap">
+    <view
+      class="director-item {{selectedDirectorId === item.directorId ? 'active' : ''}}"
+      wx:for="{{directorList}}"
+      wx:key="directorId"
+      data-id="{{item.directorId}}"
+      data-name="{{item.nickname}}"
+      bindtap="onSelectDirector"
+    >
+      <view class="left">
+        <view class="avatar-wrap">
+          <t-icon name="user" size="28rpx" color="#3088F4"></t-icon>
+        </view>
+        <view class="info">
+          <text class="name">{{item.nickname}}</text>
+          <text class="phone">{{item.phoneMask}}</text>
+        </view>
+      </view>
+      <view class="check {{selectedDirectorId === item.directorId ? 'checked' : ''}}"></view>
+    </view>
+    <view class="empty" wx:if="{{!loading && directorList.length === 0}}">暂无可选主任</view>
+  </scroll-view>
+
+  <view class="footer">
+    <button class="submit-btn" bindtap="onSubmitBind" disabled="{{submitting || !canSubmit}}">
+      {{!canSubmit ? '当前不可重复绑定' : (submitting ? '提交中...' : '提交绑定申请')}}
+    </button>
+    <text class="hint">提交后主任会收到通知，并在“绑定审核”中处理</text>
+  </view>
+</view>

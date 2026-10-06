@@ -1,0 +1,184 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{loading}}" class="loading-container">
+      <text class="loading-text">{{displayText.loadingText}}</text>
+    </view>
+
+    <view wx:elif="{{appointmentDetail}}" class="detail-container">
+      <!-- 状态卡片 -->
+      <view class="status-card">
+        <view class="status-header">
+          <text class="status-label">{{displayText.statusLabel}}</text>
+        <status-tag type="status" value="{{appointmentDetail.statusText}}"></status-tag>
+        </view>
+        <view class="status-number">
+          <text class="number-label">{{displayText.appointmentNoLabel}}</text>
+          <view class="number-row" bindtap="copyAppointmentNumber">
+            <text class="number-value">{{appointmentDetail.appointmentNumber}}</text>
+            <text class="copy-hint">{{displayText.copyHint}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 学生信息卡片 -->
+      <view class="info-card">
+        <view class="card-title">
+          <t-icon name="user" size="28rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.studentInfoTitle}}</text>
+        </view>
+        <view class="info-section">
+          <view class="info-row">
+            <text class="label">{{displayText.studentNameLabel}}</text>
+            <text class="value">{{appointmentDetail.studentName}}</text>
+          </view>
+          <view class="info-row">
+            <text class="label">{{displayText.idCardLabel}}</text>
+            <text class="value sensitive">{{appointmentDetail.idCard}}</text>
+          </view>
+          <view class="info-row">
+            <text class="label">{{displayText.currentSchoolLabel}}</text>
+            <text class="value {{appointmentDetail.currentSchool === displayText.unfilled ? 'placeholder' : ''}}">{{appointmentDetail.currentSchool}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 家长信息卡片 -->
+      <view class="info-card">
+        <view class="card-title">
+          <t-icon name="call" size="28rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.parentInfoTitle}}</text>
+        </view>
+        <view class="info-section">
+          <view class="info-row">
+            <text class="label">{{displayText.parentNameLabel}}</text>
+            <text class="value">{{appointmentDetail.parentName}}</text>
+          </view>
+          <view class="info-row" bindtap="callPhone">
+            <text class="label">预约联系电话</text>
+            <view class="value-row">
+              <text class="value phone">{{appointmentDetail.appointmentPhone}}</text>
+              <t-icon name="call" size="24rpx" color="#3088F4"></t-icon>
+            </view>
+          </view>
+          <view class="info-row" wx:if="{{appointmentDetail.accountPhone && appointmentDetail.accountPhone !== appointmentDetail.appointmentPhone}}">
+            <text class="label">账号手机号</text>
+            <text class="value phone">{{appointmentDetail.accountPhone}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 预约信息卡片 -->
+      <view class="info-card">
+        <view class="card-title">
+          <t-icon name="calendar" size="28rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.appointmentInfoTitle}}</text>
+        </view>
+        <view class="info-section">
+          <view class="info-row">
+            <text class="label">{{displayText.appointmentTimeLabel}}</text>
+            <text class="value highlight">{{appointmentDetail.appointmentTime}}</text>
+          </view>
+          <view class="info-row">
+            <text class="label">{{displayText.relatedTeacherLabel}}</text>
+            <text class="value">{{appointmentDetail.teacherName}}</text>
+          </view>
+          <view class="info-row">
+            <text class="label">{{displayText.receiveTeacherLabel}}</text>
+            <text class="value">{{appointmentDetail.actualTeacherName}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 备注信息卡片（单独一栏） -->
+      <view class="info-card remark-card">
+        <view class="card-title">
+          <t-icon name="info-circle" size="28rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.remarkLabel}}</text>
+        </view>
+        <view class="remark-content {{appointmentDetail.remark === displayText.none ? 'placeholder' : ''}}">
+          <rich-text nodes="{{formattedRemark}}"></rich-text>
+        </view>
+      </view>
+
+      <!-- 时间记录卡片 -->
+      <view class="info-card time-card">
+        <view class="card-title">
+          <t-icon name="time" size="28rpx" color="#3088F4"></t-icon>
+          <text>{{displayText.timeRecordTitle}}</text>
+        </view>
+        <view class="operation-list" wx:if="{{operationRecords.length}}">
+          <view class="operation-item" wx:for="{{operationRecords}}" wx:key="id" data-id="{{item.logId}}" bindtap="goLogDetail">
+            <view class="operation-head">
+              <text class="operation-type">{{item.typeText}}</text>
+              <text class="operation-time">{{item.time}}</text>
+            </view>
+            <view class="operation-body">
+              <text class="operation-action">{{item.action}}</text>
+              <text class="operation-operator">操作人：{{item.operatorName || item.operator}}</text>
+              <text class="operation-operator" wx:if="{{item.ip}}">操作IP：{{item.ip}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="operation-empty" wx:else>
+          暂无操作记录
+        </view>
+        <view class="operation-tip">
+          记录该预约从提交到核销/取消的关键处理流程
+        </view>
+      </view>
+
+      <!-- 底部占位 -->
+      <view class="bottom-placeholder"></view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:if="{{!loading && !appointmentDetail}}" class="empty-state">
+      <text class="empty-text">{{displayText.emptyBookingDetailNotFound}}</text>
+      <button class="btn-back" bindtap="goBack">{{displayText.btnBackList}}</button>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view wx:if="{{!loading && appointmentDetail}}" class="action-bar safe-area-bottom">
+    <button
+      wx:if="{{appointmentDetail.status === 'pending'}}"
+      class="btn-action btn-danger"
+      bindtap="handleCancel"
+      disabled="{{submitting}}"
+    >
+      {{displayText.btnCancelBooking}}
+    </button>
+    <button
+      wx:if="{{appointmentDetail.status === 'cancelled' || appointmentDetail.status === 'verified'}}"
+      class="btn-action btn-default"
+      bindtap="goBack"
+    >
+      {{displayText.btnBackList}}
+    </button>
+  </view>
+
+  <!-- 管理端取消：填写原因（站内信/订阅消息首行可见） -->
+  <view wx:if="{{showAdminCancelModal}}" class="modal-mask" catchtouchmove="preventTouchMove">
+    <view class="modal-content show" catchtap="stopModalBubble">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.adminCancelModalTitle}}</text>
+        <text class="modal-close" bindtap="closeAdminCancelModal">×</text>
+      </view>
+      <view class="modal-body">
+        <text class="admin-cancel-hint">{{displayText.adminCancelModalHint}}</text>
+        <textarea
+          class="reject-input admin-cancel-textarea"
+          placeholder="{{displayText.adminCancelReasonPlaceholder}}"
+          maxlength="200"
+          value="{{adminCancelReason}}"
+          bindinput="onAdminCancelReasonInput"
+        />
+        <text class="admin-cancel-count">{{adminCancelReasonLength}}/200</text>
+      </view>
+      <view class="modal-footer">
+        <view class="btn-modal-cancel" bindtap="closeAdminCancelModal">{{displayText.adminCancelBtnLater}}</view>
+        <view class="btn-modal-confirm {{submitting ? 'btn-modal-confirm--disabled' : ''}}" bindtap="confirmAdminCancel">{{displayText.adminCancelBtnConfirm}}</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,220 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="card tab-card-wrap">
+      <view class="tab-row">
+        <view
+          class="tab-chip {{activeTab === item.key ? 'active' : ''}}"
+          wx:for="{{configTabs}}"
+          wx:key="key"
+          data-key="{{item.key}}"
+          bindtap="switchTab"
+        >
+          <t-icon name="{{item.icon}}" size="28rpx" color="{{activeTab === item.key ? '#3088F4' : '#666'}}"></t-icon>
+          <text class="tab-chip-text">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <block wx:if="{{activeTab === 'basic'}}">
+      <view class="card">
+        <view class="card-header"><text class="card-title">基础信息</text></view>
+        <view class="form-group">
+          <text class="form-label required">当前运行环境</text>
+          <picker mode="selector" range="{{['develop','trial','release']}}" value="{{formData.runtimeStage === 'develop' ? 0 : (formData.runtimeStage === 'trial' ? 1 : (formData.runtimeStage === 'release' ? 2 : 0))}}" bindchange="onRuntimeStageChange">
+            <view class="form-picker {{formData.runtimeStage ? '' : 'placeholder'}}">{{formData.runtimeStage || '请选择运行环境'}}</view>
+          </picker>
+          <text class="form-hint">定时任务、后台补发消息、后台测试发送等非前端触发场景将读取此运行环境。</text>
+        </view>
+        <view class="form-group"><text class="form-label required">小程序名称</text><input class="form-input" value="{{formData.appName}}" data-field="appName" bindinput="onInputChange" /></view>
+        <view class="form-group"><text class="form-label required">每日预约上限</text><input class="form-input" type="number" value="{{formData.maxBookingsPerDay}}" data-field="maxBookingsPerDay" bindinput="onInputChange" /></view>
+        <view class="form-group"><text class="form-label">提前预约天数</text><input class="form-input" type="number" value="{{formData.advanceDays}}" data-field="advanceDays" bindinput="onInputChange" /></view>
+        <view class="form-group"><text class="form-label">取消预约时限（小时）</text><input class="form-input" type="number" value="{{formData.cancelHours}}" data-field="cancelHours" bindinput="onInputChange" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title required">可预约时间段</text><text class="add-slot-btn" bindtap="showAddSlotPanel">新增</text></view>
+        <view class="slot-list" wx:if="{{timeSlots.length}}">
+          <view class="slot-item {{item.enabled ? '' : 'disabled'}}" wx:for="{{timeSlots}}" wx:key="id">
+            <view class="slot-info">
+              <view class="slot-time-row">
+                <picker mode="time" value="{{item.startTime}}" data-index="{{index}}" bindchange="onSlotStartTimeChange"><text class="time-picker">{{item.startTime}}</text></picker>
+                <text class="time-separator">-</text>
+                <picker mode="time" value="{{item.endTime}}" data-index="{{index}}" bindchange="onSlotEndTimeChange"><text class="time-picker">{{item.endTime}}</text></picker>
+              </view>
+              <text class="slot-status">{{item.enabled ? '已启用' : '已停用'}}</text>
+            </view>
+            <view class="slot-actions">
+              <switch checked="{{item.enabled}}" color="#3088F4" data-index="{{index}}" bindchange="onSlotToggle" />
+              <text class="delete-slot-btn" data-index="{{index}}" bindtap="deleteSlot">删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">预约规则</text></view>
+        <view class="switch-item"><text class="switch-label">必填手机号</text><switch checked="{{rules.requirePhone}}" color="#3088F4" data-field="requirePhone" bindchange="onRuleSwitchChange" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">必填身份证号</text><switch checked="{{rules.requireIdCard}}" color="#3088F4" data-field="requireIdCard" bindchange="onRuleSwitchChange" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">允许当天取消</text><switch checked="{{rules.allowSameDayCancel}}" color="#3088F4" data-field="allowSameDayCancel" bindchange="onRuleSwitchChange" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">预约前提醒配置</text><text class="add-slot-btn" bindtap="openCreateReminder">新增规则</text></view>
+        <view class="reminder-list" wx:if="{{reminderRules.length}}">
+          <view class="reminder-item" wx:for="{{reminderRules}}" wx:key="id">
+            <view class="reminder-head">
+              <view>
+                <text class="reminder-name">{{item.name}}</text>
+                <text class="reminder-meta">{{item.offsetValue}}{{item.offsetUnit === 'minute' ? '分钟' : (item.offsetUnit === 'hour' ? '小时' : '天')}}前{{item.fixedTime ? (' ' + item.fixedTime) : ''}}</text>
+              </view>
+              <switch checked="{{item.enabled}}" color="#3088F4" data-index="{{index}}" bindchange="toggleReminderEnabled" />
+            </view>
+            <text class="reminder-channels">渠道：{{item.channels.inapp ? '站内信 ' : ''}}{{item.channels.subscribe ? '订阅消息 ' : ''}}{{item.channels.sms ? '短信' : ''}}</text>
+            <view class="reminder-actions">
+              <text class="action-link" data-index="{{index}}" bindtap="openEditReminder">编辑</text>
+              <text class="action-link danger" data-index="{{index}}" bindtap="deleteReminderRule">删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:elif="{{activeTab === 'subscribe'}}">
+      <view class="card">
+        <view class="card-header"><text class="card-title">订阅消息开关</text></view>
+        <view class="switch-item"><text class="switch-label">启用订阅消息</text><switch checked="{{notificationConfig.templateConfig.enabled}}" color="#3088F4" data-field="enabled" bindchange="onTemplateConfigSwitch" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">预约成功通知</text><switch checked="{{notificationConfig.templateConfig.appointmentSuccess}}" color="#3088F4" data-field="appointmentSuccess" bindchange="onTemplateConfigSwitch" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">预约取消通知</text><switch checked="{{notificationConfig.templateConfig.appointmentCancel}}" color="#3088F4" data-field="appointmentCancel" bindchange="onTemplateConfigSwitch" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">预约核销通知</text><switch checked="{{notificationConfig.templateConfig.appointmentVerify}}" color="#3088F4" data-field="appointmentVerify" bindchange="onTemplateConfigSwitch" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">模板 ID 配置</text></view>
+        <view class="form-group"><text class="form-label">预约提醒模板ID</text><input class="form-input" value="{{notificationConfig.templateIds.appointmentReminderTemplateId}}" data-field="appointmentReminderTemplateId" bindinput="onTemplateIdInput" /></view>
+        <view class="form-group"><text class="form-label">预约成功模板ID</text><input class="form-input" value="{{notificationConfig.templateIds.successTemplateId}}" data-field="successTemplateId" bindinput="onTemplateIdInput" /></view>
+        <view class="form-group"><text class="form-label">预约取消模板ID</text><input class="form-input" value="{{notificationConfig.templateIds.cancelTemplateId}}" data-field="cancelTemplateId" bindinput="onTemplateIdInput" /></view>
+        <view class="form-group"><text class="form-label">预约核销模板ID</text><input class="form-input" value="{{notificationConfig.templateIds.verifyTemplateId}}" data-field="verifyTemplateId" bindinput="onTemplateIdInput" /></view>
+        <view class="form-group"><text class="form-label">审核通知模板ID</text><input class="form-input" value="{{notificationConfig.templateIds.remindTemplateId}}" data-field="remindTemplateId" bindinput="onTemplateIdInput" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">订阅消息测试</text></view>
+        <view class="notify-test-btn-row">
+          <button class="notify-test-btn" data-action="appointment.testNotifySuccess" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测预约成功</button>
+          <button class="notify-test-btn" data-action="appointment.testNotifyCancel" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测预约取消</button>
+        </view>
+        <view class="notify-test-btn-row">
+          <button class="notify-test-btn" data-action="appointment.testNotifyVerify" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测预约核销</button>
+          <button class="notify-test-btn" data-action="appointment.testNotifyRemind" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测预约提醒</button>
+        </view>
+        <view class="notify-test-btn-row">
+          <button class="notify-test-btn" data-action="binding.testNotifyAuditPending" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测审核待处理</button>
+          <button class="notify-test-btn" data-action="binding.testNotifyAuditApproved" bindtap="runNotifyTest" disabled="{{notifyTesting}}">测审核通过</button>
+        </view>
+        <button class="notify-test-btn all secondary" bindtap="requestSubscribeAuthorization" disabled="{{notifyTesting}}">授权订阅消息</button>
+        <button class="notify-test-btn all" data-action="appointment.testNotifyAll" bindtap="runNotifyTest" disabled="{{notifyTesting}}">{{notifyTesting ? '发送中...' : '一键测试全部通知'}}</button>
+        <view class="notify-test-result" wx:if="{{notifyTestResultText}}"><text selectable>{{notifyTestResultText}}</text></view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="card">
+        <view class="card-header"><text class="card-title">短信开关</text></view>
+        <view class="switch-item"><text class="switch-label">启用验证码短信</text><switch checked="{{smsConfig.smsLoginCodeEnabled}}" color="#3088F4" data-field="smsLoginCodeEnabled" bindchange="onSmsSwitchChange" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">启用体验验证码</text><switch checked="{{smsConfig.debugCodeEnabled}}" color="#3088F4" data-field="debugCodeEnabled" bindchange="onSmsSwitchChange" /></view>
+        <view class="switch-divider"></view>
+        <view class="switch-item"><text class="switch-label">启用预约提醒短信</text><switch checked="{{smsConfig.smsAppointmentReminderEnabled}}" color="#3088F4" data-field="smsAppointmentReminderEnabled" bindchange="onSmsSwitchChange" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">短信服务配置</text></view>
+        <view class="form-group"><text class="form-label">SMS_SECRET_ID</text><input class="form-input" password placeholder="{{smsConfig.masked.hasSecretId ? smsConfig.masked.secretId : '留空则未配置'}}" value="{{smsConfig.secretId}}" data-field="secretId" bindinput="onSmsInput" /></view>
+        <view class="form-group"><text class="form-label">SMS_SECRET_KEY</text><input class="form-input" password placeholder="{{smsConfig.masked.hasSecretKey ? smsConfig.masked.secretKey : '留空则未配置'}}" value="{{smsConfig.secretKey}}" data-field="secretKey" bindinput="onSmsInput" /></view>
+        <view class="form-group"><text class="form-label">SMS_SDK_APP_ID</text><input class="form-input" value="{{smsConfig.sdkAppId}}" data-field="sdkAppId" bindinput="onSmsInput" /></view>
+        <view class="form-group"><text class="form-label">SMS_SIGN_NAME</text><input class="form-input" value="{{smsConfig.signName}}" data-field="signName" bindinput="onSmsInput" /></view>
+        <view class="form-group"><text class="form-label">短信地域</text><input class="form-input" value="{{smsConfig.region}}" data-field="region" bindinput="onSmsInput" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">短信模板配置</text></view>
+        <view class="form-group">
+          <text class="form-label">验证码模板ID</text>
+          <input class="form-input" value="{{smsConfig.templates.loginTemplateId}}" data-field="loginTemplateId" bindinput="onSmsTemplateInput" />
+          <text class="form-hint">申请说明：用于手机号验证码登录。模板变量按顺序为：验证码、有效分钟数。示例文案：您正在登录华襄预约，验证码为{1}，{2}分钟内有效。</text>
+        </view>
+        <view class="form-group">
+          <text class="form-label">预约前一天提醒模板ID</text>
+          <input class="form-input" value="{{smsConfig.templates.appointmentReminderBeforeDayTemplateId}}" data-field="appointmentReminderBeforeDayTemplateId" bindinput="onSmsTemplateInput" />
+          <text class="form-hint">申请说明：用于“按天提前”的预约提醒，如前1天18:00。当前按腾讯云通知短信规则，请申请固定文案模板，不要添加变量。示例文案：您预约的探校活动将于明天开始，请提前安排好行程，并按时到校。</text>
+        </view>
+        <view class="form-group">
+          <text class="form-label">预约前几小时提醒模板ID</text>
+          <input class="form-input" value="{{smsConfig.templates.appointmentReminderBeforeHoursTemplateId}}" data-field="appointmentReminderBeforeHoursTemplateId" bindinput="onSmsTemplateInput" />
+          <text class="form-hint">申请说明：用于“按小时/分钟提前”的临近提醒，如前2小时、前30分钟。当前按腾讯云通知短信规则，请申请固定文案模板，不要添加变量。示例文案：您预约的探校活动即将开始，请准备好预约信息并按时到校。</text>
+        </view>
+        <view class="form-group"><text class="form-label">通用测试短信模板ID</text><input class="form-input" value="{{smsConfig.templates.genericTemplateId}}" data-field="genericTemplateId" bindinput="onSmsTemplateInput" /></view>
+      </view>
+
+      <view class="card">
+        <view class="card-header"><text class="card-title">短信测试</text></view>
+        <button class="notify-test-btn all secondary" bindtap="validateSmsConfig" disabled="{{smsTesting}}">{{smsTesting ? '校验中...' : '保存并校验配置'}}</button>
+        <view class="form-group top-gap"><text class="form-label">测试手机号</text><input class="form-input" value="{{smsTestPhone}}" data-field="smsTestPhone" bindinput="onSmsTestInput" /></view>
+        <view class="form-group"><text class="form-label">测试内容</text><input class="form-input" value="{{smsTestContent}}" data-field="smsTestContent" bindinput="onSmsTestInput" /></view>
+        <view class="notify-test-btn-row">
+          <button class="notify-test-btn" data-scene="login" bindtap="sendSmsTest" disabled="{{smsTesting}}">测验证码模板</button>
+          <button class="notify-test-btn" data-scene="reminder_before_day" bindtap="sendSmsTest" disabled="{{smsTesting}}">测前一天提醒</button>
+        </view>
+        <view class="notify-test-btn-row">
+          <button class="notify-test-btn" data-scene="reminder_before_hours" bindtap="sendSmsTest" disabled="{{smsTesting}}">测临近提醒</button>
+          <button class="notify-test-btn" data-scene="generic" bindtap="sendSmsTest" disabled="{{smsTesting}}">测通用模板</button>
+        </view>
+        <view class="notify-test-result" wx:if="{{smsTestResultText}}"><text selectable>{{smsTestResultText}}</text></view>
+      </view>
+    </block>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <view class="bottom-area">
+    <view class="btn-row">
+      <button class="reset-btn" bindtap="discardChanges">丢弃更改</button>
+      <button class="save-btn {{saving ? 'disabled' : ''}}" bindtap="saveConfig" disabled="{{saving}}">{{saving ? '保存中...' : '保存配置'}}</button>
+    </view>
+  </view>
+
+  <view class="mask {{showAddSlot ? 'show' : ''}}" bindtap="hideAddSlotPanel"></view>
+  <view class="popup {{showAddSlot ? 'show' : ''}}">
+    <view class="popup-header"><text class="popup-title">新增时间段</text><text class="popup-close" bindtap="hideAddSlotPanel">&times;</text></view>
+    <view class="popup-body">
+      <view class="popup-form-group"><text class="popup-label">开始时间</text><picker mode="time" value="{{newSlotStart}}" bindchange="onNewSlotStartChange"><view class="popup-picker {{newSlotStart ? '' : 'placeholder'}}">{{newSlotStart || '请选择开始时间'}}</view></picker></view>
+      <view class="popup-form-group"><text class="popup-label">结束时间</text><picker mode="time" value="{{newSlotEnd}}" bindchange="onNewSlotEndChange"><view class="popup-picker {{newSlotEnd ? '' : 'placeholder'}}">{{newSlotEnd || '请选择结束时间'}}</view></picker></view>
+    </view>
+    <view class="popup-footer"><view class="popup-cancel" bindtap="hideAddSlotPanel">取消</view><view class="popup-confirm" bindtap="confirmAddSlot">确认</view></view>
+  </view>
+
+  <view class="mask {{showReminderPopup ? 'show' : ''}}" bindtap="closeReminderPopup"></view>
+  <view class="popup {{showReminderPopup ? 'show' : ''}}">
+    <view class="popup-header"><text class="popup-title">{{reminderFormMode === 'edit' ? '编辑提醒规则' : '新增提醒规则'}}</text><text class="popup-close" bindtap="closeReminderPopup">&times;</text></view>
+    <view class="popup-body">
+      <view class="popup-form-group"><text class="popup-label">规则名称</text><input class="form-input" value="{{reminderForm.name}}" data-field="name" bindinput="onReminderFieldChange" /></view>
+      <view class="popup-form-group"><text class="popup-label">提前数值</text><input class="form-input" type="number" value="{{reminderForm.offsetValue}}" data-field="offsetValue" bindinput="onReminderFieldChange" /></view>
+      <view class="popup-form-group"><text class="popup-label">时间单位</text>
+        <picker mode="selector" range="{{['minute','hour','day']}}" value="{{reminderForm.offsetUnit === 'minute' ? 0 : (reminderForm.offsetUnit === 'hour' ? 1 : 2)}}" bindchange="onReminderUnitChange">
+          <view class="popup-picker">{{reminderForm.offsetUnit}}</view>
+        </picker>
+      </view>
+      <view class="popup-form-group" wx:if="{{reminderForm.offsetUnit === 'day'}}"><text class="popup-label">固定时间</text><picker mode="time" value="{{reminderForm.fixedTime}}" data-field="fixedTime" bindchange="onReminderFieldChange"><view class="popup-picker {{reminderForm.fixedTime ? '' : 'placeholder'}}">{{reminderForm.fixedTime || '可选，如 18:00'}}</view></picker></view>
+      <view class="switch-item"><text class="switch-label">启用规则</text><switch checked="{{reminderForm.enabled}}" color="#3088F4" data-field="enabled" bindchange="onReminderSwitchChange" /></view>
+      <view class="switch-item"><text class="switch-label">站内信</text><switch checked="{{reminderForm.channels.inapp}}" color="#3088F4" data-field="inapp" bindchange="onReminderChannelChange" /></view>
+      <view class="switch-item"><text class="switch-label">订阅消息</text><switch checked="{{reminderForm.channels.subscribe}}" color="#3088F4" data-field="subscribe" bindchange="onReminderChannelChange" /></view>
+      <view class="switch-item"><text class="switch-label">短信</text><switch checked="{{reminderForm.channels.sms}}" color="#3088F4" data-field="sms" bindchange="onReminderChannelChange" /></view>
+    </view>
+    <view class="popup-footer"><view class="popup-cancel" bindtap="closeReminderPopup">取消</view><view class="popup-confirm" bindtap="saveReminderRule">确认</view></view>
+  </view>
+</view>

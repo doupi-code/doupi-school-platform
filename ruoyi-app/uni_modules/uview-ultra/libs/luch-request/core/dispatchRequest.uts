@@ -1,0 +1,89 @@
+import buildURL from '../helpers/buildURL'
+import buildFullPath from '../core/buildFullPath'
+import settle from '../core/settle'
+
+function strOf(v: any | null, dft: string): string {
+    return v != null ? `${v}` : dft
+}
+
+function asObj(v: any | null): UTSJSONObject {
+    if (v != null && typeof v === 'object' && !Array.isArray(v)) {
+        return v as UTSJSONObject
+    }
+    return {} as UTSJSONObject
+}
+
+// PLACEHOLDER_DISPATCH
+export default function dispatchRequest(config: UTSJSONObject): Promise<any> {
+    return new Promise<any>((resolve: (v: any) => void, reject: (e: any) => void) => {
+        const baseURL = strOf(config['baseURL'], '')
+        const url = strOf(config['url'], '')
+        const fullPath = buildURL(buildFullPath(baseURL, url), config['params'])
+        const header = asObj(config['header'])
+        const method = strOf(config['method'], 'GET')
+
+        // 统一收敛结果并按状态码 settle
+        const finish = (statusCode: number, data: any | null, respHeader: any | null, errMsg: string): void => {
+            let d: any | null = data
+            if (typeof d === 'string') {
+                const parsed = JSON.parseObject(d as string)
+                if (parsed != null) {
+                    d = parsed
+                }
+            }
+            const resp: UTSJSONObject = {} as UTSJSONObject
+            resp['statusCode'] = statusCode
+            resp['data'] = d
+            resp['header'] = respHeader
+            resp['errMsg'] = errMsg
+            config['fullPath'] = fullPath
+            resp['config'] = config
+            settle(resolve, reject, resp)
+        }
+
+        if (method === 'UPLOAD') {
+            uni.uploadFile({
+                url: fullPath,
+                filePath: strOf(config['filePath'], ''),
+                name: strOf(config['name'], 'file'),
+                header: header,
+                formData: asObj(config['formData']),
+                success: (r: UploadFileSuccess) => {
+                    finish(r.statusCode, r.data, null, 'uploadFile:ok')
+                },
+                fail: (e: UploadFileFail) => {
+                    finish(0, null, null, e.errMsg)
+                }
+            })
+        } else if (method === 'DOWNLOAD') {
+            uni.downloadFile({
+                url: fullPath,
+                header: header,
+                success: (r: DownloadFileSuccess) => {
+                    const resp: UTSJSONObject = {} as UTSJSONObject
+                    resp['statusCode'] = r.statusCode
+                    resp['tempFilePath'] = r.tempFilePath
+                    config['fullPath'] = fullPath
+                    resp['config'] = config
+                    settle(resolve, reject, resp)
+                },
+                fail: (e: DownloadFileFail) => {
+                    finish(0, null, null, e.errMsg)
+                }
+            })
+        } else {
+            uni.request({
+                url: fullPath,
+                method: method as RequestMethod,
+                data: config['data'],
+                header: header,
+                success: (r: RequestSuccess<any>) => {
+                    finish(r.statusCode, r.data, r.header, 'request:ok')
+                },
+                fail: (e: RequestFail) => {
+                    finish(0, null, null, e.errMsg)
+                }
+            })
+        }
+    })
+}

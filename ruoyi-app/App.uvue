@@ -1,0 +1,50 @@
+<script lang="uts">
+import { getToken } from '@/utils/auth'
+
+export default {
+  onLaunch: function () {
+    console.log('App Launch')
+    const token = getToken()
+    if (token == null || token == '') {
+      uni.reLaunch({
+        url: '/pages/login/login'
+      })
+    }
+  },
+  onShow: function () {
+    console.log('App Show')
+  },
+  onHide: function () {
+    console.log('App Hide')
+  }
+}
+</script>
+
+<style>
+/* uni-app x 全局样式 - 采用原生 Flex 布局子集 */
+.page-container {
+  flex: 1;
+  background-color: #f6f7f9;
+  flex-direction: column;
+}
+
+.flex-row {
+  flex-direction: row;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+</style>

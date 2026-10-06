@@ -1,0 +1,218 @@
+<template>
+	<up-overlay
+	    :show="!isConnected"
+		:zIndex="zIndex"
+	    @touchmove.stop.prevent="noop"
+		:customStyle="overlayStyle"
+	>
+		<view
+		    class="up-no-network"
+		>
+			<up-icon
+			    :name="image"
+			    size="150"
+			    imgMode="widthFit"
+			    class="up-no-network__error-icon"
+			></up-icon>
+			<text class="up-no-network__tips">{{tips}}</text>
+			<!-- 只有APP平台，才能跳转设置页，因为需要调用plus环境 -->
+			<!-- #ifdef APP-PLUS -->
+			<view class="up-no-network__app">
+				<text class="up-no-network__app__setting">{{ pleaseCheckText }}</text>
+				<text
+				    class="up-no-network__app__to-setting"
+				    @tap="openSettings"
+				>{{ settingsText }}</text>
+			</view>
+			<!-- #endif -->
+			<view class="up-no-network__retry">
+				<up-button
+				    size="mini"
+				    :text="retryText"
+				    type="primary"
+					plain
+				    @click="retry"
+				></up-button>
+			</view>
+		</view>
+	</up-overlay>
+</template>
+
+<script setup lang="uts">
+	import { computed, onMounted, ref } from 'vue'
+	import defProps from './noNetwork.uts'
+	import { toast, getDeviceInfo } from '../../libs/function/index';
+	import { t } from '../../libs/i18n'
+	/**
+	 * noNetwork 无网络提示
+	 * @description 该组件无需任何配置，引入即可，内部自动处理所有功能和事件。
+	 * @tutorial https://uview-plus.jiangruyi.com/components/noNetwork.html
+	 * @property {String}			tips 	没有网络时的提示语 （默认：'哎呀，网络信号丢失' ）
+	 * @property {String | Number}	zIndex	组件的z-index值 
+	 * @property {String}			image	无网络的图片提示，可用的src地址或base64图片 
+	 * @example <up-no-network></up-no-network>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-no-network'
+	})
+
+	const props = defineProps({
+		// 页面文字提示
+		tips: {
+			type: String,
+			default: defProps.getString('noNetwork.tips')
+		},
+		// 一个z-index值，用于设置没有网络这个组件的层次
+		zIndex: {
+			type: [String, Number],
+			default: defProps.getString('noNetwork.zIndex')
+		},
+		// image 没有网络的图片提示
+		image: {
+			type: String,
+			default: defProps.getString('noNetwork.image')
+		}
+	})
+
+	const emit = defineEmits(['disconnected', 'connected', 'retry'])
+
+	const isConnected = ref(true) // 是否有网络连接
+	const networkType = ref('none') // 网络类型
+	const isIOS = ref(false)
+
+	const overlayStyle = computed((): UTSJSONObject => {
+		const style = {} as UTSJSONObject
+		style['backgroundColor'] = '#fff'
+		style['display'] = 'flex'
+		style['justifyContent'] = 'center'
+		return style
+	})
+
+	const pleaseCheckText = computed((): string => {
+		return t('up.noNetwork.pleaseCheck')
+	})
+
+	const settingsText = computed((): string => {
+		return t('up.common.settings')
+	})
+
+	const retryText = computed((): string => {
+		return t('up.common.retry')
+	})
+
+	const noop = (e: UniEvent): void => {
+		e.stopPropagation()
+	}
+
+	// 发出事件给父组件
+	const emitEvent = (networkTypeValue: string): void => {
+		if (networkTypeValue === 'none') {
+			emit('disconnected')
+		} else {
+			emit('connected')
+		}
+	}
+
+	const retry = (): void => {
+		// 重新检查网络
+		uni.getNetworkType({
+			success: (res: GetNetworkTypeSuccess) => {
+				networkType.value = res.networkType
+				emitEvent(networkType.value)
+				if (res.networkType == 'none') {
+					toast(t('up.noNetwork.disconnect'))
+					isConnected.value = false
+				} else {
+					toast(t('up.noNetwork.connect'))
+					isConnected.value = true
+				}
+			}
+		})
+		emit('retry')
+	}
+
+	const gotoAppSetting = (): void => {
+		// 保留原 5+ 设置页实现占位
+	}
+
+	const gotoiOSSetting = (): void => {
+		// 保留原 5+ 设置页实现占位
+	}
+
+	const gotoAndroidSetting = (): void => {
+		// 保留原 5+ 设置页实现占位
+	}
+
+	const openSystemSettings = (): void => {
+		// 以下方法来自5+范畴，如需深究，请自行查阅相关文档
+		// https://ask.dcloud.net.cn/docs/
+		if (isIOS.value) {
+			gotoiOSSetting()
+		} else {
+			gotoAndroidSetting()
+		}
+	}
+
+	const openSettings = async (): Promise<void> => {
+		if (networkType.value == 'none') {
+			openSystemSettings()
+			return
+		}
+	}
+
+	onMounted(() => {
+		isIOS.value = (getDeviceInfo().platform === 'ios')
+		uni.onNetworkStatusChange((res: OnNetworkStatusChangeCallbackResult) => {
+			isConnected.value = res.isConnected
+			networkType.value = res.networkType
+			emitEvent(networkType.value)
+		})
+		uni.getNetworkType({
+			success: (res: GetNetworkTypeSuccess) => {
+				networkType.value = res.networkType
+				emitEvent(networkType.value)
+				isConnected.value = res.networkType != 'none'
+			}
+		})
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+
+	.up-no-network {
+		@include flex(column);
+		justify-content: center;
+		align-items: center;
+		margin-top: -100px;
+
+		&__tips {
+			color: $up-tips-color;
+			font-size: 14px;
+			margin-top: 15px;
+		}
+
+		&__app {
+			@include flex(row);
+			margin-top: 6px;
+
+			&__setting {
+				color: $up-light-color;
+				font-size: 13px;
+			}
+
+			&__to-setting {
+				font-size: 13px;
+				color: $up-primary;
+				margin-left: 3px;
+			}
+		}
+
+		&__retry {
+			@include flex(row);
+			justify-content: center;
+			margin-top: 15px;
+		}
+	}
+</style>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.edu.mapper.EduClassMapper">
+    
+    <resultMap type="EduClass" id="EduClassResult">
+        <result property="classId"    column="class_id"    />
+        <result property="grade"    column="grade"    />
+        <result property="className"    column="class_name"    />
+        <result property="studentNum"    column="student_num"    />
+        <result property="headTeacherId" column="head_teacher_id" />
+        <result property="headTeacher"   column="head_teacher"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectEduClassVo">
+        select class_id, grade, class_name, student_num, head_teacher_id, head_teacher, create_by, create_time, update_by, update_time, del_flag from edu_class
+    </sql>
+
+    <select id="selectEduClassList" parameterType="EduClass" resultMap="EduClassResult">
+        <include refid="selectEduClassVo"/>
+        <where>  
+            and del_flag = '0'
+            <if test="grade != null  and grade != ''"> and grade = #{grade}</if>
+            <if test="className != null  and className != ''"> and class_name like concat('%', #{className}, '%')</if>
+            <if test="studentNum != null "> and student_num = #{studentNum}</if>
+            <if test="headTeacher != null  and headTeacher != ''"> and head_teacher like concat('%', #{headTeacher}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectEduClassByClassId" parameterType="Long" resultMap="EduClassResult">
+        <include refid="selectEduClassVo"/>
+        where class_id = #{classId}
+    </select>
+
+    <insert id="insertEduClass" parameterType="EduClass" useGeneratedKeys="true" keyProperty="classId">
+        insert into edu_class
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="grade != null and grade != ''">grade,</if>
+            <if test="className != null and className != ''">class_name,</if>
+            <if test="studentNum != null">student_num,</if>
+            <if test="headTeacherId != null">head_teacher_id,</if>
+            <if test="headTeacher != null and headTeacher != ''">head_teacher,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="grade != null and grade != ''">#{grade},</if>
+            <if test="className != null and className != ''">#{className},</if>
+            <if test="studentNum != null">#{studentNum},</if>
+            <if test="headTeacherId != null">#{headTeacherId},</if>
+            <if test="headTeacher != null and headTeacher != ''">#{headTeacher},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduClass" parameterType="EduClass">
+        update edu_class
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="grade != null and grade != ''">grade = #{grade},</if>
+            <if test="className != null and className != ''">class_name = #{className},</if>
+            <if test="studentNum != null">student_num = #{studentNum},</if>
+            <if test="headTeacherId != null">head_teacher_id = #{headTeacherId},</if>
+            <if test="headTeacher != null">head_teacher = #{headTeacher},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where class_id = #{classId}
+    </update>
+
+    <update id="deleteEduClassByClassId" parameterType="Long">
+        update edu_class set del_flag = '2' where class_id = #{classId}
+    </update>
+
+    <update id="deleteEduClassByClassIds" parameterType="String">
+        update edu_class set del_flag = '2' where class_id in 
+        <foreach item="classId" collection="array" open="(" separator="," close=")">
+            #{classId}
+        </foreach>
+    </update>
+</mapper>

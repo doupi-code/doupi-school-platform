@@ -1,0 +1,25 @@
+<template>
+	<picker-view-column>
+		<view class="up-picker-column">
+		</view>
+	</picker-view-column>
+</template>
+
+<script setup lang="uts">
+	/**
+	 * PickerColumn 
+	 * @description 
+	 * @tutorial url
+	 * @property {String}
+	 * @event {Function}
+	 * @example
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-picker-column'
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+</style>

@@ -1,0 +1,516 @@
+{
+  "backend": [
+    {
+      "name": "系统基础 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/system/SysUserController.java",
+      "exists": true,
+      "detail": "9.7 KB",
+      "requirement": "系统用户增删改查、分配角色"
+    },
+    {
+      "name": "系统角色 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/system/SysRoleController.java",
+      "exists": true,
+      "detail": "9.0 KB",
+      "requirement": "系统角色权限与数据权限维护"
+    },
+    {
+      "name": "系统菜单 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/system/SysMenuController.java",
+      "exists": true,
+      "detail": "5.9 KB",
+      "requirement": "动态路由菜单树结构提供"
+    },
+    {
+      "name": "教务文印 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/edu/EduPrintRecordController.java",
+      "exists": true,
+      "detail": "6.3 KB",
+      "requirement": "教务文印审批与登记"
+    },
+    {
+      "name": "教务教师 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/edu/EduTeacherController.java",
+      "exists": true,
+      "detail": "3.5 KB",
+      "requirement": "教师花名册档案管理"
+    },
+    {
+      "name": "教务班级 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/edu/EduClassController.java",
+      "exists": true,
+      "detail": "3.3 KB",
+      "requirement": "班级列表与学员归属"
+    },
+    {
+      "name": "教务庆典 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/edu/EduCelebrationController.java",
+      "exists": true,
+      "detail": "5.8 KB",
+      "requirement": "校园庆典活动与排期"
+    },
+    {
+      "name": "库存物资 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/stock/StockGoodsController.java",
+      "exists": true,
+      "detail": "3.5 KB",
+      "requirement": "库存物资基本档案"
+    },
+    {
+      "name": "库存出入库 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/stock/StockInController.java",
+      "exists": true,
+      "detail": "3.7 KB",
+      "requirement": "物资入库单与审核"
+    },
+    {
+      "name": "库存出库 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/stock/StockOutController.java",
+      "exists": true,
+      "detail": "3.8 KB",
+      "requirement": "物资出库领用单"
+    },
+    {
+      "name": "库存盘点 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/stock/StockCheckController.java",
+      "exists": true,
+      "detail": "5.1 KB",
+      "requirement": "库存盘点与损益台账"
+    },
+    {
+      "name": "大屏监控 Controller",
+      "path": "doupi-server/doupi-admin/src/main/java/com/doupi/web/controller/screen/DoupiScreenController.java",
+      "exists": true,
+      "detail": "35.9 KB",
+      "requirement": "招生全景大屏与实时推送"
+    },
+    {
+      "name": "招生预约 Controller",
+      "path": "doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/DoupiRecruitAppointmentController.java",
+      "exists": true,
+      "detail": "4.6 KB",
+      "requirement": "访校预约管理与状态变更"
+    },
+    {
+      "name": "招生微信网关分发器",
+      "path": "doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/DoupiWxDispatcherController.java",
+      "exists": true,
+      "detail": "5.5 KB",
+      "requirement": "策略模式轻量网关分发器"
+    },
+    {
+      "name": "网关 Action 处理器集",
+      "path": "doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/handler/impl",
+      "exists": true,
+      "detail": "目录存在",
+      "requirement": "14个独立拆分的安全处理器"
+    },
+    {
+      "name": "后端打包产物 JAR",
+      "path": "doupi-server/doupi-admin/target/doupi-admin.jar",
+      "exists": true,
+      "detail": "131889.4 KB",
+      "requirement": "Spring Boot 4 生产可执行 JAR"
+    }
+  ],
+  "adminWeb": [
+    {
+      "name": "仪表盘工作台",
+      "path": "doupi-web-admin-react/src/pages/dashboard/index.tsx",
+      "exists": true,
+      "detail": "6.1 KB",
+      "requirement": "角色自适应工作台与 KPI 汇总"
+    },
+    {
+      "name": "全景数据大屏",
+      "path": "doupi-web-admin-react/src/pages/screen/index.tsx",
+      "exists": true,
+      "detail": "4.7 KB",
+      "requirement": "1920x1080 数字化招生监控大屏"
+    },
+    {
+      "name": "用户管理页面",
+      "path": "doupi-web-admin-react/src/pages/system/user/index.tsx",
+      "exists": true,
+      "detail": "11.6 KB",
+      "requirement": "用户列表、状态开关、重置密码"
+    },
+    {
+      "name": "角色管理页面",
+      "path": "doupi-web-admin-react/src/pages/system/role/index.tsx",
+      "exists": true,
+      "detail": "7.1 KB",
+      "requirement": "角色赋权、菜单授权树"
+    },
+    {
+      "name": "菜单管理页面",
+      "path": "doupi-web-admin-react/src/pages/system/menu/index.tsx",
+      "exists": true,
+      "detail": "7.7 KB",
+      "requirement": "动态路由菜单增删改"
+    },
+    {
+      "name": "部门管理页面",
+      "path": "doupi-web-admin-react/src/pages/system/dept/index.tsx",
+      "exists": true,
+      "detail": "6.5 KB",
+      "requirement": "组织架构树形维护"
+    },
+    {
+      "name": "字典管理页面",
+      "path": "doupi-web-admin-react/src/pages/system/dict/index.tsx",
+      "exists": true,
+      "detail": "6.5 KB",
+      "requirement": "数据字典类型与键值维护"
+    },
+    {
+      "name": "参数设置页面",
+      "path": "doupi-web-admin-react/src/pages/system/config/index.tsx",
+      "exists": true,
+      "detail": "5.9 KB",
+      "requirement": "全局业务与系统参数键值"
+    },
+    {
+      "name": "通知公告页面",
+      "path": "doupi-web-admin-react/src/pages/system/notice/index.tsx",
+      "exists": true,
+      "detail": "5.8 KB",
+      "requirement": "全校通知公告发布与展示"
+    },
+    {
+      "name": "招生看板页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/dashboard/index.tsx",
+      "exists": true,
+      "detail": "6.9 KB",
+      "requirement": "招生转化漏斗与统计图表"
+    },
+    {
+      "name": "预约记录页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/appointment/index.tsx",
+      "exists": true,
+      "detail": "8.6 KB",
+      "requirement": "访校预约审核、改期与导出"
+    },
+    {
+      "name": "现场核销页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/verify/index.tsx",
+      "exists": true,
+      "detail": "6.8 KB",
+      "requirement": "入校核销码/扫码核销登记"
+    },
+    {
+      "name": "教师绑定页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/binding/index.tsx",
+      "exists": true,
+      "detail": "5.5 KB",
+      "requirement": "招生老师与专属二维码绑定审核"
+    },
+    {
+      "name": "校区信息页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/campus/index.tsx",
+      "exists": true,
+      "detail": "5.2 KB",
+      "requirement": "校区图文风采与基本信息维护"
+    },
+    {
+      "name": "招生配置页面",
+      "path": "doupi-web-admin-react/src/pages/recruit/config/index.tsx",
+      "exists": true,
+      "detail": "5.0 KB",
+      "requirement": "访校预约时段与规则配置"
+    },
+    {
+      "name": "文印登记页面",
+      "path": "doupi-web-admin-react/src/pages/edu/record/index.tsx",
+      "exists": true,
+      "detail": "13.2 KB",
+      "requirement": "文印打印分步审批与台账"
+    },
+    {
+      "name": "极速上传组件",
+      "path": "doupi-web-admin-react/src/components/FileDropUpload/index.tsx",
+      "exists": true,
+      "detail": "7.0 KB",
+      "requirement": "拖拽及剪贴板粘贴直接上传附件"
+    },
+    {
+      "name": "教师档案页面",
+      "path": "doupi-web-admin-react/src/pages/edu/teacher/index.tsx",
+      "exists": true,
+      "detail": "5.7 KB",
+      "requirement": "教职工档案花名册"
+    },
+    {
+      "name": "班级管理页面",
+      "path": "doupi-web-admin-react/src/pages/edu/class/index.tsx",
+      "exists": true,
+      "detail": "5.3 KB",
+      "requirement": "班级年级列表管理"
+    },
+    {
+      "name": "校园庆典页面",
+      "path": "doupi-web-admin-react/src/pages/edu/celebration/index.tsx",
+      "exists": true,
+      "detail": "5.1 KB",
+      "requirement": "大型活动与庆典排期管理"
+    },
+    {
+      "name": "教务报表页面",
+      "path": "doupi-web-admin-react/src/pages/edu/report/index.tsx",
+      "exists": true,
+      "detail": "3.7 KB",
+      "requirement": "教务文印汇总与月度趋势报表"
+    },
+    {
+      "name": "物资品类页面",
+      "path": "doupi-web-admin-react/src/pages/stock/goods/index.tsx",
+      "exists": true,
+      "detail": "5.5 KB",
+      "requirement": "库存物资基本信息与阈值预警"
+    },
+    {
+      "name": "供应商页面",
+      "path": "doupi-web-admin-react/src/pages/stock/supplier/index.tsx",
+      "exists": true,
+      "detail": "4.6 KB",
+      "requirement": "供应商档案管理"
+    },
+    {
+      "name": "入库单管理",
+      "path": "doupi-web-admin-react/src/pages/stock/in/index.tsx",
+      "exists": true,
+      "detail": "8.3 KB",
+      "requirement": "物资入库单创建与审批"
+    },
+    {
+      "name": "出库单管理",
+      "path": "doupi-web-admin-react/src/pages/stock/out/index.tsx",
+      "exists": true,
+      "detail": "7.7 KB",
+      "requirement": "物资出库申请与领用审批"
+    },
+    {
+      "name": "物资盘点页面",
+      "path": "doupi-web-admin-react/src/pages/stock/check/index.tsx",
+      "exists": true,
+      "detail": "4.9 KB",
+      "requirement": "库存盘点录入与盈亏计算"
+    },
+    {
+      "name": "库存明细报表",
+      "path": "doupi-web-admin-react/src/pages/stock/report/detail.tsx",
+      "exists": true,
+      "detail": "2.0 KB",
+      "requirement": "物资出入库流水明细台账"
+    },
+    {
+      "name": "库存月度报表",
+      "path": "doupi-web-admin-react/src/pages/stock/report/monthly.tsx",
+      "exists": true,
+      "detail": "3.6 KB",
+      "requirement": "按月度维度统计物资进销存总账"
+    },
+    {
+      "name": "在线用户监控",
+      "path": "doupi-web-admin-react/src/pages/monitor/online/index.tsx",
+      "exists": true,
+      "detail": "2.5 KB",
+      "requirement": "当前在线 Session 强退与查询"
+    },
+    {
+      "name": "操作日志监控",
+      "path": "doupi-web-admin-react/src/pages/monitor/operlog/index.tsx",
+      "exists": true,
+      "detail": "3.4 KB",
+      "requirement": "管理员业务操作留痕审计"
+    },
+    {
+      "name": "登录日志监控",
+      "path": "doupi-web-admin-react/src/pages/monitor/logininfor/index.tsx",
+      "exists": true,
+      "detail": "3.9 KB",
+      "requirement": "登录日志与异常 IP 拦截审计"
+    },
+    {
+      "name": "定时任务监控",
+      "path": "doupi-web-admin-react/src/pages/monitor/job/index.tsx",
+      "exists": true,
+      "detail": "6.7 KB",
+      "requirement": "Quartz 任务增删改查与即时执行"
+    },
+    {
+      "name": "缓存监控页面",
+      "path": "doupi-web-admin-react/src/pages/monitor/cache/index.tsx",
+      "exists": true,
+      "detail": "4.3 KB",
+      "requirement": "Redis 内存占用/命令统计图表"
+    },
+    {
+      "name": "管理端构建产物",
+      "path": "doupi-web-admin-react/dist/index.html",
+      "exists": true,
+      "detail": "1.7 KB",
+      "requirement": "Vite 生产打包静态资源文件"
+    }
+  ],
+  "clientWeb": [
+    {
+      "name": "门户首页",
+      "path": "doupi-web-client-react/src/pages/home/index.tsx",
+      "exists": true,
+      "detail": "2.3 KB",
+      "requirement": "校园品牌宣传与特色展示首页"
+    },
+    {
+      "name": "关于学校",
+      "path": "doupi-web-client-react/src/pages/about/index.tsx",
+      "exists": true,
+      "detail": "1.8 KB",
+      "requirement": "办学理念、历史沿革与校园环境"
+    },
+    {
+      "name": "名师风采",
+      "path": "doupi-web-client-react/src/pages/teachers/index.tsx",
+      "exists": true,
+      "detail": "1.6 KB",
+      "requirement": "特级教师与骨干名师团队介绍"
+    },
+    {
+      "name": "校园风采",
+      "path": "doupi-web-client-react/src/pages/gallery/index.tsx",
+      "exists": true,
+      "detail": "1.5 KB",
+      "requirement": "校区相册与校园环境画廊"
+    },
+    {
+      "name": "在线访校预约",
+      "path": "doupi-web-client-react/src/pages/appointment/index.tsx",
+      "exists": true,
+      "detail": "5.7 KB",
+      "requirement": "家长在线预约提交并生成核销码"
+    },
+    {
+      "name": "预约记录查询",
+      "path": "doupi-web-client-react/src/pages/query/index.tsx",
+      "exists": true,
+      "detail": "4.0 KB",
+      "requirement": "手机号一键查询名下预约状态与核销凭证"
+    },
+    {
+      "name": "客户端网关通信",
+      "path": "doupi-web-client-react/src/api/dispatcher.ts",
+      "exists": true,
+      "detail": "1.3 KB",
+      "requirement": "统一微信/Web网关调用封装"
+    },
+    {
+      "name": "用户端构建产物",
+      "path": "doupi-web-client-react/dist/index.html",
+      "exists": true,
+      "detail": "0.5 KB",
+      "requirement": "Vite 生产打包静态资源文件"
+    }
+  ],
+  "miniPrograms": [
+    {
+      "name": "单AppID统一小程序配置",
+      "path": "doupi-app/app.json",
+      "exists": true,
+      "detail": "2.2 KB",
+      "requirement": "包含主包14个页面与pages/admin独立分包23个页面"
+    },
+    {
+      "name": "统一小程序网络层",
+      "path": "doupi-app/utils/cloudClient.js",
+      "exists": true,
+      "detail": "5.0 KB",
+      "requirement": "真实 Bearer Token 注入与 401 自动清理"
+    },
+    {
+      "name": "统一小程序管理大盘",
+      "path": "doupi-app/pages/admin/dashboard/dashboard.js",
+      "exists": true,
+      "detail": "12.7 KB",
+      "requirement": "教师工作台主入口与返回门户首页联动"
+    },
+    {
+      "name": "统一小程序自定义TabBar",
+      "path": "doupi-app/custom-tab-bar/index.js",
+      "exists": true,
+      "detail": "1.6 KB",
+      "requirement": "动态两项主底栏导航"
+    },
+    {
+      "name": "客户端小程序配置",
+      "path": "doupi-app-client/app.json",
+      "exists": true,
+      "detail": "1.2 KB",
+      "requirement": "包含14个用户端页面定义与TabBar"
+    },
+    {
+      "name": "管理端小程序配置",
+      "path": "doupi-app-admin/app.json",
+      "exists": true,
+      "detail": "1.9 KB",
+      "requirement": "包含26个移动工作台管理页面定义"
+    },
+    {
+      "name": "双端公共文件同步",
+      "path": "scripts/sync-shared.js",
+      "exists": true,
+      "detail": "4.1 KB",
+      "requirement": "保障小程序双端公共工具与样式的一致性"
+    }
+  ],
+  "deployment": [
+    {
+      "name": "Docker 生产编排",
+      "path": "deploy/docker-compose.yml",
+      "exists": true,
+      "detail": "3.9 KB",
+      "requirement": "MySQL 8.0 + Redis 7.2 + Spring Boot + Nginx 集群"
+    },
+    {
+      "name": "Nginx 统一网关配置",
+      "path": "deploy/nginx/conf.d/doupi.conf",
+      "exists": true,
+      "detail": "4.4 KB",
+      "requirement": "反代、Gzip全站加速、静态缓存与SSE透传"
+    },
+    {
+      "name": "后端生产 Dockerfile",
+      "path": "deploy/docker/Dockerfile.server",
+      "exists": true,
+      "detail": "1.1 KB",
+      "requirement": "Java 17 JRE 镜像构建、字体与OCR依赖"
+    },
+    {
+      "name": "环境变量模板文件",
+      "path": "deploy/.env.example",
+      "exists": true,
+      "detail": "0.5 KB",
+      "requirement": "生产环境安全密钥与配置项模板"
+    },
+    {
+      "name": "一键编译启动(Linux)",
+      "path": "deploy/deploy.sh",
+      "exists": true,
+      "detail": "1.8 KB",
+      "requirement": "生产云服务器自动化全链路打包与启动脚本"
+    },
+    {
+      "name": "一键编译启动(Win)",
+      "path": "deploy/deploy.bat",
+      "exists": true,
+      "detail": "1.5 KB",
+      "requirement": "Windows 本地与测试服务器一键批处理启动脚本"
+    },
+    {
+      "name": "数据库自动备份脚本",
+      "path": "deploy/backup-db.sh",
+      "exists": true,
+      "detail": "0.9 KB",
+      "requirement": "每日定时热备份与过期归档删除"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Doupi Management System Test Backend Service
+After=network.target mysql.service redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/data/doupi-test
+ExecStart=/data/doupi-test/start.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/data/doupi-test/logs/console.log
+StandardError=append:/data/doupi-test/logs/error.log
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

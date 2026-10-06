@@ -1,0 +1,155 @@
+<template>
+  <scroll-view class="notice-list-page" scroll-y="true">
+    <!-- 顶部类型切换 (使用 up-tabs 组件) -->
+    <view class="seg-header">
+      <up-tabs 
+        :list="tabs" 
+        lineColor="#165DFF"
+        activeStyle="color: #165DFF; font-weight: bold;"
+        @click="handleTabClick"
+      ></up-tabs>
+    </view>
+
+    <!-- 列表展示 (使用 up-tag 组件) -->
+    <view class="list-container">
+      <view 
+        class="notice-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index" 
+        @click="navDetail(item)"
+      >
+        <view class="card-top">
+          <up-tag 
+            :type="item.noticeType === '1' ? 'primary' : 'warning'" 
+            :text="item.noticeType === '1' ? '通知' : '公告'" 
+            size="mini"
+          ></up-tag>
+          <text class="notice-date">{{ item.createTime }}</text>
+        </view>
+        <text class="notice-title">{{ item.noticeTitle }}</text>
+        <text class="notice-brief">{{ item.brief }}</text>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="data" 
+        text="暂无相关通知公告"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+type NoticeItem = {
+  noticeId: number
+  noticeTitle: string
+  noticeType: string
+  createTime: string
+  brief: string
+}
+
+export default {
+  data() {
+    return {
+      currentTab: '',
+      tabs: [
+        { name: '全部', value: '' },
+        { name: '通知', value: '1' },
+        { name: '公告', value: '2' }
+      ],
+      list: [
+        {
+          noticeId: 1,
+          noticeTitle: '关于 2026 年秋季学期开学及访校接待工作的通知',
+          noticeType: '1',
+          createTime: '2026-09-01',
+          brief: '请各教研组做好教学文印筹备与开学访校接待工作安排。'
+        },
+        {
+          noticeId: 2,
+          noticeTitle: '校园综合管理系统全面升级原生性能的公告',
+          noticeType: '2',
+          createTime: '2026-09-15',
+          brief: '移动端架构已升级至 uni-app x 原生渲染模式，支持鸿蒙 HarmonyOS NEXT。'
+        }
+      ] as NoticeItem[]
+    }
+  },
+  computed: {
+    filteredList(): NoticeItem[] {
+      if (this.currentTab === '') {
+        return this.list
+      }
+      return this.list.filter((item: NoticeItem): boolean => item.noticeType === this.currentTab)
+    }
+  },
+  methods: {
+    handleTabClick(item: any) {
+      const obj = item as UTSJSONObject
+      if (obj != null && obj['value'] != null) {
+        this.currentTab = obj['value'] as string
+      }
+    },
+    navDetail(item: NoticeItem) {
+      uni.navigateTo({
+        url: '/pages/work/notice/detail?id=' + item.noticeId
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.notice-list-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.seg-header {
+  background-color: #FFFFFF;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid #F2F3F5;
+}
+
+.list-container {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.notice-card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.card-top {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.notice-date {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.notice-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1D2129;
+  margin-bottom: 6px;
+}
+
+.notice-brief {
+  font-size: 13px;
+  color: #4E5969;
+  line-height: 20px;
+}
+</style>

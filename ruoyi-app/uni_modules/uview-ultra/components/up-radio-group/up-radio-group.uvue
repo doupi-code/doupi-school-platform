@@ -1,0 +1,211 @@
+<template>
+	<view
+	    class="up-radio-group"
+	    :class="bemClass"
+	>
+		<slot></slot>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed, watch } from 'vue';
+	import defProps from './radioGroup.uts';
+	import defPropsRadio from '../up-radio/radio.uts';
+	import { bem } from '../../libs/function/index.uts';
+	import { useUltraUI } from '../../libs/composable/useUltraUI.uts';
+	/**
+	 * radioRroup 单选框父组件
+	 * @author jry ijry@qq.com
+	 * @description 单选框用于有一个选择，用户只能选择其中一个的场景。搭配up-radio使用
+	 * @tutorial https://ijry.github.io/uview-plus/components/radio.html
+	 * @property {String | Number | Boolean}	value 			绑定的值
+	 * @property {Boolean}						disabled		是否禁用所有radio（默认 false ）
+	 * @property {String}						shape			外观形状，shape-方形，circle-圆形(默认 circle )
+	 * @property {String}						activeColor		选中时的颜色，应用到所有子Radio组件（默认 '#2979ff' ）
+	 * @property {String}						inactiveColor	未选中的颜色 (默认 '#c8c9cc' )
+	 * @property {String}						name			标识符
+	 * @property {String | Number}				size			组件整体的大小，单位px（默认 18 ）
+	 * @property {String}						placement		布局方式，row-横向，column-纵向 （默认 'row' ）
+	 * @property {String}						label			文本
+	 * @property {String}						labelColor		label的颜色 （默认 '#303133' ）
+	 * @property {String | Number}				labelSize		label的字体大小，px单位 （默认 14 ）
+	 * @property {Boolean}						labelDisabled	是否禁止点击文本操作checkbox(默认 false )
+	 * @property {String}						iconColor		图标颜色 （默认 '#ffffff' ）
+	 * @property {String | Number}				iconSize		图标的大小，单位px （默认 12 ）
+	 * @property {Boolean}						borderBottom	placement为row时，是否显示下边框 （默认 false ）
+	 * @property {String}						iconPlacement	图标与文字的对齐方式 （默认 'left' ）
+     * @property {Object}						customStyle		组件的样式，对象形式
+	 * @event {Function} change 任一个radio状态发生变化时触发
+	 * @example <up-radio-group v-model="value"></up-radio-group>
+	 */
+	const { children, getChildren, addChild } = useUltraUI()
+
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-radio-group'
+	})
+
+	const props = defineProps({
+		// 绑定的值
+		modelValue: {
+			type: [String, Number, Boolean],
+			default: (defProps['radioGroup'] as UTSJSONObject)['value']
+		},
+		// 是否禁用全部radio
+		disabled: {
+			type: Boolean,
+			default: (defProps['radioGroup'] as UTSJSONObject)['disabled']
+		},
+		// 形状，circle-圆形，square-方形
+		shape: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['shape']
+		},
+		// 选中状态下的颜色，如设置此值，将会覆盖parent的activeColor值
+		activeColor: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['activeColor']
+		},
+		// 未选中的颜色
+		inactiveColor: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['inactiveColor']
+		},
+		// 标识符
+		name: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['name']
+		},
+		// 整个组件的尺寸，默认px
+		size: {
+			type: [String, Number],
+			default: (defProps['radioGroup'] as UTSJSONObject)['size']
+		},
+		// 布局方式，row-横向，column-纵向
+		placement: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['placement']
+		},
+		// label的文本
+		label: {
+			type: [String],
+			default: (defProps['radioGroup'] as UTSJSONObject)['label']
+		},
+		// label的颜色 （默认 '#303133' ）
+		labelColor: {
+			type: [String],
+			default: (defProps['radioGroup'] as UTSJSONObject)['labelColor']
+		},
+		// label的字体大小，px单位
+		labelSize: {
+			type: [String, Number],
+			default: (defProps['radioGroup'] as UTSJSONObject)['labelSize']
+		},
+		// 是否禁止点击文本操作checkbox(默认 false )
+		labelDisabled: {
+			type: Boolean,
+			default: (defProps['radioGroup'] as UTSJSONObject)['labelDisabled']
+		},
+		// 图标颜色
+		iconColor: {
+			type: String,
+			default: (defProps['radioGroup'] as UTSJSONObject)['iconColor']
+		},
+		// 图标的大小，单位px
+		iconSize: {
+			type: [String, Number],
+			default: (defProps['radioGroup'] as UTSJSONObject)['iconSize']
+		},
+		// 竖向配列时，是否显示下划线
+		borderBottom: {
+			type: Boolean,
+			default: (defProps['radioGroup'] as UTSJSONObject)['borderBottom']
+		},
+		// 图标与文字的对齐方式
+		iconPlacement: {
+			type: String,
+			default: (defPropsRadio['radio'] as UTSJSONObject)['iconPlacement']
+		}
+	})
+
+	const emit = defineEmits(['update:modelValue', 'change'])
+
+	// 这里computed的变量，都是子组件up-radio需要用到的，由于头条小程序的兼容性差异，子组件无法实时监听父组件参数的变化
+	const parentDataSelf = computed((): UTSJSONObject => {
+		return {
+			modelValue: props.modelValue,
+			disabled: props.disabled,
+			inactiveColor: props.inactiveColor,
+			activeColor: props.activeColor,
+			size: props.size,
+			labelColor: props.labelColor,
+			labelDisabled: props.labelDisabled,
+			labelSize: props.labelSize,
+			shape: props.shape,
+			iconColor: props.iconColor,
+			iconSize: props.iconSize,
+			iconPlacement: props.iconPlacement,
+			borderBottom: props.borderBottom,
+			placement: props.placement,
+		} as UTSJSONObject
+	})
+
+	const bemClass = computed((): string => {
+		const placement = props.placement
+		return bem('radio-group', [placement != null ? placement.toString() : 'row'], [])
+	})
+
+	// 将其他的radio设置为未选中的状态
+	const unCheckedOther = (childInstance: ComponentPublicInstance): void => {
+		children.value.map((child: ComponentPublicInstance) => {
+			// 所有子radio中，被操作组件实例的checked的值无需修改
+			if (childInstance !== child) {
+				child.$callMethod('setChecked', false)
+			}
+		})
+		const name = childInstance.$props['name']
+		// 通过emit事件，设置父组件通过v-model双向绑定的值
+		emit("update:modelValue", name)
+		// 发出事件
+		emit('change', name)
+	}
+
+	watch(parentDataSelf, () => {
+		children.value.map((child: ComponentPublicInstance) => {
+			child.$callMethod('init')
+		})
+	}, { deep: true })
+
+	const getProps = (): UTSJSONObject => {
+		return parentDataSelf.value
+	}
+
+	const getRefs = (): UTSJSONObject => {
+		return {} as UTSJSONObject
+	}
+
+	defineExpose({
+		unCheckedOther,
+		getChildren,
+		addChild,
+		getProps,
+		getRefs
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import "../../libs/css/components.scss";
+
+	.up-radio-group {
+		flex: 1;
+
+		&--row {
+			display: flex;
+			flex-flow: row wrap;
+		}
+
+		&--column {
+			@include flex(column);
+		}
+	}
+</style>

@@ -1,0 +1,36 @@
+<template>
+  <view class="rb-empty-container">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">{{ text }}</text>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'rb-empty',
+  props: {
+    text: {
+      type: String,
+      default: '暂无数据'
+    }
+  }
+}
+</script>
+
+<style>
+.rb-empty-container {
+  padding-top: 60px;
+  padding-bottom: 60px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.empty-text {
+  font-size: 14px;
+  color: #86909c;
+}
+</style>

@@ -1,0 +1,298 @@
+<view class="page">
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <!-- 概览统计 -->
+    <view class="overview-card">
+      <view class="overview-item">
+        <text class="overview-num">{{roles.length}}</text>
+        <text class="overview-label">{{displayText.overviewRoleTotal}}</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-num active">{{activeRoleCount}}</text>
+        <text class="overview-label">{{displayText.overviewEnabled}}</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-num custom">{{customRoleCount}}</text>
+        <text class="overview-label">{{displayText.overviewCustom}}</text>
+      </view>
+    </view>
+
+    <!-- 搜索和筛选 -->
+    <view class="search-filter-row">
+      <view class="search-box">
+        <t-icon name="search" size="32rpx" color="#999999"></t-icon>
+        <input
+          class="search-input"
+          placeholder="{{displayText.placeholderSearchRole}}"
+          value="{{searchKeyword}}"
+          bindinput="handleSearch"
+        />
+      </view>
+
+      <scroll-view scroll-x class="status-filters" enhanced show-scrollbar="{{false}}">
+        <view
+          class="status-tab {{filterStatus === item.value ? 'active' : ''}}"
+          wx:for="{{statusTabs}}"
+          wx:key="value"
+          data-status="{{item.value}}"
+          bindtap="onFilterStatus"
+        >
+          {{item.label}}
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 角色列表 -->
+    <view class="role-list">
+      <view
+        class="role-card"
+        wx:for="{{filteredRoles || roles}}"
+        wx:key="id"
+      >
+        <!-- 角色头部 -->
+        <view class="role-header" bindtap="toggleRoleDetail" data-id="{{item.id}}">
+          <view class="role-left">
+            <view class="role-icon" style="background: {{item.bgColor}};">
+              <t-icon name="{{item.tIcon || 'setting'}}" size="36rpx" color="{{item.color}}"></t-icon>
+            </view>
+            <view class="role-info">
+              <view class="role-name-row">
+                <text class="role-name">{{item.name}}</text>
+                <view class="system-badge" wx:if="{{item.isSystem}}">{{displayText.badgeBuiltIn}}</view>
+                <view class="status-dot {{item.status}}" wx:else></view>
+              </view>
+              <text class="role-code">@{{item.code}}</text>
+            </view>
+          </view>
+
+          <view class="role-right">
+            <view class="role-stats">
+              <text class="stat-num">{{item.userCount}}</text>
+              <text class="stat-label">{{displayText.unitPerson}}</text>
+            </view>
+            <t-icon class="expand-arrow {{expandedRoleId === item.id ? 'rotated' : ''}}" name="chevron-right" size="24rpx" color="#C9CDD4"></t-icon>
+          </view>
+        </view>
+
+        <!-- 角色描述 -->
+        <view class="role-desc" wx:if="{{expandedRoleId !== item.id}}">
+          <text class="desc-text">{{item.description}}</text>
+        </view>
+
+        <!-- 展开的详情 -->
+        <view class="role-detail {{expandedRoleId === item.id ? 'show' : ''}}">
+          <view class="detail-section">
+            <text class="detail-title">{{displayText.titleRoleDesc}}</text>
+            <text class="detail-content">{{item.description}}</text>
+          </view>
+
+          <view class="detail-section">
+            <text class="detail-title">{{displayText.titlePermissionCount}}</text>
+            <view class="perm-count-bar">
+              <view class="perm-count-fill" style="width: {{(item.permissionCount / 15) * 100}}%;"></view>
+              <text class="perm-count-text">{{item.permissionCount}}{{displayText.permissionCountSuffix}}</text>
+            </view>
+            <text class="detail-content" wx:if="{{item.permissionSummary}}">{{item.permissionSummary}}</text>
+          </view>
+
+          <view class="detail-section">
+            <text class="detail-title">{{displayText.titleUserStats}}</text>
+            <view class="user-stat-row">
+              <view
+                class="user-stat-btn"
+                data-id="{{item.id}}"
+                catchtap="viewRoleUsers"
+              >
+                <text class="user-stat-num">{{item.userCount}}</text>
+                <text class="user-stat-label">{{displayText.labelLinkedUsers}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="detail-actions">
+            <view
+              class="action-btn edit"
+              data-id="{{item.id}}"
+              catchtap="showEditModal"
+            >
+              <t-icon name="edit" size="26rpx" color="#1677FF"></t-icon>
+              <text class="btn-text">{{displayText.btnEdit}}</text>
+            </view>
+            <view
+              class="action-btn status"
+              data-id="{{item.id}}"
+              catchtap="toggleRoleStatus"
+            >
+              <t-icon name="{{item.status === 'active' ? 'lock-on' : 'lock-off'}}" size="26rpx" color="#722ED1"></t-icon>
+              <text class="btn-text">{{item.status === 'active' ? displayText.btnDisable : displayText.btnEnable}}</text>
+            </view>
+            <view
+              class="action-btn danger"
+              data-id="{{item.id}}"
+              catchtap="confirmDeleteRole"
+              wx:if="{{!item.isSystem}}"
+            >
+              <t-icon name="delete" size="26rpx" color="#FF4D4F"></t-icon>
+              <text class="btn-text">{{displayText.btnDelete}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && (!filteredRoles || filteredRoles.length === 0)}}">
+      <t-icon class="empty-icon" name="usergroup" size="56rpx" color="#C9CDD4"></t-icon>
+      <text class="empty-title">{{displayText.noMatchedRoles}}</text>
+      <text class="empty-desc">{{displayText.emptyTryAdjustFilter}}</text>
+    </view>
+
+    <!-- 底部占位 -->
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- 编辑角色弹窗 -->
+  <view class="modal-mask {{showEditModal ? 'show' : ''}}" catchtap="hideEditModal">
+    <view class="modal-content edit-modal" catchtap="" wx:if="{{showEditModal && editingRole}}">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.titleEditRole}}</text>
+        <text class="modal-close" catchtap="hideEditModal">×</text>
+      </view>
+
+      <view class="modal-body">
+        <view class="form-group">
+          <label class="form-label required">{{displayText.labelRoleName}}</label>
+          <input
+            class="form-input"
+            placeholder="{{displayText.placeholderEnterRoleName}}"
+            value="{{editingRole.name}}"
+            bindinput="onEditNameInput"
+            maxlength="20"
+          />
+        </view>
+
+        <view class="form-group">
+          <label class="form-label">{{displayText.labelRoleCode}}</label>
+          <input
+            class="form-input"
+            value="{{editingRole.code}}"
+            disabled
+            style="background: #F5F6F8; color: #999;"
+          />
+          <text class="form-hint">{{displayText.hintBuiltinRoleCodeReadonly}}</text>
+        </view>
+
+        <view class="form-group">
+          <label class="form-label">{{displayText.titleRoleDesc}}</label>
+          <textarea
+            class="form-textarea"
+            placeholder="{{displayText.placeholderEnterRoleDesc}}"
+            value="{{editingRole.description}}"
+            bindinput="onEditDescInput"
+            maxlength="200"
+            auto-height
+          ></textarea>
+        </view>
+
+        <view class="form-group" wx:if="{{!editingRole.isSystem}}">
+          <label class="form-label">{{displayText.labelPermissionConfig}}</label>
+          <text class="form-hint">{{displayText.hintPermissionConfigAtPermissionPage}}</text>
+        </view>
+      </view>
+
+      <view class="modal-footer">
+        <button class="modal-btn cancel" catchtap="hideEditModal">{{displayText.btnCancel}}</button>
+        <button
+          class="modal-btn confirm"
+          catchtap="saveRoleEdit"
+          disabled="{{saving}}"
+        >
+          {{saving ? displayText.saving : displayText.btnSave}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 新建角色弹窗 -->
+  <view class="modal-mask {{showCreateModal ? 'show' : ''}}" catchtap="hideCreateModal">
+    <view class="modal-content create-modal" catchtap="" wx:if="{{showCreateModal}}">
+      <view class="modal-header">
+        <text class="modal-title">{{displayText.titleCreateRole}}</text>
+        <text class="modal-close" catchtap="hideCreateModal">×</text>
+      </view>
+
+      <scroll-view scroll-y class="modal-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="modal-body">
+          <view class="form-group">
+            <label class="form-label required">{{displayText.labelRoleName}}</label>
+            <input
+              class="form-input"
+              placeholder="{{displayText.placeholderRoleNameExample}}"
+              value="{{newRoleForm.name}}"
+              bindinput="onCreateNameInput"
+              maxlength="20"
+            />
+          </view>
+
+          <view class="form-group">
+            <label class="form-label required">{{displayText.labelRoleCode}}</label>
+            <input
+              class="form-input"
+              placeholder="{{displayText.placeholderRoleCodeFormat}}"
+              value="{{newRoleForm.code}}"
+              bindinput="onCreateCodeInput"
+              maxlength="30"
+            />
+            <text class="form-hint">{{displayText.hintRoleCodeReadonlyAfterCreate}}</text>
+          </view>
+
+          <view class="form-group">
+            <label class="form-label">{{displayText.titleRoleDesc}}</label>
+            <textarea
+              class="form-textarea"
+              placeholder="{{displayText.placeholderRoleDescScope}}"
+              value="{{newRoleForm.description}}"
+              bindinput="onCreateDescInput"
+              maxlength="200"
+              auto-height
+            ></textarea>
+          </view>
+
+          <!-- 权限选择 -->
+          <view class="perm-select-section">
+            <label class="form-label">{{displayText.labelAssignPermissions}}</label>
+
+            <view class="perm-category" wx:for="{{permissionGroups}}" wx:key="key">
+              <text class="category-name">{{item.label}}</text>
+              <view class="perm-chips">
+                <view
+                  class="perm-chip {{isNewPermChecked(perm.key) ? 'checked' : ''}}"
+                  wx:for="{{item.permissions}}"
+                  wx:for-item="perm"
+                  wx:key="key"
+                  data-perm="{{perm.key}}"
+                  catchtap="toggleNewPerm"
+                >
+                  <t-icon class="chip-check" wx:if="{{isNewPermChecked(perm.key)}}" name="check" size="20rpx" color="#FFFFFF"></t-icon>
+                  <text class="chip-name">{{perm.name}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="modal-footer">
+        <button class="modal-btn cancel" catchtap="hideCreateModal">{{displayText.btnCancel}}</button>
+        <button
+          class="modal-btn confirm"
+          catchtap="createRole"
+          disabled="{{saving}}"
+        >
+          {{saving ? displayText.creating : displayText.btnCreateRole}}
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

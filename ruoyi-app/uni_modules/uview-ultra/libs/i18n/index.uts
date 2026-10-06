@@ -1,0 +1,141 @@
+import zhHans from './locales/zh-Hans.uts'
+
+let settings = {
+    lang: 'zh-Hans',
+    locales: {
+        'zh-Hans': zhHans
+    } as UTSJSONObject
+} as UTSJSONObject
+
+// App-UTS 不支持 getLocale/onLocaleChange，App 端通过 setLocale 显式切换语言。
+// #ifndef APP
+try {
+    // #ifdef WEB || MP
+    // @ts-ignore
+    if (typeof uni !== 'undefined' && typeof uni.getLocale === 'function') {
+        const current = uni.getLocale()
+        if (current != null && current != '') {
+            settings['lang'] = current
+        }
+    }
+    // #endif
+} catch (e) {
+}
+
+try {
+    // #ifdef WEB || MP
+    // @ts-ignore
+    if (typeof uni !== 'undefined' && typeof uni.onLocaleChange === 'function') {
+        uni.onLocaleChange((locale: any | null) => {
+            if (locale == null) return
+            if (typeof locale == 'string') {
+                settings['lang'] = locale
+            } else {
+                const localeObj = locale as UTSJSONObject
+                if (localeObj['locale'] != null) {
+                    settings['lang'] = localeObj['locale'] as string
+                }
+            }
+        })
+    }
+    // #endif
+} catch (e) {
+}
+// #endif
+
+function isPlainObject(value: any | null): boolean {
+    return value != null && typeof value == 'object'
+}
+
+export function hasLocale(locale: string): boolean {
+    if (locale == '') return false
+    const locales = settings['locales'] as UTSJSONObject
+    return locales[locale] != null
+}
+
+export function getLocale(): string {
+    return settings['lang'] as string
+}
+
+export function setLocale(locale: string): string {
+    if (locale == '') return settings['lang'] as string
+    settings['lang'] = locale
+    // #ifndef APP
+    try {
+        // #ifdef WEB || MP
+        // @ts-ignore
+        if (typeof uni !== 'undefined' && typeof uni.setLocale === 'function') {
+            uni.setLocale(locale)
+        }
+        // #endif
+    } catch (e) {
+    }
+    // #endif
+    return settings['lang'] as string
+}
+
+/**
+ * registerLocale('en', messages)
+ * registerLocale({ en: messages, ja: messages2 })
+ */
+export function registerLocale(localeOrMap: any, messages: any | null = null): void {
+    const locales = settings['locales'] as UTSJSONObject
+    if (typeof localeOrMap == 'string') {
+        if (localeOrMap == '' || !isPlainObject(messages)) return
+        locales[localeOrMap] = messages
+        settings['locales'] = locales
+        return
+    }
+    if (!isPlainObject(localeOrMap)) return
+    const mapObj = localeOrMap as UTSJSONObject
+    // UTS 下遍历键
+    const keys = UTSJSONObject.keys(mapObj)
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        const value = mapObj[key]
+        if (isPlainObject(value)) {
+            locales[key] = value
+        }
+    }
+    settings['locales'] = locales
+}
+
+/**
+ * 多语言方法（ultra 保留 . -> _ 变换）
+ */
+export function t(value: string, params: UTSJSONObject = {} as UTSJSONObject): string {
+    if (value == '') {
+        return value
+    }
+    //let key = value.replaceAll('.', '_')
+    let key = value.replace(/\./g, '_')
+    let lang = settings['lang'] as string
+    let locales = settings['locales'] as UTSJSONObject
+    if (locales[lang] == null) {
+        lang = 'zh-Hans'
+    }
+    let result = value
+    if (locales[lang] != null) {
+        const pack = locales[lang] as UTSJSONObject
+        if (pack[key] != null) {
+            // @ts-ignore
+            result = pack[key].toString()
+        }
+    }
+    let resultStr = result.toString()
+    const paramKeys = UTSJSONObject.keys(params)
+    for (let i = 0; i < paramKeys.length; i++) {
+        const paramKey = paramKeys[i]
+        const paramValue = params[paramKey]
+        if (paramValue != null) {
+            const targetKey = new RegExp('{' + paramKey + '}','g') //'{' + paramKey + '}'
+            resultStr = resultStr.replace(targetKey, paramValue.toString())
+            //resultStr = resultStr.replaceAll('{' + paramKey + '}', paramValue.toString())
+        }
+    }
+    return resultStr
+}
+
+export default {
+    settings: settings
+}

@@ -1,0 +1,126 @@
+<template>
+	<view
+		class="up-list-item"
+		:ref="refstr"
+		fref="`up-list-item-${anchor}`"
+		:class="[`up-list-item-${refstr}`]"
+	>
+		<slot />
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getCurrentInstance, onMounted, ref } from 'vue'
+	import defProps from './listItem.uts'
+	import { getParentFunc, getWindowInfo, guid, upGetRect } from '../../libs/function/index.uts'
+	/**
+	 * List 列表
+	 * @description 该组件为高性能列表组件
+	 * @tutorial https://uview-plus.jiangruyi.com/components/list.html
+	 * @property {String | Number}	anchor	用于滚动到指定item
+	 * @example <up-list-item v-for="(item, index) in indexList" :key="index" ></up-list-item>
+	 */
+	defineOptions({
+		styleIsolation: 'app-and-page',
+		name: 'up-list-item'
+	})
+
+	const props = defineProps({
+		// 用于滚动到指定item
+		anchor: {
+			type: [String, Number],
+			default: defProps.getString('listItem.anchor')
+		}
+	})
+
+	const instance = getCurrentInstance()!.proxy!
+	const parent = ref<ComponentPublicInstance | null>(null)
+	// 节点信息
+	const rect = ref({} as NodeInfo)
+	const index = ref(0)
+	const refstr = ref(guid())
+	const show = ref(true)
+	const sys = getWindowInfo() as GetWindowInfoResult
+
+	// 查询元素尺寸
+	const queryRect = (el: string): Promise<NodeInfo> => {
+		return upGetRect(`.${el}`, false, instance)
+	}
+
+	const updateParentData = (): void => {
+		parent.value = getParentFunc('up-list', instance)
+		if (parent.value != null) {
+			parent.value.$callMethod('addChildRef', refstr.value)
+			parent.value.$callMethod('addChild', instance)
+		}
+	}
+
+	const resize = (): void => {
+		// console.log("*******", `up-list-item-${props.anchor}`)
+		queryRect(`up-list-item-${refstr.value}`).then((size: NodeInfo) => {
+			if (index.value > 0) {
+				if (parent.value != null) {
+					const children = parent.value.$callMethod('getChildren') as ComponentPublicInstance[]
+					const lastChild = children[index.value - 1]
+					if (lastChild == null) {
+						return
+					}
+					rect.value = size
+					const parentProps = parent.value.$callMethod('getProps') as UTSJSONObject
+					const preLoadScreen = parseFloat(parentProps['preLoadScreen'] != null ? parentProps['preLoadScreen'].toString() : '0')
+					const windowHeight = sys.windowHeight
+					// #ifndef APP-NVUE
+					if (lastChild != null) {
+						const lastRefs = lastChild.$callMethod('getRefs') as UTSJSONObject
+						const lastRect = lastRefs['rect'] as NodeInfo
+						rect.value.top = ((lastRect).top ?? 0)
+							+ ((lastRect).height ?? 0)
+					}
+					const parentRefs = parent.value.$callMethod('getRefs') as UTSJSONObject
+					const innerScrollTop = parentRefs['innerScrollTop'] as number
+					if ((size.top ?? 0) >= parseFloat(innerScrollTop.toString()) + (1 + preLoadScreen) * windowHeight) {
+						show.value = false
+					}
+					// #endif
+				}
+			} else {
+				console.log('index == 0')
+			}
+		})
+	}
+
+	const init = (): void => {
+		// 初始化数据
+		updateParentData()
+		if (parent.value != null) {
+			const parentRefs = parent.value.$callMethod('getRefs') as UTSJSONObject
+			const childrenRefs = parentRefs['childrenRefs'] as string[]
+			index.value = childrenRefs.indexOf(refstr.value)
+			resize()
+		}
+	}
+
+	const getRefs = (): UTSJSONObject => {
+		return {
+			rect: rect.value,
+			index: index.value,
+			refstr: refstr.value,
+			show: show.value
+		}
+	}
+
+	onMounted(() => {
+		init()
+	})
+
+	defineExpose({
+		updateParentData,
+		resize,
+		queryRect,
+		getRefs
+	})
+</script>
+
+<style lang="scss" scoped>
+	.up-list-item {}
+</style>

@@ -1,0 +1,135 @@
+/**
+ * 设置页样式 - 美化增强版
+ * 设计规范：分组卡片、图标系统、开关控件
+ */
+
+.settings-page {
+  min-height: 100vh;
+  background-color: #f5f6f8;
+}
+
+.settings-content {
+  padding: 18rpx 16rpx 16rpx;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-main {
+  flex: 1;
+}
+
+.settings-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+}
+
+.settings-section__header {
+  border-bottom: 1rpx solid #f5f6f8;
+  padding: 12rpx 16rpx;
+}
+
+.settings-section__title {
+  font-size: 28rpx;
+  color: #666666;
+}
+
+.settings-cell {
+  height: 88rpx;
+  padding: 0 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-cell__left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.settings-cell__icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 9999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-icon-image {
+  width: 20rpx;
+  height: 20rpx;
+}
+
+.settings-cell__icon--user,
+.settings-cell__icon--lock,
+.settings-cell__icon--file {
+  background-color: #e8f2fe;
+}
+
+.settings-cell__icon--info {
+  background-color: #f5f6f8;
+}
+
+.settings-cell__text {
+  font-size: 32rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.settings-cell__right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.settings-cell__note {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.settings-cell__version {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.settings-arrow {
+  width: 20rpx;
+  height: 20rpx;
+}
+
+.settings-divider {
+  height: 1rpx;
+  background-color: #f5f6f8;
+  margin-left: 68rpx;
+}
+
+.settings-logout-wrap {
+  margin-top: auto;
+  padding-top: 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+}
+
+.btn-logout {
+  height: 88rpx;
+  background-color: #ff4d4f;
+  border-radius: 16rpx;
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 500;
+  border: none;
+  line-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.logout-icon {
+  width: 20rpx;
+  height: 20rpx;
+}

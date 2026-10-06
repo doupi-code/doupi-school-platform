@@ -1,0 +1,105 @@
+<template>
+  <view 
+    :class="['ui-cell', isLink ? 'ui-cell--link' : '']"
+    @click="handleClick"
+  >
+    <view class="ui-cell__left">
+      <image v-if="icon != ''" class="ui-cell__icon" :src="icon" mode="aspectFit"></image>
+      <text class="ui-cell__title">{{ title }}</text>
+    </view>
+    <view class="ui-cell__right">
+      <text v-if="value != ''" class="ui-cell__value">{{ value }}</text>
+      <slot name="right"></slot>
+      <image 
+        v-if="isLink" 
+        class="ui-cell__arrow" 
+        src="/static/icons/settings-chevron-right.svg" 
+        mode="aspectFit"
+      ></image>
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiCell',
+  props: {
+    title: {
+      type: String,
+      default: ''
+    },
+    value: {
+      type: String,
+      default: ''
+    },
+    icon: {
+      type: String,
+      default: ''
+    },
+    isLink: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: ['click'],
+  methods: {
+    handleClick(event: any) {
+      this.$emit('click', event)
+    }
+  }
+}
+</script>
+
+<style>
+.ui-cell {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F7F8FA;
+}
+
+.ui-cell--link:active {
+  background-color: #F7F8FA;
+}
+
+.ui-cell__left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ui-cell__icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  opacity: 0.8;
+}
+
+.ui-cell__title {
+  font-size: 15px;
+  color: #1D2129;
+}
+
+.ui-cell__right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ui-cell__value {
+  font-size: 14px;
+  color: #86909C;
+  margin-right: 6px;
+}
+
+.ui-cell__arrow {
+  width: 14px;
+  height: 14px;
+  opacity: 0.4;
+}
+</style>

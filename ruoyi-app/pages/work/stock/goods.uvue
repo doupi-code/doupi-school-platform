@@ -1,0 +1,364 @@
+<template>
+  <scroll-view class="stock-goods-page" scroll-y="true">
+    <!-- 顶部大盘指标 -->
+    <view class="stat-row">
+      <view class="stat-card">
+        <text class="stat-title">物资总品类</text>
+        <view class="stat-val-row">
+          <text class="stat-val">128</text>
+          <text class="stat-unit">种</text>
+        </view>
+        <text class="stat-sub text-green">常备耗材充足</text>
+      </view>
+      <view style="width: 12px;"></view>
+      <view class="stat-card">
+        <text class="stat-title">库存预警物料</text>
+        <view class="stat-val-row">
+          <text class="stat-val text-red">3</text>
+          <text class="stat-unit">项</text>
+        </view>
+        <text class="stat-sub text-red">需尽快补仓</text>
+      </view>
+    </view>
+
+    <!-- 搜索栏组件 (使用 up-search 组件) -->
+    <view class="search-box">
+      <up-search 
+        v-model="searchKey" 
+        placeholder="输入物资名称、编号或规格..." 
+        shape="round"
+        :showAction="false"
+        @search="handleSearch"
+      ></up-search>
+    </view>
+
+    <!-- 物资列表 (使用 up-tag, up-button 组件) -->
+    <view class="list-container">
+      <view 
+        class="goods-card" 
+        v-for="(item, index) in filteredList" 
+        :key="index"
+      >
+        <view class="card-head">
+          <text class="card-title">{{ item.goodsName }}</text>
+          <text class="card-extra">{{ item.goodsCode }}</text>
+        </view>
+
+        <view class="goods-info-row">
+          <view class="goods-tags">
+            <up-tag type="info" :text="item.categoryName" size="mini"></up-tag>
+            <up-tag 
+              :type="item.stockNum <= item.warnNum ? 'error' : 'success'" 
+              :text="item.stockNum <= item.warnNum ? '库存偏低' : '充足'"
+              size="mini"
+            ></up-tag>
+          </view>
+          <text class="goods-spec">规格：{{ item.spec }}</text>
+        </view>
+
+        <view class="stock-num-bar">
+          <view class="stock-cell">
+            <text class="stock-label">当前在库：</text>
+            <text :class="['stock-val', item.stockNum <= item.warnNum ? 'text-danger' : 'text-green']">
+              {{ item.stockNum }} {{ item.unit }}
+            </text>
+          </view>
+          <view class="stock-cell">
+            <text class="stock-label">预警警戒线：</text>
+            <text class="stock-val">{{ item.warnNum }} {{ item.unit }}</text>
+          </view>
+          <view class="stock-cell">
+            <text class="stock-label">存放库位：</text>
+            <text class="stock-val text-bold">{{ item.location }}</text>
+          </view>
+        </view>
+
+        <view class="card-footer">
+          <view class="footer-btns">
+            <up-button 
+              type="info" 
+              size="mini" 
+              shape="circle"
+              text="发起申领"
+              @click="handleApplyOut(item)"
+            ></up-button>
+            <up-button 
+              type="primary" 
+              size="mini" 
+              shape="circle"
+              text="入库补货"
+              @click="handleStockIn(item)"
+            ></up-button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 (使用 up-empty 组件) -->
+      <up-empty 
+        v-if="filteredList.length === 0" 
+        mode="search" 
+        text="未检索到符合条件的物资"
+      ></up-empty>
+    </view>
+  </scroll-view>
+</template>
+
+<script lang="uts">
+type GoodsItem = {
+  goodsId: number
+  goodsCode: string
+  goodsName: string
+  categoryName: string
+  spec: string
+  unit: string
+  stockNum: number
+  warnNum: number
+  location: string
+}
+
+export default {
+  data() {
+    return {
+      searchKey: '',
+      list: [
+        {
+          goodsId: 1,
+          goodsCode: 'MAT-2026-001',
+          goodsName: '得力 A4 旗舰多功能复印纸 (80g)',
+          categoryName: '文印耗材',
+          spec: '80g / 500张/包 (8包/箱)',
+          unit: '箱',
+          stockNum: 4,
+          warnNum: 10,
+          location: '北校区文印仓库 A-01-02'
+        },
+        {
+          goodsId: 2,
+          goodsCode: 'MAT-2026-002',
+          goodsName: '晨光白板笔 (黑/红/蓝三色套装)',
+          categoryName: '教学用具',
+          spec: '12支/盒',
+          unit: '盒',
+          stockNum: 48,
+          warnNum: 20,
+          location: '主楼后勤库房 B-03-01'
+        },
+        {
+          goodsId: 3,
+          goodsCode: 'MAT-2026-003',
+          goodsName: '校园开放日宣传折页与家长手提袋',
+          categoryName: '招生宣传品',
+          spec: '定制铜版纸手提袋+宣传册',
+          unit: '套',
+          stockNum: 860,
+          warnNum: 200,
+          location: '招生大厅备品库 C-02-05'
+        },
+        {
+          goodsId: 4,
+          goodsCode: 'MAT-2026-004',
+          goodsName: '理化生实验室丁腈一次性防护手套',
+          categoryName: '实验防护',
+          spec: '中号 M (100只/盒)',
+          unit: '盒',
+          stockNum: 3,
+          warnNum: 15,
+          location: '实验楼药品物资储备室'
+        }
+      ] as GoodsItem[]
+    }
+  },
+  computed: {
+    filteredList(): GoodsItem[] {
+      if (this.searchKey.trim() === '') {
+        return this.list
+      }
+      const key = this.searchKey.toLowerCase()
+      return this.list.filter((item: GoodsItem): boolean => {
+        return item.goodsName.toLowerCase().indexOf(key) >= 0 || 
+               item.goodsCode.toLowerCase().indexOf(key) >= 0 ||
+               item.categoryName.toLowerCase().indexOf(key) >= 0
+      })
+    }
+  },
+  methods: {
+    handleSearch(key: string) {
+      uni.showToast({ title: '已检索物资', icon: 'none' })
+    },
+    handleApplyOut(item: GoodsItem) {
+      uni.navigateTo({
+        url: '/pages/work/stock/out'
+      })
+    },
+    handleStockIn(item: GoodsItem) {
+      uni.showToast({ title: '进入入库登记流程', icon: 'none' })
+    }
+  }
+}
+</script>
+
+<style>
+.stock-goods-page {
+  flex: 1;
+  background-color: #F6F7F9;
+  flex-direction: column;
+}
+
+.stat-row {
+  flex-direction: row;
+  padding: 16px;
+  background-color: #FFFFFF;
+}
+
+.stat-card {
+  flex: 1;
+  background-color: #F7F8FA;
+  border-radius: 12px;
+  padding: 12px;
+  flex-direction: column;
+}
+
+.stat-title {
+  font-size: 12px;
+  color: #86909C;
+  margin-bottom: 4px;
+}
+
+.stat-val-row {
+  flex-direction: row;
+  align-items: baseline;
+}
+
+.stat-val {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.stat-unit {
+  font-size: 11px;
+  color: #86909C;
+  margin-left: 2px;
+}
+
+.stat-sub {
+  font-size: 11px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.text-red {
+  color: #F53F3F;
+}
+
+.search-box {
+  padding: 10px 16px;
+  background-color: #FFFFFF;
+}
+
+.list-container {
+  padding: 16px;
+  flex-direction: column;
+}
+
+.goods-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  flex-direction: column;
+}
+
+.card-head {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #F2F3F5;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1D2129;
+}
+
+.card-extra {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.goods-info-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.goods-tags {
+  flex-direction: row;
+  gap: 6px;
+}
+
+.goods-spec {
+  font-size: 12px;
+  color: #86909C;
+}
+
+.stock-num-bar {
+  flex-direction: column;
+  background-color: #F7F8FA;
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 4px;
+}
+
+.stock-cell {
+  flex-direction: row;
+  align-items: center;
+}
+
+.stock-label {
+  font-size: 13px;
+  color: #86909C;
+}
+
+.stock-val {
+  font-size: 13px;
+  color: #1D2129;
+}
+
+.text-bold {
+  font-weight: 500;
+}
+
+.text-danger {
+  color: #F53F3F;
+  font-weight: bold;
+}
+
+.text-green {
+  color: #00B42A;
+  font-weight: bold;
+}
+
+.card-footer {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #F2F3F5;
+  padding-top: 12px;
+  margin-top: 12px;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.footer-btns {
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+}
+</style>

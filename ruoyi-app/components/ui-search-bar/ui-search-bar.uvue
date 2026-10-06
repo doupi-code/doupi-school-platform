@@ -1,0 +1,77 @@
+<template>
+  <view class="ui-search-bar">
+    <view class="ui-search-bar__box">
+      <image class="ui-search-bar__icon" src="/static/icons/figma-user.svg" mode="aspectFit"></image>
+      <input
+        class="ui-search-bar__input"
+        :value="modelValue"
+        :placeholder="placeholder"
+        :placeholder-style="'color: #C9CDD4; font-size: 14px;'"
+        confirm-type="search"
+        @input="handleInput"
+        @confirm="handleConfirm"
+      />
+    </view>
+  </view>
+</template>
+
+<script lang="uts">
+export default {
+  name: 'UiSearchBar',
+  props: {
+    modelValue: {
+      type: String,
+      default: ''
+    },
+    placeholder: {
+      type: String,
+      default: '搜索关键字...'
+    }
+  },
+  emits: ['update:modelValue', 'search'],
+  methods: {
+    handleInput(event: any) {
+      const val = event.detail.value as string
+      this.$emit('update:modelValue', val)
+    },
+    handleConfirm(event: any) {
+      this.$emit('search', this.modelValue)
+    }
+  }
+}
+</script>
+
+<style>
+.ui-search-bar {
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background-color: #FFFFFF;
+}
+
+.ui-search-bar__box {
+  height: 38px;
+  background-color: #F2F3F5;
+  border-radius: 19px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.ui-search-bar__icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  opacity: 0.45;
+}
+
+.ui-search-bar__input {
+  flex: 1;
+  height: 100%;
+  font-size: 14px;
+  color: #1D2129;
+}
+</style>

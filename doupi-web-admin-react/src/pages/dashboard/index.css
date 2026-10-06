@@ -1,0 +1,149 @@
+/* 数字化校园智能工作台专属样式 */
+
+.dashboard-container {
+  padding: 20px;
+  background-color: #f0f2f5;
+  min-height: calc(100vh - 64px);
+}
+
+/* 顶部欢迎条 */
+.dashboard-header-card {
+  border-radius: 14px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #1677ff 0%, #0050b3 50%, #08979c 100%);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(22, 119, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-header-card::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+
+/* KPI 统计卡片微交互 */
+.kpi-card {
+  border-radius: 12px;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+/* 快捷入口磁贴 */
+.quick-action-card {
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-3px);
+  border-color: #91caff;
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.12);
+}
+
+.quick-action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+/* 待办与动态流 */
+.timeline-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin-bottom: 4px;
+}
+
+.timeline-item-desc {
+  font-size: 13px;
+  color: #595959;
+}
+
+.timeline-item-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 排行榜徽章 */
+.rank-badge {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: 50%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.rank-badge-top1 {
+  background-color: #ffd700;
+  color: #78350f;
+}
+
+.rank-badge-top2 {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.rank-badge-top3 {
+  background-color: #fed7aa;
+  color: #9a3412;
+}
+
+.rank-badge-normal {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* 标签页与卡片圆角 */
+.dashboard-content-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
