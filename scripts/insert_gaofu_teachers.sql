@@ -85,7 +85,7 @@ INSERT INTO edu_teacher (teacher_id, teacher_name, dept, grade, class_ids, subje
 VALUES (115, '杨俊堂', '高复教学部', '复读部', '103', '生物', '13800010015', '0', 'admin', NOW())
 ON DUPLICATE KEY UPDATE teacher_name = VALUES(teacher_name), dept = VALUES(dept), grade = VALUES(grade), class_ids = VALUES(class_ids), subject = VALUES(subject), phone = VALUES(phone), del_flag = '0';
 INSERT INTO edu_teacher (teacher_id, teacher_name, dept, grade, class_ids, subject, phone, del_flag, create_by, create_time)
-VALUES (116, '祝呈巧', '高复教学部', '复读部', '104', '语文', '13800010016', '0', 'admin', NOW())
+VALUES (116, '祝呈巧', '高复教学部', '复读部', '104', '语文', '18879805597', '0', 'admin', NOW())
 ON DUPLICATE KEY UPDATE teacher_name = VALUES(teacher_name), dept = VALUES(dept), grade = VALUES(grade), class_ids = VALUES(class_ids), subject = VALUES(subject), phone = VALUES(phone), del_flag = '0';
 INSERT INTO edu_teacher (teacher_id, teacher_name, dept, grade, class_ids, subject, phone, del_flag, create_by, create_time)
 VALUES (117, '郭强', '高复教学部', '复读部', '104', '数学', '13800010017', '0', 'admin', NOW())
@@ -183,7 +183,7 @@ INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, user_type, email, 
 VALUES (115, 110, 'yangjuntang', '杨俊堂', '00', 'yangjuntang@doupi.edu', '13800010015', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '复读部', '生物', '103', '任教班级：高三（2）班B班·提升班B', 'admin', NOW())
 ON DUPLICATE KEY UPDATE dept_id = VALUES(dept_id), nick_name = VALUES(nick_name), phonenumber = VALUES(phonenumber), grade = VALUES(grade), subject = VALUES(subject), class_ids = VALUES(class_ids), remark = VALUES(remark), status = '0', del_flag = '0';
 INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, user_type, email, phonenumber, sex, password, status, del_flag, grade, subject, class_ids, remark, create_by, create_time)
-VALUES (116, 110, 'zhuchengqiao', '祝呈巧', '00', 'zhuchengqiao@doupi.edu', '13800010016', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '复读部', '语文', '104', '任教班级：高三（3）班·精英A班', 'admin', NOW())
+VALUES (116, 110, 'zhuchengqiao', '祝呈巧', '00', 'zhuchengqiao@doupi.edu', '18879805597', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '复读部', '语文', '104', '高复部语文教师、教务老师，任教班级：高三（3）班·精英A班', 'admin', NOW())
 ON DUPLICATE KEY UPDATE dept_id = VALUES(dept_id), nick_name = VALUES(nick_name), phonenumber = VALUES(phonenumber), grade = VALUES(grade), subject = VALUES(subject), class_ids = VALUES(class_ids), remark = VALUES(remark), status = '0', del_flag = '0';
 INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, user_type, email, phonenumber, sex, password, status, del_flag, grade, subject, class_ids, remark, create_by, create_time)
 VALUES (117, 110, 'guoqiang', '郭强', '00', 'guoqiang@doupi.edu', '13800010017', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '复读部', '数学', '104', '高复部班主任（高三（3）班·精英A班），任教班级：高三（3）班·精英A班', 'admin', NOW())
@@ -266,7 +266,8 @@ INSERT INTO sys_user_role (user_id, role_id) VALUES (114, 4);
 DELETE FROM sys_user_role WHERE user_id = 115;
 INSERT INTO sys_user_role (user_id, role_id) VALUES (115, 4);
 DELETE FROM sys_user_role WHERE user_id = 116;
-INSERT INTO sys_user_role (user_id, role_id) VALUES (116, 4);
+INSERT INTO sys_user_role (user_id, role_id) VALUES (116, 3); -- 教务干事/教务老师
+INSERT INTO sys_user_role (user_id, role_id) VALUES (116, 4); -- 任课老师
 DELETE FROM sys_user_role WHERE user_id = 117;
 INSERT INTO sys_user_role (user_id, role_id) VALUES (117, 4);
 DELETE FROM sys_user_role WHERE user_id = 118;
