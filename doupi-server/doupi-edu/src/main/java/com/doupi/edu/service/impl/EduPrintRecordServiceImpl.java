@@ -166,7 +166,10 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
             throw new ServiceException("选中的用纸物品不存在！");
         }
         long currentStock = paperGoods.getStockNum() == null ? 0L : paperGoods.getStockNum();
-        if (currentStock < totalSheets)
+        long conversionRate = paperGoods.getConversionRate() == null ? 0L : paperGoods.getConversionRate();
+        //计算实际库存数量
+        long totalStockNum = currentStock *conversionRate;
+        if (currentStock < totalStockNum)
         {
             throw new ServiceException("用纸【" + paperGoods.getGoodsName() + "】库存不足，当前库存为 " + currentStock
                     + " 张，本次印刷总耗纸需求为 " + totalSheets + " 张（" + eduPrintRecord.getPrintCount() + "份 × 每份" + pageCount + "页[" + sideDesc + "，耗纸" + sheetsPerCopy + "张/份]）！");
