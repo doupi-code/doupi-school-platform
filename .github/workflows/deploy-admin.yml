@@ -11,6 +11,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -23,6 +24,26 @@ jobs:
             exit 1
           fi
 
+      - name: Setup SSH Connection
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 22 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          cat >> ~/.ssh/config << 'EOF'
+          Host deploy-host
+            HostName ${{ secrets.SERVER_HOST }}
+            User ${{ secrets.SERVER_USER || 'cicd' }}
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+            ConnectTimeout 15
+          EOF
+          chmod 600 ~/.ssh/config
+          # 验证 SSH 联通性 (快速失败机制，避免无意义等待)
+          ssh -o ConnectTimeout=10 deploy-host "whoami"
+
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -33,34 +54,34 @@ jobs:
           cd doupi-web-admin-react
           npm install --legacy-peer-deps
           npm run build
-          tar -czf dist-admin.tar.gz dist
+          # 使用 -C dist . 直接平铺打包，解包后即为完整前端目录结构
+          tar -czf dist-admin.tar.gz -C dist .
 
-      - name: Upload Dist Archive
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'cicd' }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          source: "doupi-web-admin-react/dist-admin.tar.gz"
-          target: "/tmp/"
-          strip_components: 1
+      - name: Transfer Dist Package
+        run: |
+          scp -o ConnectTimeout=20 doupi-web-admin-react/dist-admin.tar.gz deploy-host:/home/cicd/dist-admin.tar.gz
 
-      - name: Atomic Deploy & Nginx Reload
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'cicd' }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          command_timeout: 60s
-          script: |
+      - name: Deploy and Reload Nginx
+        run: |
+          ssh deploy-host << 'EOF'
+            set -e
             TARGET_DIR="/var/www/doupi-web-admin"
-            mkdir -p $TARGET_DIR
-            mkdir -p /tmp/unpack_admin
-            tar -xzf /tmp/dist-admin.tar.gz -C /tmp/unpack_admin
-            rm -rf $TARGET_DIR/dist
-            mv /tmp/unpack_admin/dist $TARGET_DIR/dist
-            rm -rf /tmp/unpack_admin /tmp/dist-admin.tar.gz
+            mkdir -p $TARGET_DIR/dist_new
+            tar -xzf /home/cicd/dist-admin.tar.gz -C $TARGET_DIR/dist_new
+            rm -f /home/cicd/dist-admin.tar.gz
+            
+            # 设置静态资源权限
+            find $TARGET_DIR/dist_new -type d -exec chmod 755 {} +
+            find $TARGET_DIR/dist_new -type f -exec chmod 644 {} +
+            
+            # 零停机原子替换
+            if [ -d "$TARGET_DIR/dist" ]; then
+              rm -rf $TARGET_DIR/dist_old
+              mv $TARGET_DIR/dist $TARGET_DIR/dist_old
+            fi
+            mv $TARGET_DIR/dist_new $TARGET_DIR/dist
+            rm -rf $TARGET_DIR/dist_old
+            
             sudo systemctl reload nginx
-            echo "Admin Web Deployed to $TARGET_DIR successfully!"
+            echo "Admin Web Deployed successfully!"
+          EOF

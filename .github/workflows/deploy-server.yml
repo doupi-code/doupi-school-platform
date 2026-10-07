@@ -11,6 +11,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,6 +23,26 @@ jobs:
             echo "::error::请先在仓库 Settings -> Secrets and variables -> Actions 中添加部署密钥。"
             exit 1
           fi
+
+      - name: Setup SSH Connection
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 22 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          cat >> ~/.ssh/config << 'EOF'
+          Host deploy-host
+            HostName ${{ secrets.SERVER_HOST }}
+            User ${{ secrets.SERVER_USER || 'cicd' }}
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+            ConnectTimeout 15
+          EOF
+          chmod 600 ~/.ssh/config
+          # 验证 SSH 联通性 (快速失败机制)
+          ssh -o ConnectTimeout=10 deploy-host "whoami"
 
       - name: Setup JDK 17
         uses: actions/setup-java@v5
@@ -35,61 +56,40 @@ jobs:
           cd doupi-server
           mvn clean package -DskipTests
 
-      - name: Prepare Backup & Clean Remote Temp
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'cicd' }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          command_timeout: 60s
-          script: |
-            TARGET_DIR="/data/doupi"
-            mkdir -p $TARGET_DIR/backups
-            if [ -f "$TARGET_DIR/doupi-admin.jar" ]; then
-              cp "$TARGET_DIR/doupi-admin.jar" "$TARGET_DIR/backups/doupi-admin-$(date +%Y%m%d%H%M%S).jar"
-            fi
-            cd $TARGET_DIR/backups && ls -t | sed -e '1,3d' | xargs -d '\n' rm -f 2>/dev/null || true
-            rm -f /tmp/doupi-admin.jar
-
-      - name: Upload New JAR
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'cicd' }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          source: "doupi-server/doupi-admin/target/doupi-admin.jar"
-          target: "/tmp/"
-          strip_components: 3
+      - name: Transfer JAR Package
+        run: |
+          scp -o ConnectTimeout=30 doupi-server/doupi-admin/target/doupi-admin.jar deploy-host:/data/doupi/doupi-admin.jar.new
 
       - name: Restart Service & Health Check
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'cicd' }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          command_timeout: 60s
-          script: |
+        run: |
+          ssh deploy-host << 'EOF'
+            set -e
             TARGET_DIR="/data/doupi"
             SERVICE_NAME="doupi-server"
             HEALTH_PORT=8088
 
-            mv /tmp/doupi-admin.jar $TARGET_DIR/doupi-admin.jar
+            mkdir -p $TARGET_DIR/backups
+            if [ -f "$TARGET_DIR/doupi-admin.jar" ]; then
+              cp "$TARGET_DIR/doupi-admin.jar" "$TARGET_DIR/backups/doupi-admin-$(date +%Y%m%d%H%M%S).jar"
+            fi
+            # 保留最近 5 份备份，自动清理陈旧备份
+            cd $TARGET_DIR/backups && ls -t | sed -e '1,5d' | xargs -d '\n' rm -f 2>/dev/null || true
+
+            # 原地原子替换
+            mv $TARGET_DIR/doupi-admin.jar.new $TARGET_DIR/doupi-admin.jar
             sudo systemctl restart $SERVICE_NAME
 
-            # 自动化健康探活 (15秒)
+            # 自动化健康探活 (最多 25 秒)
             sleep 8
             HEALTHY=0
-            for i in {1..8}; do
+            for i in {1..10}; do
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${HEALTH_PORT}/login" || true)
               if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "404" ]; then
                 echo "Health Check Passed! Service $SERVICE_NAME is running healthy (HTTP $HTTP_CODE)."
                 HEALTHY=1
                 break
               fi
-              echo "Waiting for service to become ready... ($i/8)"
+              echo "Waiting for service to become ready... ($i/10)"
               sleep 2
             done
 
@@ -103,3 +103,5 @@ jobs:
               fi
               exit 1
             fi
+            echo "Backend Server Deployed and Verified Successfully!"
+          EOF
