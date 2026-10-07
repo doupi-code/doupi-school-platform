@@ -1198,43 +1198,96 @@ const PrintRecordPage: React.FC = () => {
       title: '印刷名称',
       dataIndex: 'printName',
       ellipsis: true,
-      width: 175,
+      width: 180,
       render: (_, record) => {
-        const name: string = record.printName || '-';
-        if (name.startsWith('[试卷]')) {
-          return (
-            <Space size={4}>
-              <Tag color="processing" style={{ margin: 0, fontSize: 11, padding: '0 4px' }}>
-                试卷
-              </Tag>
-              <span>{name.replace(/^\[试卷\]\s*/, '')}</span>
-            </Space>
-          );
-        }
-        if (name.startsWith('[答案]')) {
-          return (
-            <Space size={4}>
-              <Tag color="success" style={{ margin: 0, fontSize: 11, padding: '0 4px' }}>
-                答案
-              </Tag>
-              <span>{name.replace(/^\[答案\]\s*/, '')}</span>
-            </Space>
-          );
-        }
-        return name;
+        const fullName: string = record.printName || '-';
+        const isExam = fullName.startsWith('[试卷]');
+        const isAns = fullName.startsWith('[答案]');
+        const cleanName = isExam
+          ? fullName.replace(/^\[试卷\]\s*/, '')
+          : isAns
+          ? fullName.replace(/^\[答案\]\s*/, '')
+          : fullName;
+
+        return (
+          <Tooltip title={fullName} placement="topLeft">
+            <div
+              style={{
+                maxWidth: 170,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                cursor: 'pointer',
+              }}
+            >
+              {isExam && (
+                <Tag color="processing" style={{ margin: 0, fontSize: 11, padding: '0 4px', flexShrink: 0 }}>
+                  试卷
+                </Tag>
+              )}
+              {isAns && (
+                <Tag color="success" style={{ margin: 0, fontSize: 11, padding: '0 4px', flexShrink: 0 }}>
+                  答案
+                </Tag>
+              )}
+              <span
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {cleanName}
+              </span>
+            </div>
+          </Tooltip>
+        );
       },
     },
     {
       title: '印刷用纸',
       dataIndex: 'paperType',
-      width: 100,
+      width: 140,
       align: 'center',
-      render: (_, record) => (
-        <Space>
-          <Tag color="cyan">{record.paperType || 'A4'}</Tag>
-          {record.paperGoodsName && <span style={{ fontSize: 12 }}>{record.paperGoodsName}</span>}
-        </Space>
-      ),
+      ellipsis: true,
+      render: (_, record) => {
+        const pType = record.paperType || 'A4';
+        const goodsName = record.paperGoodsName || '';
+        const fullTooltip = goodsName ? `【${pType}】${goodsName}` : pType;
+
+        return (
+          <Tooltip title={fullTooltip} placement="topLeft">
+            <div
+              style={{
+                maxWidth: 130,
+                margin: '0 auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                cursor: 'pointer',
+              }}
+            >
+              <Tag color="cyan" style={{ margin: 0, flexShrink: 0 }}>
+                {pType}
+              </Tag>
+              {goodsName && (
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: 'rgba(0, 0, 0, 0.75)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {goodsName}
+                </span>
+              )}
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '印刷份数',
