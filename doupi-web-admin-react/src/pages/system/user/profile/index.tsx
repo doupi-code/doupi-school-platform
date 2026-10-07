@@ -74,9 +74,13 @@ const UserProfilePage: React.FC = () => {
     try {
       const values = await infoForm.validateFields();
       setInfoSubmitting(true);
-      await updateUserProfile(values);
+      // 昵称由管理员维护，个人中心不提交昵称字段
+      await updateUserProfile({
+        phonenumber: values.phonenumber,
+        email: values.email,
+        sex: values.sex,
+      });
       message.success('基本资料修改成功');
-      setName(values.nickName);
       loadProfile();
     } catch (e: any) {
       message.error(e?.message || '保存失败');
@@ -248,9 +252,9 @@ const UserProfilePage: React.FC = () => {
                       <Form.Item
                         name="nickName"
                         label="用户昵称"
-                        rules={[{ required: true, message: '用户昵称不能为空' }]}
+                        extra="昵称由系统管理员统一维护，个人中心不可自行修改"
                       >
-                        <Input maxLength={30} placeholder="请输入您的昵称" />
+                        <Input maxLength={30} disabled placeholder="昵称由管理员维护" />
                       </Form.Item>
 
                       <Form.Item

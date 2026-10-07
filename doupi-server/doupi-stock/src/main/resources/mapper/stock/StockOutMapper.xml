@@ -12,6 +12,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="classId"    column="class_id"    />
         <result property="outTime"    column="out_time"    />
         <result property="operator"    column="operator"    />
+        <result property="operatorId"    column="operator_id"    />
+        <result property="operatorNickName"    column="operator_nick_name"    />
         <result property="remark"    column="remark"    />
         <result property="status"    column="status"    />
         <result property="createBy"    column="create_by"    />
@@ -27,12 +29,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectStockOutVo">
-        select o.out_id, o.out_no, o.out_type, o.receiver, o.class_id, o.out_time, o.operator, o.remark, o.status, o.create_by, o.create_time, o.update_by, o.update_time, o.del_flag,
+        select o.out_id, o.out_no, o.out_type, o.receiver, o.class_id, o.out_time, o.operator, o.operator_id, o.remark, o.status, o.create_by, o.create_time, o.update_by, o.update_time, o.del_flag,
                c.class_name, c.grade,
                p.print_id, p.print_name,
-               coalesce(u_dept.dept_name, '') as dept
+               coalesce(u_dept.dept_name, '') as dept,
+               op.nick_name as operator_nick_name
         from edu_stock_out o
         left join edu_class c on o.class_id = c.class_id
+        left join sys_user op on o.operator_id = op.user_id
         left join (
             select out_id, min(print_id) as print_id, min(print_name) as print_name 
             from edu_print_record 
@@ -88,6 +92,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="classId != null">class_id,</if>
             <if test="outTime != null">out_time,</if>
             <if test="operator != null and operator != ''">operator,</if>
+            <if test="operatorId != null">operator_id,</if>
             <if test="remark != null">remark,</if>
             <if test="status != null and status != ''">status,</if>
             <if test="createBy != null">create_by,</if>
@@ -103,6 +108,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="classId != null">#{classId},</if>
             <if test="outTime != null">#{outTime},</if>
             <if test="operator != null and operator != ''">#{operator},</if>
+            <if test="operatorId != null">#{operatorId},</if>
             <if test="remark != null">#{remark},</if>
             <if test="status != null and status != ''">#{status},</if>
             <if test="createBy != null">#{createBy},</if>
@@ -122,6 +128,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="classId != null">class_id = #{classId},</if>
             <if test="outTime != null">out_time = #{outTime},</if>
             <if test="operator != null and operator != ''">operator = #{operator},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="status != null and status != ''">status = #{status},</if>
             <if test="createBy != null">create_by = #{createBy},</if>

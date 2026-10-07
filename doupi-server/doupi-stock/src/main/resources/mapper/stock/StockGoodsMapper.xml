@@ -8,6 +8,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="goodsId"    column="goods_id"    />
         <result property="goodsName"    column="goods_name"    />
         <result property="category"    column="category"    />
+        <result property="supplierId"    column="supplier_id"    />
+        <result property="supplierName"    column="supplier_name"    />
         <result property="grade"    column="grade"    />
         <result property="spec"    column="spec"    />
         <result property="unit"    column="unit"    />
@@ -25,28 +27,31 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectStockGoodsVo">
-        select goods_id, goods_name, category, grade, spec, unit, stock_num, conversion_rate, base_unit, remain_sheets, warn_low, location, create_by, create_time, update_by, update_time, del_flag from edu_goods
+        select g.goods_id, g.goods_name, g.category, g.supplier_id, s.supplier_name, g.grade, g.spec, g.unit, g.stock_num, g.conversion_rate, g.base_unit, g.remain_sheets, g.warn_low, g.location, g.create_by, g.create_time, g.update_by, g.update_time, g.del_flag
+        from edu_goods g
+        left join edu_supplier s on g.supplier_id = s.supplier_id
     </sql>
 
     <select id="selectEduGoodsList" parameterType="StockGoods" resultMap="StockGoodsResult">
         <include refid="selectStockGoodsVo"/>
         <where>  
-            and del_flag = '0'
-            <if test="goodsName != null  and goodsName != ''"> and goods_name like concat('%', #{goodsName}, '%')</if>
-            <if test="category != null  and category != ''"> and category = #{category}</if>
-            <if test="grade != null  and grade != ''"> and grade = #{grade}</if>
-            <if test="spec != null  and spec != ''"> and spec = #{spec}</if>
-            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
-            <if test="stockNum != null "> and stock_num = #{stockNum}</if>
-            <if test="warnLow != null "> and warn_low = #{warnLow}</if>
-            <if test="location != null  and location != ''"> and location = #{location}</if>
-            <if test="params.isWarn != null and params.isWarn == 'true'"> and stock_num &lt; warn_low</if>
+            and g.del_flag = '0'
+            <if test="goodsName != null  and goodsName != ''"> and g.goods_name like concat('%', #{goodsName}, '%')</if>
+            <if test="category != null  and category != ''"> and g.category = #{category}</if>
+            <if test="supplierId != null "> and g.supplier_id = #{supplierId}</if>
+            <if test="grade != null  and grade != ''"> and g.grade = #{grade}</if>
+            <if test="spec != null  and spec != ''"> and g.spec = #{spec}</if>
+            <if test="unit != null  and unit != ''"> and g.unit = #{unit}</if>
+            <if test="stockNum != null "> and g.stock_num = #{stockNum}</if>
+            <if test="warnLow != null "> and g.warn_low = #{warnLow}</if>
+            <if test="location != null  and location != ''"> and g.location = #{location}</if>
+            <if test="params.isWarn != null and params.isWarn == 'true'"> and g.stock_num &lt; g.warn_low</if>
         </where>
     </select>
     
     <select id="selectEduGoodsByGoodsId" parameterType="Long" resultMap="StockGoodsResult">
         <include refid="selectStockGoodsVo"/>
-        where goods_id = #{goodsId}
+        where g.goods_id = #{goodsId}
     </select>
 
     <insert id="insertEduGoods" parameterType="StockGoods" useGeneratedKeys="true" keyProperty="goodsId">
@@ -54,6 +59,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="goodsName != null and goodsName != ''">goods_name,</if>
             <if test="category != null and category != ''">category,</if>
+            <if test="supplierId != null">supplier_id,</if>
             <if test="grade != null">grade,</if>
             <if test="spec != null">spec,</if>
             <if test="unit != null and unit != ''">unit,</if>
@@ -72,6 +78,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="goodsName != null and goodsName != ''">#{goodsName},</if>
             <if test="category != null and category != ''">#{category},</if>
+            <if test="supplierId != null">#{supplierId},</if>
             <if test="grade != null">#{grade},</if>
             <if test="spec != null">#{spec},</if>
             <if test="unit != null and unit != ''">#{unit},</if>
@@ -94,6 +101,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="SET" suffixOverrides=",">
             <if test="goodsName != null and goodsName != ''">goods_name = #{goodsName},</if>
             <if test="category != null and category != ''">category = #{category},</if>
+            <if test="supplierId != null">supplier_id = #{supplierId},</if>
             <if test="grade != null">grade = #{grade},</if>
             <if test="spec != null">spec = #{spec},</if>
             <if test="unit != null and unit != ''">unit = #{unit},</if>

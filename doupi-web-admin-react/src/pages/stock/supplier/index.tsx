@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Button, Form, Input, message, Modal, Popconfirm, Space } from 'antd';
+import { Button, Form, Input, message, Modal, Popconfirm, Space, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import Authorized from '@/components/Authorized';
 import DraftNoticeAlert from '@/components/DraftNoticeAlert';
@@ -127,6 +127,15 @@ const SupplierPage: React.FC = () => {
     {
       title: '供应商名称',
       dataIndex: 'supplierName',
+      width: 200,
+      ellipsis: true,
+      render: (_, record) => (
+        <Tooltip title={record.supplierName} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {record.supplierName || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '联系人',
@@ -141,7 +150,15 @@ const SupplierPage: React.FC = () => {
     {
       title: '供应商地址',
       dataIndex: 'address',
+      width: 220,
       ellipsis: true,
+      render: (_, record) => (
+        <Tooltip title={record.address} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 210, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {record.address || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '操作',

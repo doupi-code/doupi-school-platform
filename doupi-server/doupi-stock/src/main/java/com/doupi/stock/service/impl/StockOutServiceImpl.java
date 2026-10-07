@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doupi.common.exception.ServiceException;
 import com.doupi.common.utils.DateUtils;
 import com.doupi.common.utils.StringUtils;
+import com.doupi.common.utils.SecurityUtils;
 import com.doupi.stock.domain.StockGoods;
 import com.doupi.stock.domain.StockOut;
 import com.doupi.stock.domain.StockOutItem;
@@ -147,7 +148,15 @@ public class StockOutServiceImpl implements IStockOutService
         }
         if (StringUtils.isEmpty(stockOut.getOperator()))
         {
-            stockOut.setOperator(StringUtils.isNotEmpty(stockOut.getCreateBy()) ? stockOut.getCreateBy() : "管理员");
+            // 经办人统一记录当前登录用户：operator 存昵称、operator_id 存用户ID
+            String nickName = SecurityUtils.getLoginUser() != null && SecurityUtils.getLoginUser().getUser() != null
+                    ? SecurityUtils.getLoginUser().getUser().getNickName() : null;
+            stockOut.setOperator(StringUtils.isNotEmpty(nickName) ? nickName
+                    : (StringUtils.isNotEmpty(stockOut.getCreateBy()) ? stockOut.getCreateBy() : "管理员"));
+        }
+        if (stockOut.getOperatorId() == null)
+        {
+            stockOut.setOperatorId(SecurityUtils.getUserId());
         }
         stockOut.setCreateTime(DateUtils.getNowDate());
 

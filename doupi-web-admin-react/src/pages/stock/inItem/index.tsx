@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
+import { Tooltip } from 'antd';
 import { listInItem } from '@/api/stock/inItem';
 
 const InItemPage: React.FC = () => {
@@ -15,6 +16,15 @@ const InItemPage: React.FC = () => {
     {
       title: '物品名称',
       dataIndex: 'goodsName',
+      width: 200,
+      ellipsis: true,
+      render: (_, r) => (
+        <Tooltip title={r.goodsName} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {r.goodsName || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '入库数量',
@@ -30,6 +40,15 @@ const InItemPage: React.FC = () => {
     {
       title: '供应商',
       dataIndex: 'supplierName',
+      width: 200,
+      ellipsis: true,
+      render: (_, r) => (
+        <Tooltip title={r.supplierName} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {r.supplierName || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '入库日期',

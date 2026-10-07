@@ -69,3 +69,6 @@ dist-ssr/
 # 排除大型数据清洗与临时导出 sql (保留基础 init 模板)
 scripts/backup_*.sql
 scripts/*.tar.gz
+
+# WorkBuddy 项目数据目录
+.workbuddy/

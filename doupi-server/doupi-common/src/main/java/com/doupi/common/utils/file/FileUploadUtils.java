@@ -88,6 +88,67 @@ public class FileUploadUtils
     }
 
     /**
+     * 根据文件路径上传，并按内容哈希命名（用于同文件秒传去重）
+     *
+     * @param baseDir 相对应用的基目录
+     * @param file 上传的文件
+     * @param fileHash 文件内容哈希（可为空，为空则使用默认命名规则）
+     * @return 文件名称
+     * @throws IOException
+     */
+    public static final String upload(String baseDir, MultipartFile file, String fileHash) throws IOException
+    {
+        if (StringUtils.isEmpty(fileHash))
+        {
+            return upload(baseDir, file);
+        }
+        try
+        {
+            int fileNameLength = Objects.requireNonNull(file.getOriginalFilename()).length();
+            if (fileNameLength > FileUploadUtils.DEFAULT_FILE_NAME_LENGTH)
+            {
+                throw new FileNameLengthLimitExceededException(FileUploadUtils.DEFAULT_FILE_NAME_LENGTH);
+            }
+            assertAllowed(file, MimeTypeUtils.DEFAULT_ALLOWED_EXTENSION);
+
+            // 使用内容哈希 + 原扩展名命名，存放于 hash/ 子目录，实现天然去重
+            String extension = getExtension(file);
+            String fileName = StringUtils.format("{}/{}.{}", DateUtils.datePath(), fileHash, extension);
+            String absPath = getAbsoluteFile(baseDir, fileName).getAbsolutePath();
+            file.transferTo(Paths.get(absPath));
+            return getPathFileName(baseDir, fileName);
+        }
+        catch (Exception e)
+        {
+            throw new IOException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 按内容哈希查找已上传文件，命中则返回其相对文件名（实现秒传）
+     *
+     * @param baseDir 相对应用的基目录
+     * @param fileHash 文件内容哈希
+     * @param extension 文件扩展名
+     * @return 已存在的文件名，不存在返回 null
+     */
+    public static final String findByHash(String baseDir, String fileHash, String extension) throws IOException
+    {
+        if (StringUtils.isEmpty(fileHash) || StringUtils.isEmpty(extension))
+        {
+            return null;
+        }
+        // 按当天日期目录查找（同一天内重复上传命中概率最高）
+        String relativeName = StringUtils.format("{}/{}.{}", DateUtils.datePath(), fileHash, extension);
+        File target = new File(baseDir + File.separator + relativeName);
+        if (target.exists())
+        {
+            return getPathFileName(baseDir, relativeName);
+        }
+        return null;
+    }
+
+    /**
      * 文件上传
      *
      * @param baseDir 相对应用的基目录

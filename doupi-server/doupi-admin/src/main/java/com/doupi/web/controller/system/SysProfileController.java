@@ -64,7 +64,8 @@ public class SysProfileController extends BaseController
     {
         LoginUser loginUser = getLoginUser();
         SysUser currentUser = loginUser.getUser();
-        currentUser.setNickName(user.getNickName());
+        // 昵称由系统管理员统一维护，个人中心不允许自行修改昵称（仅允许修改邮箱、手机、性别）
+        // currentUser.setNickName(user.getNickName());
         currentUser.setEmail(user.getEmail());
         currentUser.setPhonenumber(user.getPhonenumber());
         currentUser.setSex(user.getSex());

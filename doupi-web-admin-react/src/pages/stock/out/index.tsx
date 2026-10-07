@@ -23,6 +23,7 @@ import {
   Spin,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import {
@@ -597,15 +598,18 @@ const StockOutPage: React.FC = () => {
       render: (_, record) => {
         const hasPrint = !!(record.printName || record.printId || record.outType === '教学文印');
         if (!hasPrint) return <Text type="secondary">-</Text>;
+        const label = record.printName || `文印单 #${record.printId || record.outId}`;
         return (
-          <Tag
-            color="purple"
-            style={{ cursor: 'pointer' }}
-            onClick={() => handleViewPrintDetail(record)}
-          >
-            <PrinterOutlined style={{ marginRight: 4 }} />
-            {record.printName || `文印单 #${record.printId || record.outId}`}
-          </Tag>
+          <Tooltip title={record.printName || label} placement="topLeft">
+            <Tag
+              color="purple"
+              style={{ cursor: 'pointer', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              onClick={() => handleViewPrintDetail(record)}
+            >
+              <PrinterOutlined style={{ marginRight: 4 }} />
+              {label}
+            </Tag>
+          </Tooltip>
         );
       },
     },
@@ -631,6 +635,13 @@ const StockOutPage: React.FC = () => {
       width: 200,
       ellipsis: true,
       hideInSearch: true,
+      render: (_, record) => (
+        <Tooltip title={record.remark} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {record.remark || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '操作',

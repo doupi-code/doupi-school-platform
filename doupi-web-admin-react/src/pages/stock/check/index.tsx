@@ -18,6 +18,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import {
@@ -251,6 +252,13 @@ const StockCheckPage: React.FC = () => {
       width: 200,
       ellipsis: true,
       hideInSearch: true,
+      render: (_, record) => (
+        <Tooltip title={record.remark} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {record.remark || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '操作',

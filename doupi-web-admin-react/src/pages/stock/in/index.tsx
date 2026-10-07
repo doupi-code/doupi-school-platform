@@ -18,6 +18,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import {
@@ -40,7 +41,7 @@ const { Text } = Typography;
 
 const StockInPage: React.FC = () => {
   const actionRef = useRef<ActionType>(undefined);
-  const { name: currentUserName } = useUserStore();
+  const { name: currentUserName, nickName: currentNickName } = useUserStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<any>(null);
@@ -89,9 +90,9 @@ const StockInPage: React.FC = () => {
     } else {
       setItems([]);
       form.setFieldsValue({
-        inType: '采购入库',
+        inType: '1',
         inTime: dayjs().format('YYYY-MM-DD'),
-        operator: currentUserName || '管理员',
+        operator: currentNickName || currentUserName || '管理员',
       });
       setDraftNotice(null);
     }
@@ -106,9 +107,9 @@ const StockInPage: React.FC = () => {
       form.resetFields();
       setItems([]);
       form.setFieldsValue({
-        inType: '采购入库',
+        inType: '1',
         inTime: dayjs().format('YYYY-MM-DD'),
-        operator: currentUserName || '管理员',
+        operator: currentNickName || currentUserName || '管理员',
       });
       message.success('已丢弃本地草稿，已刷新到未填写状态！');
     } catch (e: any) {
@@ -152,6 +153,8 @@ const StockInPage: React.FC = () => {
         const unit = targetGoods?.unit || '件';
         const stockNum = targetGoods?.stockNum ?? targetGoods?.stock ?? 0;
         const goodsName = targetGoods?.goodsName || '';
+        const conversionRate = Number(targetGoods?.conversionRate) > 0 ? Number(targetGoods.conversionRate) : 1;
+        const baseUnit = targetGoods?.baseUnit || unit;
         const amount = Number((item.quantity * item.price).toFixed(2));
         return {
           ...item,
@@ -160,6 +163,8 @@ const StockInPage: React.FC = () => {
           spec,
           unit,
           stockNum,
+          conversionRate,
+          baseUnit,
           amount,
         };
       }
@@ -281,12 +286,20 @@ const StockInPage: React.FC = () => {
       width: 100,
       align: 'center',
       valueEnum: {
-        采购入库: { text: '采购入库' },
-        调拨入库: { text: '调拨入库' },
-        捐赠入库: { text: '捐赠入库' },
-        盘盈入库: { text: '盘盈入库' },
+        '1': { text: '采购入库' },
+        '2': { text: '调拨入库' },
+        '3': { text: '捐赠入库' },
+        '4': { text: '盘盈入库' },
       },
-      render: (_, record) => <Tag color="blue">{record.inType || '采购入库'}</Tag>,
+      render: (_, record) => {
+        const typeMap: Record<string, string> = {
+          '1': '采购入库',
+          '2': '调拨入库',
+          '3': '捐赠入库',
+          '4': '盘盈入库',
+        };
+        return <Tag color="blue">{typeMap[record.inType] || record.inType || '采购入库'}</Tag>;
+      },
     },
     {
       title: '供货厂商/供应商',
@@ -299,6 +312,7 @@ const StockInPage: React.FC = () => {
       dataIndex: 'operator',
       width: 95,
       align: 'center',
+      render: (_, record) => record.operatorNickName || record.operator || '-',
     },
     {
       title: '入库日期',
@@ -462,10 +476,10 @@ const StockInPage: React.FC = () => {
               <Col span={8}>
                 <Form.Item name="inType" label="入库类型" rules={[{ required: true }]}>
                   <Select placeholder="选择入库类型">
-                    <Select.Option value="采购入库">采购入库</Select.Option>
-                    <Select.Option value="调拨入库">调拨入库</Select.Option>
-                    <Select.Option value="捐赠入库">捐赠入库</Select.Option>
-                    <Select.Option value="盘盈入库">盘盈入库</Select.Option>
+                    <Select.Option value="1">采购入库</Select.Option>
+                    <Select.Option value="2">调拨入库</Select.Option>
+                    <Select.Option value="3">捐赠入库</Select.Option>
+                    <Select.Option value="4">盘盈入库</Select.Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -545,8 +559,26 @@ const StockInPage: React.FC = () => {
                 {
                   title: '单位',
                   dataIndex: 'unit',
-                  width: 65,
+                  width: 120,
                   align: 'center',
+                  render: (_, r) => {
+                    const rate = Number(r.conversionRate) > 0 ? Number(r.conversionRate) : 1;
+                    const baseUnit = r.baseUnit || r.unit || '件';
+                    return (
+                      <Tooltip
+                        title={
+                          rate > 1
+                            ? `整装物品：每${r.unit || '包'}含 ${rate} ${baseUnit}，入库数量按「${r.unit || '包'}」计`
+                            : `散装物品：换算率 1:1，入库数量按「${r.unit || '件'}」直接计`
+                        }
+                      >
+                        <span style={{ cursor: 'help', borderBottom: '1px dashed #bbb' }}>
+                          {r.unit || '件'}
+                          {rate > 1 && <span style={{ fontSize: 11, color: '#888' }}>/{rate}{baseUnit}</span>}
+                        </span>
+                      </Tooltip>
+                    );
+                  },
                 },
                 {
                   title: '现库存',
@@ -653,10 +685,12 @@ const StockInPage: React.FC = () => {
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label="入库单号">{currentRecord.inNo}</Descriptions.Item>
               <Descriptions.Item label="入库类型">
-                <Tag color="blue">{currentRecord.inType || '采购入库'}</Tag>
+                <Tag color="blue">
+                  {{ '1': '采购入库', '2': '调拨入库', '3': '捐赠入库', '4': '盘盈入库' }[currentRecord.inType] || currentRecord.inType || '采购入库'}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="供应商">{currentRecord.supplierName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="经办人">{currentRecord.operator}</Descriptions.Item>
+              <Descriptions.Item label="经办人">{currentRecord.operatorNickName || currentRecord.operator || '-'}</Descriptions.Item>
               <Descriptions.Item label="入库日期">{currentRecord.inTime}</Descriptions.Item>
               <Descriptions.Item label="单据状态">
                 {currentRecord.status === '2' ? (

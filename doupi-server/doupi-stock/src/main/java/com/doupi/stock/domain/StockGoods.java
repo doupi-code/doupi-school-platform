@@ -26,6 +26,12 @@ public class StockGoods extends BaseEntity
     @Excel(name = "分类")
     private String category;
 
+    /** 默认供应商ID */
+    private Long supplierId;
+
+    /** 默认供应商名称（非表字段，联表查询展示） */
+    private String supplierName;
+
     /** 适用年级（如高一、初一，非教材类为空） */
     @Excel(name = "适用年级", readConverterExp = "如=高一、初一，非教材类为空")
     private String grade;
@@ -136,6 +142,26 @@ public class StockGoods extends BaseEntity
     public String getCategory() 
     {
         return category;
+    }
+
+    public void setSupplierId(Long supplierId) 
+    {
+        this.supplierId = supplierId;
+    }
+
+    public Long getSupplierId() 
+    {
+        return supplierId;
+    }
+
+    public void setSupplierName(String supplierName) 
+    {
+        this.supplierName = supplierName;
+    }
+
+    public String getSupplierName() 
+    {
+        return supplierName;
     }
 
     public void setGrade(String grade) 

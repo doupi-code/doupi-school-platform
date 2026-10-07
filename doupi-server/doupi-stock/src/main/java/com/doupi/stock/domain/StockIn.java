@@ -41,6 +41,12 @@ public class StockIn extends BaseEntity
     @Excel(name = "经办人")
     private String operator;
 
+    /** 经办人用户ID */
+    private Long operatorId;
+
+    /** 经办人昵称（联表查询展示） */
+    private String operatorNickName;
+
     /** 状态 */
     @Excel(name = "状态")
     private String status;
@@ -140,6 +146,26 @@ public class StockIn extends BaseEntity
     public String getOperator() 
     {
         return operator;
+    }
+
+    public void setOperatorId(Long operatorId) 
+    {
+        this.operatorId = operatorId;
+    }
+
+    public Long getOperatorId() 
+    {
+        return operatorId;
+    }
+
+    public void setOperatorNickName(String operatorNickName) 
+    {
+        this.operatorNickName = operatorNickName;
+    }
+
+    public String getOperatorNickName() 
+    {
+        return operatorNickName;
     }
 
     public void setStatus(String status) 

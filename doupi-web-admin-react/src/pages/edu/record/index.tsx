@@ -137,6 +137,24 @@ const PrintRecordPage: React.FC = () => {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [previewTotalSheets, setPreviewTotalSheets] = useState(50);
 
+  // 追踪当前选中的关联用纸物品，用于动态换算库存与耗纸量
+  const watchedPaperGoodsId = Form.useWatch('paperGoodsId', form);
+  const currentPaperGoods = React.useMemo(() => {
+    if (watchedPaperGoodsId == null) return undefined;
+    return paperGoodsList.find((g) => String(g.goodsId) === String(watchedPaperGoodsId));
+  }, [watchedPaperGoodsId, paperGoodsList]);
+  // 当前纸张的包装换算率（1 包装 = rate 张），默认 500 兜底
+  const currentPaperRate = React.useMemo(() => {
+    const rate = Number(currentPaperGoods?.conversionRate);
+    return rate > 0 ? rate : 500;
+  }, [currentPaperGoods]);
+  // 当前纸张折合可用基本单位（张）总量
+  const currentPaperStockSheets = React.useMemo(() => {
+    const stock = Number(currentPaperGoods?.stockNum ?? 0);
+    const remain = Number(currentPaperGoods?.remainSheets ?? 0);
+    return currentPaperGoods ? stock * currentPaperRate + remain : 0;
+  }, [currentPaperGoods, currentPaperRate]);
+
   // 文印经办人下拉选项（优先当前登录人，整合教师花名册）
   const operatorOptions = React.useMemo(() => {
     const options: { label: string; value: string }[] = [];
@@ -452,7 +470,7 @@ const PrintRecordPage: React.FC = () => {
       form.setFieldsValue({
         ...record,
         splitAnswer: false,
-        operator: record.operator || currentUserName || 'admin',
+        operator: record.operator || currentNickName || currentUserName || 'admin',
         paperGoodsId: defaultGoodsId,
         printTime: record.printTime ? dayjs(record.printTime) : dayjs(),
       });
@@ -478,7 +496,7 @@ const PrintRecordPage: React.FC = () => {
         form.setFieldsValue({
           ...currentEditRecord,
           splitAnswer: false,
-          operator: currentEditRecord.operator || currentUserName || 'admin',
+          operator: currentEditRecord.operator || currentNickName || currentUserName || 'admin',
           paperGoodsId: defaultGoodsId,
           printTime: currentEditRecord.printTime ? dayjs(currentEditRecord.printTime) : dayjs(),
         });
@@ -503,7 +521,7 @@ const PrintRecordPage: React.FC = () => {
           answerPageCount: 1,
           answerPrintCount: 2,
           answerPrintSide: '1',
-          operator: currentUserName || 'admin',
+          operator: currentNickName || currentUserName || 'admin',
           printTime: dayjs(),
           status: '0',
         });
@@ -519,6 +537,40 @@ const PrintRecordPage: React.FC = () => {
     } finally {
       setDiscardLoading(false);
     }
+  };
+
+  // 解析微信聊天中的原对话时间片段，尽可能还原为具体印刷时间
+  // 支持：绝对时间「2026年08月12日 17:01」「2026-08-12 17:01」、相对时间「昨天/前天 HH:mm」
+  const parseChatTime = (snippet?: string) => {
+    if (!snippet) return null;
+    const s = String(snippet).trim();
+    if (!s) return null;
+
+    // 1. 绝对时间：2026年08月12日 17:01 / 2026-08-12 17:01 / 2026/8/12 17:01
+    const absMatch = s.match(/(\d{4})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})[日]?(?:[ ]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (absMatch) {
+      const year = Number(absMatch[1]);
+      const month = Number(absMatch[2]);
+      const day = Number(absMatch[3]);
+      const hour = absMatch[4] ? Number(absMatch[4]) : 0;
+      const minute = absMatch[5] ? Number(absMatch[5]) : 0;
+      const second = absMatch[6] ? Number(absMatch[6]) : 0;
+      const parsed = dayjs(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`);
+      if (parsed.isValid()) return parsed;
+    }
+
+    // 2. 相对时间：昨天/前天 HH:mm
+    const relMatch = s.match(/(昨天|前天|今天)[\s]*(\d{1,2}):(\d{1,2})/);
+    if (relMatch) {
+      let base = dayjs();
+      if (relMatch[1] === '昨天') base = dayjs().subtract(1, 'day');
+      else if (relMatch[1] === '前天') base = dayjs().subtract(2, 'day');
+      const hour = Number(relMatch[2]);
+      const minute = Number(relMatch[3]);
+      return base.hour(hour).minute(minute).second(0);
+    }
+
+    return null;
   };
 
   // 将识别任务数据统一回填并唤起新增表单弹窗（支持单任务与多任务/跨天队列任务）
@@ -688,8 +740,8 @@ const PrintRecordPage: React.FC = () => {
       grade: targetGrade || undefined,
       classId: finalClassId,
       className: finalClassName,
-      operator: currentUserName || 'admin',
-      printTime: dayjs(),
+      operator: currentNickName || currentUserName || 'admin',
+      printTime: parseChatTime(task.timeSnippet) || dayjs(),
       status: '0',
       remark: remarkText,
       attachment: task.attachment || '',
@@ -1765,11 +1817,19 @@ const PrintRecordPage: React.FC = () => {
                   showSearch
                   optionFilterProp="children"
                 >
-                  {paperGoodsList.map((g) => (
-                    <Select.Option key={g.goodsId} value={g.goodsId}>
-                      {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 当前库存: {g.stockNum ?? 0} {g.unit || '包'}
-                    </Select.Option>
-                  ))}
+                  {paperGoodsList.map((g) => {
+                    const rate = Number(g.conversionRate) > 0 ? Number(g.conversionRate) : 1;
+                    const stock = Number(g.stockNum ?? 0);
+                    const remain = Number(g.remainSheets ?? 0);
+                    const totalSheets = stock * rate + remain;
+                    return (
+                      <Select.Option key={g.goodsId} value={g.goodsId}>
+                        {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 当前库存: {stock} {g.unit || '包'}
+                        {remain > 0 ? `又${remain}${g.baseUnit || '张'}` : ''}
+                        {rate > 1 ? ` (折合 ${totalSheets.toLocaleString()} ${g.baseUnit || '张'})` : ''}
+                      </Select.Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
             </Col>
@@ -1999,7 +2059,7 @@ const PrintRecordPage: React.FC = () => {
                     📊 试卷与答案拆分耗纸核算明细：
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 'bold', color: '#389E0D' }}>
-                    合计耗纸 {previewTotalSheets} 张 (约折合 {(previewTotalSheets / 500).toFixed(2)} 包)
+                    合计耗纸 {previewTotalSheets} 张 (约折合 {(previewTotalSheets / currentPaperRate).toFixed(2)} 包)
                   </span>
                 </div>
                 <div
@@ -2030,7 +2090,7 @@ const PrintRecordPage: React.FC = () => {
                   📊 自动换算实际纸张消耗总量：
                 </span>
                 <span style={{ fontSize: 16, fontWeight: 'bold', color: '#1677FF' }}>
-                  {previewTotalSheets} 张纸 (约折合 {(previewTotalSheets / 500).toFixed(2)} 包)
+                  {previewTotalSheets} 张纸 (约折合 {(previewTotalSheets / currentPaperRate).toFixed(2)} 包)
                 </span>
               </div>
             )}

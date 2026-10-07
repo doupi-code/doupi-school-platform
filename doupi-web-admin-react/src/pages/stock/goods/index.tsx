@@ -97,6 +97,13 @@ const GoodsPage: React.FC = () => {
         }
       })
       .catch(() => {});
+
+    // 加载供应商列表，用于物资档案默认供应商下拉
+    listSupplier({ pageSize: 100 })
+      .then((res: any) => {
+        if (res && res.rows) setSupplierList(res.rows);
+      })
+      .catch(() => {});
   }, []);
 
   // 规范化物资分类：兼容旧版中文字符与真实字典编码
@@ -370,8 +377,15 @@ const GoodsPage: React.FC = () => {
     {
       title: '物资名称',
       dataIndex: 'goodsName',
-      width: 150,
+      width: 160,
       ellipsis: true,
+      render: (_, record) => (
+        <Tooltip title={record.goodsName} placement="topLeft">
+          <span style={{ display: 'inline-block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {record.goodsName || '-'}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: '物资分类',
@@ -422,6 +436,23 @@ const GoodsPage: React.FC = () => {
       render: (_, record) => record.grade || '全校通用',
     },
     {
+      title: '默认供应商',
+      dataIndex: 'supplierName',
+      width: 180,
+      ellipsis: true,
+      render: (_, record) =>
+        record.supplierName ? (
+          <Tooltip title={record.supplierName} placement="topLeft">
+            <span style={{ display: 'inline-block', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <ShopOutlined style={{ marginRight: 4, color: '#1677ff' }} />
+              {record.supplierName}
+            </span>
+          </Tooltip>
+        ) : (
+          <span style={{ color: '#bbb' }}>未关联</span>
+        ),
+    },
+    {
       title: '规格型号与换算',
       dataIndex: 'spec',
       width: 160,
@@ -431,7 +462,9 @@ const GoodsPage: React.FC = () => {
         const baseUnit = record.baseUnit || '张';
         return (
           <div>
-            <div style={{ fontWeight: 500 }}>{record.spec || '-'}</div>
+            <Tooltip title={record.spec || '-'} placement="topLeft">
+              <div style={{ fontWeight: 500, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{record.spec || '-'}</div>
+            </Tooltip>
             {rate > 1 && (
               <Tag color="blue" style={{ marginTop: 2, fontSize: 11, padding: '0 4px' }}>
                 1{unit} = {rate}{baseUnit}
@@ -784,6 +817,29 @@ const GoodsPage: React.FC = () => {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="supplierId"
+                label="默认供应商"
+                extra="关联该物资的默认供货厂商，入库单可自动带出"
+              >
+                <Select
+                  placeholder="选择默认供应商（可选）"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
+                >
+                  {supplierList.map((s) => (
+                    <Select.Option key={s.supplierId} value={s.supplierId}>
+                      {s.supplierName}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Card
             size="small"
             title="包装规格与基础单位换算设计"
@@ -974,33 +1030,37 @@ const GoodsPage: React.FC = () => {
             )}
           </Card>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="stockNum"
-                label={
-                  <Form.Item noStyle shouldUpdate>
-                    {() => `当前整包/件库存数（${form.getFieldValue('unit') || '包'}）`}
-                  </Form.Item>
-                }
-              >
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="remainSheets"
-                label={
-                  <Form.Item noStyle shouldUpdate>
-                    {() => `散张零头余量（${form.getFieldValue('baseUnit') || '张'}）`}
-                  </Form.Item>
-                }
-                extra="文印出库优先消耗此散张，不足时自动拆包"
-              >
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
+          {editingId ? (
+            <Card
+              size="small"
+              title="当前库存结存（只读，库存变更请走出入库单）"
+              style={{ backgroundColor: '#fffbe6', marginBottom: 16, border: '1px solid #ffe58f' }}
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div style={{ fontSize: 13, color: '#595959' }}>
+                    整包/件库存数
+                    <div style={{ fontSize: 18, fontWeight: 'bold', color: '#1f1f1f', marginTop: 2 }}>
+                      {initialStockNum} {form.getFieldValue('unit') || '包'}
+                      {initialRemainSheets > 0 ? ` 又 ${initialRemainSheets} ${form.getFieldValue('baseUnit') || '张'}` : ''}
+                    </div>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ fontSize: 13, color: '#595959' }}>
+                    折合基础单位总量
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#0958d9', marginTop: 2 }}>
+                      {Number(initialStockNum * currentRate + initialRemainSheets).toLocaleString()} {form.getFieldValue('baseUnit') || '张'}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
+                <InfoCircleOutlined style={{ marginRight: 4, color: '#faad14' }} />
+                物资库存由采购入库单、领用出库单、文印耗材出库联动自动变更，档案编辑无法直接修改库存数。
+              </div>
+            </Card>
+          ) : null}
 
           <Row gutter={16}>
             <Col span={12}>

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doupi.common.exception.ServiceException;
 import com.doupi.common.utils.DateUtils;
 import com.doupi.common.utils.StringUtils;
+import com.doupi.common.utils.SecurityUtils;
 import com.doupi.stock.domain.StockGoods;
 import com.doupi.stock.domain.StockIn;
 import com.doupi.stock.domain.StockInItem;
@@ -95,6 +96,8 @@ public class StockInServiceImpl implements IStockInService
         {
             throw new ServiceException("入库明细列表不能为空！");
         }
+        // 入库类型规范化：兼容前端提交的中文描述或数字编码，统一映射为单字符编码
+        stockIn.setInType(normalizeInType(stockIn.getInType()));
         if ("1".equals(stockIn.getInType()) && stockIn.getSupplierId() == null)
         {
             throw new ServiceException("采购入库类型必须选择供应商！");
@@ -130,7 +133,16 @@ public class StockInServiceImpl implements IStockInService
         }
         if (StringUtils.isEmpty(stockIn.getOperator()))
         {
-            stockIn.setOperator(StringUtils.isNotEmpty(stockIn.getCreateBy()) ? stockIn.getCreateBy() : "管理员");
+            // 经办人统一记录当前登录用户：operator 存昵称、operator_id 存用户ID
+            String nickName = SecurityUtils.getLoginUser() != null && SecurityUtils.getLoginUser().getUser() != null
+                    ? SecurityUtils.getLoginUser().getUser().getNickName() : null;
+            stockIn.setOperator(StringUtils.isNotEmpty(nickName) ? nickName
+                    : (StringUtils.isNotEmpty(stockIn.getCreateBy()) ? stockIn.getCreateBy() : "管理员"));
+        }
+        // 记录经办人用户ID
+        if (stockIn.getOperatorId() == null)
+        {
+            stockIn.setOperatorId(SecurityUtils.getUserId());
         }
         stockIn.setCreateTime(DateUtils.getNowDate());
 
@@ -231,5 +243,27 @@ public class StockInServiceImpl implements IStockInService
     public int deleteEduStockInByInId(Long inId)
     {
         return stockInMapper.deleteEduStockInByInId(inId);
+    }
+
+    /**
+     * 入库类型规范化：兼容前端提交的中文描述与数字编码，统一映射为单字符编码
+     * 1-采购入库 2-调拨入库 3-其他入库/捐赠入库 4-盘盈入库
+     */
+    private String normalizeInType(String inType)
+    {
+        if (StringUtils.isEmpty(inType))
+        {
+            return "1";
+        }
+        String t = inType.trim();
+        switch (t)
+        {
+            case "采购入库": case "采购": return "1";
+            case "调拨入库": case "调拨": return "2";
+            case "捐赠入库": case "捐赠": return "3";
+            case "盘盈入库": case "盘盈": return "4";
+            case "其他入库": case "其他": return "3";
+            default: return t;
+        }
     }
 }

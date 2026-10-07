@@ -70,16 +70,35 @@ public class CommonController
 
     /**
      * 通用上传请求（单个）
+     * 支持同文件秒传：前端传入 fileHash（文件内容哈希），后端据此检测已存在文件直接返回原链接
      */
     @PostMapping("/upload")
-    public AjaxResult uploadFile(MultipartFile file) throws Exception
+    public AjaxResult uploadFile(MultipartFile file, String fileHash) throws Exception
     {
         try
         {
             // 上传文件路径
             String filePath = DoupiConfig.getUploadPath();
+
+            // 同文件秒传：若提供了内容哈希且对应文件已存在，直接返回已有链接，不重复存储
+            if (StringUtils.isNotEmpty(fileHash))
+            {
+                String existingFileName = FileUploadUtils.findByHash(filePath, fileHash, FileUploadUtils.getExtension(file));
+                if (StringUtils.isNotEmpty(existingFileName))
+                {
+                    String url = serverConfig.getUrl() + existingFileName;
+                    AjaxResult ajax = AjaxResult.success();
+                    ajax.put("url", url);
+                    ajax.put("fileName", existingFileName);
+                    ajax.put("newFileName", FileUtils.getName(existingFileName));
+                    ajax.put("originalFilename", file.getOriginalFilename());
+                    ajax.put("deduplicated", true);
+                    return ajax;
+                }
+            }
+
             // 上传并返回新文件名称
-            String fileName = FileUploadUtils.upload(filePath, file);
+            String fileName = FileUploadUtils.upload(filePath, file, fileHash);
             String url = serverConfig.getUrl() + fileName;
             AjaxResult ajax = AjaxResult.success();
             ajax.put("url", url);

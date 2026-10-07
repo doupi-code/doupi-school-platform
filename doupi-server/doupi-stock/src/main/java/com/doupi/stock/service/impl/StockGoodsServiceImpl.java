@@ -100,8 +100,10 @@ public class StockGoodsServiceImpl implements IStockGoodsService
             mode = "A";
         }
 
-        Long curStockNum = stockGoods.getStockNum() != null ? stockGoods.getStockNum() : (oldGoods.getStockNum() != null ? oldGoods.getStockNum() : 0L);
-        Integer curRemainSheets = stockGoods.getRemainSheets() != null ? stockGoods.getRemainSheets() : (oldGoods.getRemainSheets() != null ? oldGoods.getRemainSheets() : 0);
+        // 库存数必须由出入库单唯一变更，物资档案编辑一律忽略前端传入的库存字段，
+        // 始终以数据库当前值为准（仅当换算率变化时按所选模式重算）。
+        Long curStockNum = oldGoods.getStockNum() != null ? oldGoods.getStockNum() : 0L;
+        Integer curRemainSheets = oldGoods.getRemainSheets() != null ? oldGoods.getRemainSheets() : 0;
 
         // 当换算率发生变化时执行重算
         if (!oldRate.equals(newRate))
