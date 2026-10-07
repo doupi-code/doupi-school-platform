@@ -133,9 +133,9 @@ const UserProfilePage: React.FC = () => {
     return false; // 阻止默认上传动作
   };
 
-  const currentAvatarUrl = user.avatar
+  const currentAvatarUrl = user.avatar && user.avatar.trim() !== ''
     ? (user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_APP_BASE_API || ''}${user.avatar}`)
-    : 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png';
+    : '';
 
   return (
     <PageContainer header={{ title: '个人中心' }}>
@@ -149,12 +149,26 @@ const UserProfilePage: React.FC = () => {
           >
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <div style={{ position: 'relative', display: 'inline-block' }}>
-                <Avatar
-                  size={100}
-                  src={currentAvatarUrl}
-                  icon={<UserOutlined />}
-                  style={{ border: '3px solid #1677FF', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
+                {currentAvatarUrl ? (
+                  <Avatar
+                    size={100}
+                    src={currentAvatarUrl}
+                    style={{ border: '3px solid #1677FF', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  />
+                ) : (
+                  <Avatar
+                    size={100}
+                    style={{
+                      backgroundColor: '#1677FF',
+                      fontSize: 36,
+                      fontWeight: 600,
+                      border: '3px solid #1677FF',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    {(user.nickName || user.userName || '用').slice(0, 1)}
+                  </Avatar>
+                )}
                 <Upload
                   showUploadList={false}
                   beforeUpload={handleUploadAvatar}

@@ -5,10 +5,12 @@ import { setToken, removeToken, getToken } from '../utils/auth';
 interface UserState {
   token: string | undefined;
   name: string;
+  nickName: string;
   avatar: string;
   roles: string[];
   permissions: string[];
   setName: (name: string) => void;
+  setNickName: (nickName: string) => void;
   setAvatar: (avatar: string) => void;
   login: (userInfo: any) => Promise<any>;
   getInfo: () => Promise<any>;
@@ -18,11 +20,13 @@ interface UserState {
 export const useUserStore = create<UserState>((set) => ({
   token: getToken(),
   name: '',
+  nickName: '',
   avatar: '',
   roles: [],
   permissions: [],
 
   setName: (name: string) => set({ name }),
+  setNickName: (nickName: string) => set({ nickName }),
   setAvatar: (avatar: string) => set({ avatar }),
 
   login: async (userInfo) => {
@@ -35,29 +39,30 @@ export const useUserStore = create<UserState>((set) => ({
   getInfo: async () => {
     const res: any = await getInfo();
     const user = res.user;
-    const avatar = (user.avatar == "" || user.avatar == null) ? "/avatar.png" : user.avatar;
-    if (res.roles && res.roles.length > 0) {
-      set({
-        roles: res.roles,
-        permissions: res.permissions,
-        name: user.userName,
-        avatar: avatar
-      });
-    } else {
-      set({
-        roles: ['ROLE_DEFAULT'],
-        permissions: res.permissions,
-        name: user.userName,
-        avatar: avatar
-      });
+    let avatarUrl = '';
+    if (user.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' && user.avatar !== '/avatar.png') {
+      if (user.avatar.startsWith('http://') || user.avatar.startsWith('https://') || user.avatar.startsWith('data:')) {
+        avatarUrl = user.avatar;
+      } else {
+        const base = import.meta.env.VITE_APP_BASE_API || '';
+        avatarUrl = `${base}${user.avatar}`;
+      }
     }
+    const roles = res.roles && res.roles.length > 0 ? res.roles : ['ROLE_DEFAULT'];
+    set({
+      roles,
+      permissions: res.permissions || [],
+      name: user.userName || '',
+      nickName: user.nickName || '',
+      avatar: avatarUrl,
+    });
     return res;
   },
 
   logout: async () => {
     await logout();
     removeToken();
-    set({ token: undefined, roles: [], permissions: [], name: '', avatar: '' });
+    set({ token: undefined, roles: [], permissions: [], name: '', nickName: '', avatar: '' });
   }
 }));
 

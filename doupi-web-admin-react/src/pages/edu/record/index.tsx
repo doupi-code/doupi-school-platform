@@ -67,7 +67,6 @@ import {
 import { listTeacher } from '@/api/edu/teacher';
 import { listClass } from '@/api/edu/class';
 import { listGoods } from '@/api/stock/goods';
-import { listUser } from '@/api/system/user';
 import dayjs from 'dayjs';
 
 const { Text, Paragraph } = Typography;
@@ -75,7 +74,7 @@ const { TextArea } = Input;
 
 const PrintRecordPage: React.FC = () => {
   const actionRef = useRef<ActionType>(undefined);
-  const { name: currentUserName } = useUserStore();
+  const { name: currentUserName, nickName: currentNickName } = useUserStore();
   const [form] = Form.useForm();
   const [completeForm] = Form.useForm();
 
@@ -133,34 +132,29 @@ const PrintRecordPage: React.FC = () => {
   const [teacherList, setTeacherList] = useState<any[]>([]);
   const [classList, setClassList] = useState<any[]>([]);
   const [paperGoodsList, setPaperGoodsList] = useState<any[]>([]);
-  const [userList, setUserList] = useState<any[]>([]);
 
   // 动态联动状态
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [previewTotalSheets, setPreviewTotalSheets] = useState(50);
 
-  // 文印经办人下拉选项（包含系统用户，默认当前登录账号）
+  // 文印经办人下拉选项（优先当前登录人，整合教师花名册）
   const operatorOptions = React.useMemo(() => {
-    const list = [...userList];
-    const currentName = currentUserName || 'admin';
-    if (!list.some((u) => u.userName === currentName || u.nickName === currentName)) {
-      list.unshift({
-        userId: 0,
-        userName: currentName,
-        nickName: currentName,
-      });
-    }
-    return list.map((u) => {
-      const displayLabel = u.nickName && u.nickName !== u.userName
-        ? `${u.nickName} (${u.userName})`
-        : (u.nickName || u.userName);
-      const value = u.nickName || u.userName;
-      return {
-        label: displayLabel,
-        value: value,
-      };
+    const options: { label: string; value: string }[] = [];
+    const currentName = currentNickName || currentUserName || '文印经办人';
+    options.push({ label: `${currentName} (当前经办)`, value: currentName });
+
+    (teacherList || []).forEach((t: any) => {
+      const name = t.teacherName || t.name;
+      if (name && !options.some((o) => o.value === name)) {
+        options.push({
+          label: t.deptName ? `${name} (${t.deptName})` : name,
+          value: name,
+        });
+      }
     });
-  }, [userList, currentUserName]);
+
+    return options;
+  }, [teacherList, currentUserName, currentNickName]);
 
   // 智能根据纸张规格寻找匹配的库存耗材物品
   const findGoodsByPaperType = (type: string, list: any[]) => {
@@ -175,23 +169,19 @@ const PrintRecordPage: React.FC = () => {
     return matched ? matched.goodsId : paperList[0]?.goodsId;
   };
 
-  // 加载教师、班级、纸张耗材与经办人用户列表
+  // 加载教师、班级与纸张耗材列表
   const loadBaseData = async () => {
     try {
-      const [tRes, cRes, gRes, uRes]: any = await Promise.allSettled([
+      const [tRes, cRes, gRes]: any = await Promise.allSettled([
         listTeacher({ pageSize: 200 }),
         listClass({ pageSize: 200 }),
         listGoods({ pageSize: 200 }),
-        listUser({ pageSize: 200 }),
       ]);
       if (tRes.status === 'fulfilled' && tRes.value?.rows) {
         setTeacherList(tRes.value.rows);
       }
       if (cRes.status === 'fulfilled' && cRes.value?.rows) {
         setClassList(cRes.value.rows);
-      }
-      if (uRes.status === 'fulfilled' && uRes.value?.rows) {
-        setUserList(uRes.value.rows);
       }
       if (gRes.status === 'fulfilled' && gRes.value?.rows) {
         const allGoods = gRes.value.rows || [];
@@ -421,7 +411,7 @@ const PrintRecordPage: React.FC = () => {
         answerPageCount: 1,
         answerPrintCount: 2,
         answerPrintSide: '1',
-        operator: currentUserName || 'admin',
+        operator: currentNickName || currentUserName || '文印管理员',
         printTime: dayjs(),
         status: '0',
       });

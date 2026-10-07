@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ProLayout } from '@ant-design/pro-components';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Dropdown, Button, Tooltip, Space } from 'antd';
+import { Avatar, Dropdown, Button, Tooltip, Space } from 'antd';
 import {
   LogoutOutlined,
   UserOutlined,
@@ -79,7 +79,7 @@ const renderIcon = (name?: string) => {
 const BasicLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { name, avatar, logout } = useUserStore();
+  const { name, nickName, avatar, logout } = useUserStore();
   const { sidebarRoutes } = usePermStore();
 
   const handleLogout = async () => {
@@ -223,9 +223,11 @@ const BasicLayout: React.FC = () => {
         </div>
       )}
       avatarProps={{
-        src: avatar || 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png',
-        title: name || '管理员',
-        render: (props, dom) => {
+        src: avatar || undefined,
+        title: nickName || name || '教职工',
+        render: (_props, _dom) => {
+          const displayName = nickName || name || '用户';
+          const initialChar = displayName.trim().charAt(0) || '豆';
           return (
             <Dropdown
               menu={{
@@ -236,7 +238,45 @@ const BasicLayout: React.FC = () => {
                 ],
               }}
             >
-              {dom}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                {avatar ? (
+                  <Avatar src={avatar} size="default" />
+                ) : (
+                  <Avatar
+                    size="default"
+                    style={{
+                      backgroundColor: '#1677ff',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      boxShadow: '0 2px 6px rgba(22, 119, 255, 0.25)',
+                    }}
+                  >
+                    {initialChar}
+                  </Avatar>
+                )}
+                <span
+                  style={{
+                    color: 'rgba(0, 0, 0, 0.85)',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    lineHeight: '22px',
+                    userSelect: 'none',
+                  }}
+                >
+                  {displayName}
+                </span>
+              </div>
             </Dropdown>
           );
         },
