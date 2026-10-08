@@ -43,13 +43,6 @@ if [ -f "$DEPLOY_KEY" ]; then
   fi
 fi
 
-# npm 走代理
-export HTTP_PROXY="http://127.0.0.1:${PROXY_PORT}"
-export HTTPS_PROXY="http://127.0.0.1:${PROXY_PORT}"
-export http_proxy="$HTTP_PROXY"
-export https_proxy="$HTTPS_PROXY"
-export NO_PROXY="127.0.0.1,localhost"
-
 command -v npm >/dev/null 2>&1 || { echo "[x] 未找到 npm/node，请确认 CI 用户环境下 Node 可用"; exit 1; }
 command -v git >/dev/null 2>&1 || { echo "[x] 未找到 git，请先安装"; exit 1; }
 
