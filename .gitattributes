@@ -1,0 +1,2 @@
+# 统一换行符：shell 脚本必须在 Linux 服务器上可直接执行，禁止 CRLF
+*.sh text eol=lf
