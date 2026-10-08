@@ -74,3 +74,5 @@ scripts/*.tar.gz
 .workbuddy/
 "doupi-web-admin-react/dist/" 
 "doupi-web-client-react/dist/" 
+doupi-web-admin-react/dist/
+doupi-web-client-react/dist/
