@@ -76,6 +76,14 @@ public interface IEduPrintRecordService
     public int cancelEduPrintRecord(Long printId);
 
     /**
+     * 记录印刷错误（创建错误出库单扣减库存，回写 error_count/error_out_id）
+     * 
+     * @param eduPrintRecord 包含 printId、errorCount、errorRemark
+     * @return 结果
+     */
+    public int recordPrintError(EduPrintRecord eduPrintRecord);
+
+    /**
      * 获取文印统计报表数据
      * 
      * @param eduPrintRecord 查询条件

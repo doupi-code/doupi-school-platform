@@ -132,6 +132,17 @@ public class EduPrintRecordController extends BaseController
     }
 
     /**
+     * 记录印刷错误（创建错误损耗出库单扣减库存，回写 error_count/error_out_id）
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:edit')")
+    @Log(title = "记录印刷错误", businessType = BusinessType.UPDATE)
+    @PutMapping("/recordPrintError")
+    public AjaxResult recordPrintError(@RequestBody EduPrintRecord eduPrintRecord)
+    {
+        return toAjax(eduPrintRecordService.recordPrintError(eduPrintRecord));
+    }
+
+    /**
      * 本地离线OCR微信截图智能解析预填
      */
     @PreAuthorize("@ss.hasPermi('edu:record:add')")

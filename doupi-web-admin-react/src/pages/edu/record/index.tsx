@@ -45,6 +45,7 @@ import {
   CheckCircleFilled,
   ExclamationCircleFilled,
   QuestionCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import Authorized from '@/components/Authorized';
 import DraftNoticeAlert from '@/components/DraftNoticeAlert';
@@ -60,6 +61,7 @@ import {
   delRecord,
   cancelRecord,
   completeRecord,
+  recordPrintError,
   textParse,
   ocrParse,
   uploadFile,
@@ -90,6 +92,18 @@ const PrintRecordPage: React.FC = () => {
   const [currentRecord, setCurrentRecord] = useState<any>(null);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completeTarget, setCompleteTarget] = useState<any>(null);
+
+  // 修改弹窗（待印刷状态专用）
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm] = Form.useForm();
+
+  // 印刷错误登记弹窗
+  const [printErrorModalOpen, setPrintErrorModalOpen] = useState(false);
+  const [printErrorTarget, setPrintErrorTarget] = useState<any>(null);
+  const [printErrorSaving, setPrintErrorSaving] = useState(false);
+  const [printErrorForm] = Form.useForm();
 
   // 微信文本解析与OCR弹窗
   const [textModalOpen, setTextModalOpen] = useState(false);
@@ -1138,6 +1152,90 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
+  // 打开修改弹窗（仅待印刷状态）
+  const handleOpenEdit = (record: any) => {
+    setEditTarget(record);
+    editForm.resetFields();
+    editForm.setFieldsValue({
+      printName: record.printName,
+      paperGoodsId: record.paperGoodsId,
+      paperType: record.paperType,
+      printCount: record.printCount,
+      pageCount: record.pageCount,
+      printSide: record.printSide,
+      teacherId: record.teacherId,
+      grade: record.grade,
+      classId: record.classId,
+      className: record.className,
+      operator: record.operator,
+      printTime: record.printTime ? dayjs(record.printTime) : undefined,
+      remark: record.remark,
+    });
+    setEditModalOpen(true);
+  };
+
+  // 关闭修改弹窗
+  const handleCloseEdit = () => {
+    setEditModalOpen(false);
+    setEditTarget(null);
+  };
+
+  // 保存修改（调用 updateRecord，后端会处理库存同步）
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    try {
+      const values = await editForm.validateFields();
+      setEditSaving(true);
+      await updateRecord({
+        printId: editTarget.printId,
+        ...values,
+        operator: values.operator || editTarget.operator,
+      });
+      message.success('修改成功，库存已同步更新');
+      setEditModalOpen(false);
+      setEditTarget(null);
+      actionRef.current?.reload();
+    } catch (e: any) {
+      message.error(e.message || '保存失败');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // 打开印刷错误登记弹窗
+  const handleOpenPrintError = (record: any) => {
+    setPrintErrorTarget(record);
+    printErrorForm.resetFields();
+    printErrorForm.setFieldsValue({
+      errorCount: record.errorCount || undefined,
+      errorRemark: record.errorRemark || '',
+    });
+    setPrintErrorModalOpen(true);
+  };
+
+  // 保存印刷错误登记
+  const handleSavePrintError = async () => {
+    if (!printErrorTarget) return;
+    try {
+      const values = await printErrorForm.validateFields();
+      setPrintErrorSaving(true);
+      await recordPrintError({
+        printId: printErrorTarget.printId,
+        errorCount: Number(values.errorCount),
+        errorRemark: values.errorRemark || '',
+        operator: currentUserName,
+      });
+      message.success(`印刷错误已登记，损耗 ${values.errorCount} 张`);
+      setPrintErrorModalOpen(false);
+      setPrintErrorTarget(null);
+      actionRef.current?.reload();
+    } catch (e: any) {
+      message.error(e.message || '保存失败');
+    } finally {
+      setPrintErrorSaving(false);
+    }
+  };
+
   // 智能解析数据统一入口（处理 OCR 与纯文本解析，支持跨天与多次任务队列）
   const handleParsedResult = (data: any) => {
     if (!data) return;
@@ -1564,10 +1662,22 @@ const PrintRecordPage: React.FC = () => {
     {
       title: '操作',
       valueType: 'option',
-      width: 260,
+      width: 340,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap>
+          {record.status === '0' && (
+            <Button
+              key="edit"
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              style={{ color: '#1677FF' }}
+              onClick={() => handleOpenEdit(record)}
+            >
+              修改
+            </Button>
+          )}
           {record.status === '0' && (
             <Button
               key="complete"
@@ -1578,6 +1688,18 @@ const PrintRecordPage: React.FC = () => {
               onClick={() => handleOpenComplete(record)}
             >
               完成
+            </Button>
+          )}
+          {record.status !== '2' && (
+            <Button
+              key="error"
+              type="link"
+              size="small"
+              danger
+              icon={<WarningOutlined />}
+              onClick={() => handleOpenPrintError(record)}
+            >
+              印刷错误
             </Button>
           )}
           <Button
@@ -2667,6 +2789,209 @@ const PrintRecordPage: React.FC = () => {
             extra="印完后拍照留样归档，支持本地选择、拖拽或按 Ctrl+V 粘贴截图"
           >
             <ImageUpload placeholder="点击上传或拖拽成品留样图片" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 修改印刷登记弹窗（待印刷状态专用，库存相关字段变化时后端自动同步库存） */}
+      <Modal
+        title="修改印刷登记"
+        open={editModalOpen}
+        onOk={handleSaveEdit}
+        onCancel={handleCloseEdit}
+        confirmLoading={editSaving}
+        width={720}
+        destroyOnHidden
+      >
+        {editTarget && (
+          <div
+            style={{
+              background: '#FFF7E6',
+              border: '1px solid #FFD591',
+              borderRadius: 6,
+              padding: '10px 14px',
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontWeight: 'bold', fontSize: 14, color: '#D46B08', marginBottom: 4 }}>
+              ✏️ 修改印刷登记：{editTarget.printName}
+            </div>
+            <div style={{ fontSize: 12, color: '#874D00' }}>
+              当前状态：待印刷。修改印刷份数/页数/单双面/纸张类型会自动作废旧出库单并按新耗纸量重新扣减库存。
+            </div>
+          </div>
+        )}
+        <Form form={editForm} layout="vertical" preserve={false}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="printName"
+                label="印刷名称"
+                rules={[{ required: true, message: '请输入印刷名称' }]}
+              >
+                <Input placeholder="如：高三月考数学试卷" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="paperGoodsId"
+                label="用纸物品"
+                rules={[{ required: true, message: '请选择用纸物品' }]}
+              >
+                <Select
+                  placeholder="选择用纸"
+                  showSearch
+                  optionFilterProp="children"
+                  options={goodsList.map((g: any) => ({
+                    label: `${g.goodsName}（库存 ${g.stockNum || 0} ${g.unitName || '箱'} × ${g.conversionRate || 1}张/箱${g.remainSheets ? ' + ' + g.remainSheets + '张' : ''}）`,
+                    value: g.goodsId,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="printCount"
+                label="印刷份数"
+                rules={[{ required: true, message: '请输入印刷份数' }]}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="如 100" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="pageCount"
+                label="每份页数"
+                rules={[{ required: true, message: '请输入每份页数' }]}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="如 2" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="printSide" label="单/双面">
+                <Select placeholder="选择单双面">
+                  <Select.Option value="1">单面印刷</Select.Option>
+                  <Select.Option value="2">双面印刷</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="grade" label="年级">
+                <Select placeholder="选择年级" allowClear>
+                  <Select.Option value="高一">高一</Select.Option>
+                  <Select.Option value="高二">高二</Select.Option>
+                  <Select.Option value="高三">高三</Select.Option>
+                  <Select.Option value="复读部">复读部</Select.Option>
+                  <Select.Option value="初中部">初中部</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="classId" label="班级">
+                <Select
+                  placeholder="选择班级"
+                  showSearch
+                  optionFilterProp="children"
+                  allowClear
+                  options={classList.map((c: any) => ({
+                    label: `${c.className}（${c.grade || ''}）`,
+                    value: c.classId,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="teacherId" label="申请教师">
+                <Select
+                  placeholder="选择教师"
+                  showSearch
+                  optionFilterProp="children"
+                  allowClear
+                  options={teacherList.map((t: any) => ({
+                    label: `${t.teacherName}（${t.subject || ''}）`,
+                    value: t.teacherId,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="printTime" label="印刷时间">
+                <DatePicker style={{ width: '100%' }} placeholder="选择印刷时间" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="operator" label="经办人">
+                <Input placeholder="经办人姓名" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="remark" label="备注">
+            <TextArea placeholder="备注信息" rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 印刷错误登记弹窗 */}
+      <Modal
+        title="登记印刷错误损耗"
+        open={printErrorModalOpen}
+        onOk={handleSavePrintError}
+        onCancel={() => {
+          setPrintErrorModalOpen(false);
+          setPrintErrorTarget(null);
+        }}
+        confirmLoading={printErrorSaving}
+        width={480}
+        destroyOnHidden
+      >
+        {printErrorTarget && (
+          <div
+            style={{
+              background: '#FFF1F0',
+              border: '1px solid #FFA39E',
+              borderRadius: 6,
+              padding: '10px 14px',
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontWeight: 'bold', fontSize: 14, color: '#CF1322', marginBottom: 4 }}>
+              ⚠️ 印刷错误损耗登记：{printErrorTarget.printName}
+            </div>
+            <div style={{ fontSize: 12, color: '#5C0011', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span>原耗纸: <b>{printErrorTarget.totalPages || 0} 张</b></span>
+              <span>用纸: <b>{printErrorTarget.paperGoodsName || printErrorTarget.paperType || 'A4'}</b></span>
+              {printErrorTarget.errorCount ? (
+                <span>已登记损耗: <b style={{ color: '#CF1322' }}>{printErrorTarget.errorCount} 张</b></span>
+              ) : null}
+            </div>
+          </div>
+        )}
+        <Form form={printErrorForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="errorCount"
+            label="印刷错误损耗张数"
+            rules={[{ required: true, message: '请输入损耗张数' }]}
+            extra="错误损耗张数会作为一张单独的出库单从库存中扣减"
+          >
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="如 50" autoFocus />
+          </Form.Item>
+          <Form.Item
+            name="errorRemark"
+            label="错误原因说明"
+            rules={[{ required: true, message: '请简要说明错误原因' }]}
+          >
+            <TextArea
+              placeholder="如：油墨不均导致重印、纸张卡纸损耗、装订错误等"
+              rows={3}
+              maxLength={200}
+              showCount
+            />
           </Form.Item>
         </Form>
       </Modal>

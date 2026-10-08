@@ -32,19 +32,26 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="teacherName"    column="teacher_name"    />
         <result property="paperGoodsName"    column="paper_goods_name"    />
         <result property="outNo"    column="out_no"    />
+        <result property="errorCount"    column="error_count"    />
+        <result property="errorRemark"    column="error_remark"    />
+        <result property="errorOutId"    column="error_out_id"    />
+        <result property="errorOutNo"    column="error_out_no"    />
     </resultMap>
 
     <sql id="selectEduPrintRecordVo">
         select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.total_pages, r.teacher_id, r.grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
                coalesce(u.nick_name, t.teacher_name) as teacher_name,
                g.goods_name as paper_goods_name,
-               o.out_no
+               o.out_no as out_no,
+               r.error_count, r.error_remark, r.error_out_id,
+               eo.out_no as error_out_no
         from edu_print_record r
         left join sys_user u on r.teacher_id = u.user_id
         left join edu_teacher t on r.teacher_id = t.teacher_id
         left join edu_class c on r.class_id = c.class_id
         left join edu_goods g on r.paper_goods_id = g.goods_id
         left join edu_stock_out o on r.out_id = o.out_id
+        left join edu_stock_out eo on r.error_out_id = eo.out_id
     </sql>
 
     <select id="selectEduPrintRecordList" parameterType="EduPrintRecord" resultMap="EduPrintRecordResult">
@@ -111,6 +118,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">update_by,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="delFlag != null">del_flag,</if>
+            <if test="errorCount != null">error_count,</if>
+            <if test="errorRemark != null and errorRemark != ''">error_remark,</if>
+            <if test="errorOutId != null">error_out_id,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="printName != null and printName != ''">#{printName},</if>
@@ -136,6 +146,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">#{updateBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="delFlag != null">#{delFlag},</if>
+            <if test="errorCount != null">#{errorCount},</if>
+            <if test="errorRemark != null and errorRemark != ''">#{errorRemark},</if>
+            <if test="errorOutId != null">#{errorOutId},</if>
          </trim>
     </insert>
 
@@ -165,6 +178,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="delFlag != null">del_flag = #{delFlag},</if>
+            <if test="errorCount != null">error_count = #{errorCount},</if>
+            <if test="errorRemark != null">error_remark = #{errorRemark},</if>
+            <if test="errorOutId != null">error_out_id = #{errorOutId},</if>
         </trim>
         where print_id = #{printId}
     </update>
@@ -181,7 +197,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </update>
 
     <select id="selectPrintSummary" parameterType="EduPrintRecord" resultType="java.util.Map">
-        select 
+        select
             coalesce(sum(case when status != '2' then 1 else 0 end), 0) as totalJobs,
             coalesce(sum(case when status != '2' then print_count else 0 end), 0) as totalPrintCount,
             coalesce(sum(case when status != '2' then total_pages else 0 end), 0) as totalPages,
@@ -192,7 +208,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             coalesce(sum(case when status = '0' then print_count else 0 end), 0) as pendingPrintCount,
             coalesce(sum(case when status = '0' then total_pages else 0 end), 0) as pendingPages,
             coalesce(sum(case when status = '2' then 1 else 0 end), 0) as cancelledJobs,
-            coalesce(sum(case when status = '2' then total_pages else 0 end), 0) as cancelledPages
+            coalesce(sum(case when status = '2' then total_pages else 0 end), 0) as cancelledPages,
+            coalesce(sum(case when status != '2' then coalesce(error_count, 0) else 0 end), 0) as totalErrorCount
         from edu_print_record
         <where>
             and del_flag = '0'
@@ -211,11 +228,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="selectPaperTypeStats" parameterType="EduPrintRecord" resultType="java.util.Map">
-        select 
+        select
             coalesce(paper_type, '未指定') as paperType,
             count(1) as jobCount,
             coalesce(sum(total_pages), 0) as totalPages,
-            coalesce(sum(print_count), 0) as totalPrintCount
+            coalesce(sum(print_count), 0) as totalPrintCount,
+            coalesce(sum(coalesce(error_count, 0)), 0) as totalErrorCount
         from edu_print_record
         <where>
             and del_flag = '0'
@@ -236,11 +254,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="selectGradePrintStats" parameterType="EduPrintRecord" resultType="java.util.Map">
-        select 
+        select
             coalesce(nullif(grade, ''), '全校通用') as grade,
             count(1) as jobCount,
             coalesce(sum(total_pages), 0) as totalPages,
-            coalesce(sum(print_count), 0) as totalPrintCount
+            coalesce(sum(print_count), 0) as totalPrintCount,
+            coalesce(sum(coalesce(error_count, 0)), 0) as totalErrorCount
         from edu_print_record
         <where>
             and del_flag = '0'
@@ -261,12 +280,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="selectTeacherPrintStats" parameterType="EduPrintRecord" resultType="java.util.Map">
-        select 
+        select
             coalesce(u.nick_name, t.teacher_name, '未知教师') as teacherName,
             coalesce(u.subject, t.subject, '学科通用') as subject,
             count(1) as jobCount,
             coalesce(sum(r.total_pages), 0) as totalPages,
-            coalesce(sum(r.print_count), 0) as totalPrintCount
+            coalesce(sum(r.print_count), 0) as totalPrintCount,
+            coalesce(sum(coalesce(r.error_count, 0)), 0) as totalErrorCount
         from edu_print_record r
         left join sys_user u on r.teacher_id = u.user_id
         left join edu_teacher t on r.teacher_id = t.teacher_id

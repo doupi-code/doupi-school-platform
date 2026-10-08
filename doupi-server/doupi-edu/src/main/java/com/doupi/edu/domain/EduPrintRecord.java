@@ -104,6 +104,21 @@ public class EduPrintRecord extends BaseEntity
     @Excel(name = "关联出库单号")
     private String outNo;
 
+    /** 印刷错误张数 */
+    @Excel(name = "印刷错误张数")
+    private Long errorCount;
+
+    /** 印刷错误说明 */
+    @Excel(name = "印刷错误说明")
+    private String errorRemark;
+
+    /** 错误关联出库单ID */
+    private Long errorOutId;
+
+    /** 错误关联出库单号 */
+    @Excel(name = "错误出库单号")
+    private String errorOutNo;
+
     public String getTeacherName() {
         return teacherName;
     }
@@ -126,6 +141,38 @@ public class EduPrintRecord extends BaseEntity
 
     public void setOutNo(String outNo) {
         this.outNo = outNo;
+    }
+
+    public Long getErrorCount() {
+        return errorCount;
+    }
+
+    public void setErrorCount(Long errorCount) {
+        this.errorCount = errorCount;
+    }
+
+    public String getErrorRemark() {
+        return errorRemark;
+    }
+
+    public void setErrorRemark(String errorRemark) {
+        this.errorRemark = errorRemark;
+    }
+
+    public Long getErrorOutId() {
+        return errorOutId;
+    }
+
+    public void setErrorOutId(Long errorOutId) {
+        this.errorOutId = errorOutId;
+    }
+
+    public String getErrorOutNo() {
+        return errorOutNo;
+    }
+
+    public void setErrorOutNo(String errorOutNo) {
+        this.errorOutNo = errorOutNo;
     }
 
     public void setPrintId(Long printId) 

@@ -50,6 +50,7 @@ import {
   CameraOutlined,
   BookOutlined,
   ClearOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
@@ -104,6 +105,7 @@ const PrintLedgerReportPage: React.FC = () => {
     pendingPages: 0,
     cancelledJobs: 0,
     cancelledPages: 0,
+    totalErrorCount: 0,
     totalReams: 0,
     totalCost: 0,
     unitPrice: 0.06,
@@ -236,6 +238,7 @@ const PrintLedgerReportPage: React.FC = () => {
         const pPages = Number(sum.pendingPages ?? 0);
         const canJobs = Number(sum.cancelledJobs ?? 0);
         const canPages = Number(sum.cancelledPages ?? 0);
+        const totalErrorCount = Number(sum.totalErrorCount ?? 0);
 
         // 如果用户主动按“作废”筛选，则消耗量对齐作废，否则展示实际已完成印刷的消耗量
         const isQueryCancelled = params.status === '2';
@@ -260,6 +263,7 @@ const PrintLedgerReportPage: React.FC = () => {
           pendingPages: pPages,
           cancelledJobs: canJobs,
           cancelledPages: canPages,
+          totalErrorCount,
           totalReams: reams,
           totalCost: cost,
           unitPrice,
@@ -683,6 +687,23 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
+      title: '错误损耗',
+      dataIndex: 'errorCount',
+      width: 100,
+      align: 'right',
+      render: (_, r) => {
+        const cnt = Number(r.errorCount || 0);
+        if (cnt > 0) {
+          return (
+            <Tooltip title={r.errorRemark || '印刷错误'}>
+              <Tag color="warning">{cnt} 张</Tag>
+            </Tooltip>
+          );
+        }
+        return <Text type="secondary">-</Text>;
+      },
+    },
+    {
       title: '折合成本',
       dataIndex: 'cost',
       width: 100,
@@ -954,6 +975,21 @@ const PrintLedgerReportPage: React.FC = () => {
               </div>
             </Card>
           </Col>
+
+          <Col xs={24} sm={12} md={4} style={{ flex: '1 1 20%' }}>
+            <Card bordered={false} style={{ borderRadius: 12, background: 'linear-gradient(135deg, #FFF7E6 0%, #FFFFFF 100%)' }}>
+              <Statistic
+                title="印刷错误损耗"
+                value={summary.totalErrorCount}
+                suffix="张"
+                prefix={<WarningOutlined style={{ color: '#FA8C16' }} />}
+                valueStyle={{ color: '#FA8C16', fontWeight: 'bold' }}
+              />
+              <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                错误率: <strong>{summary.totalPages > 0 ? ((summary.totalErrorCount / summary.totalPages) * 100).toFixed(2) : '0.00'}%</strong>
+              </div>
+            </Card>
+          </Col>
         </Row>
       </Spin>
 
@@ -1121,6 +1157,17 @@ const PrintLedgerReportPage: React.FC = () => {
                       ),
                     },
                     {
+                      title: '错误损耗',
+                      dataIndex: 'totalErrorCount',
+                      align: 'right',
+                      render: (val) => {
+                        const cnt = Number(val || 0);
+                        return cnt > 0
+                          ? <Tag color="warning">{cnt.toLocaleString()} 张</Tag>
+                          : <Text type="secondary">-</Text>;
+                      },
+                    },
+                    {
                       title: '折合标准包数',
                       align: 'right',
                       render: (_, r) => `${(Number(r.totalPages || 0) / summary.sheetsPerReam).toFixed(1)} 包`,
@@ -1218,6 +1265,17 @@ const PrintLedgerReportPage: React.FC = () => {
                           {Number(val || 0).toLocaleString()} 张
                         </strong>
                       ),
+                    },
+                    {
+                      title: '错误损耗',
+                      dataIndex: 'totalErrorCount',
+                      align: 'right',
+                      render: (val) => {
+                        const cnt = Number(val || 0);
+                        return cnt > 0
+                          ? <Tag color="warning">{cnt.toLocaleString()} 张</Tag>
+                          : <Text type="secondary">-</Text>;
+                      },
                     },
                     {
                       title: '折合成本',

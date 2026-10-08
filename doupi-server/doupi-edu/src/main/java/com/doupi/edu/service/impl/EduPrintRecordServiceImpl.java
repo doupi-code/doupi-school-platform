@@ -260,14 +260,106 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
     }
 
     /**
-     * 修改印刷登记
+     * 修改印刷登记（待印刷状态下若库存相关字段变化，自动同步作废旧出库单并创建新出库单）
      * 
      * @param eduPrintRecord 印刷登记
      * @return 结果
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int updateEduPrintRecord(EduPrintRecord eduPrintRecord)
     {
+        EduPrintRecord old = eduPrintRecordMapper.selectEduPrintRecordByPrintId(eduPrintRecord.getPrintId());
+        if (old == null)
+        {
+            throw new ServiceException("印刷登记记录不存在！");
+        }
+
+        // 只有待印刷状态才允许修改库存相关字段；已完成/已作废不碰库存
+        boolean stockNeedsSync = "0".equals(old.getStatus()) && old.getOutId() != null;
+
+        if (stockNeedsSync)
+        {
+            // 合并新旧值（前端可能只传部分字段）
+            Long newPaperGoodsId = eduPrintRecord.getPaperGoodsId() != null ? eduPrintRecord.getPaperGoodsId() : old.getPaperGoodsId();
+            Long newPrintCount = eduPrintRecord.getPrintCount() != null ? eduPrintRecord.getPrintCount() : old.getPrintCount();
+            Long newPageCount = eduPrintRecord.getPageCount() != null ? eduPrintRecord.getPageCount() : old.getPageCount();
+            String newPrintSide = StringUtils.isNotEmpty(eduPrintRecord.getPrintSide()) ? eduPrintRecord.getPrintSide() : old.getPrintSide();
+
+            // 校验与重新计算耗纸量（与 insert 保持一致）
+            if (newPageCount == null || newPageCount <= 0)
+            {
+                newPageCount = 1L;
+            }
+            if (newPrintCount == null || newPrintCount <= 0)
+            {
+                throw new ServiceException("印刷份数必须大于0！");
+            }
+            if (StringUtils.isEmpty(newPrintSide))
+            {
+                newPrintSide = "1";
+            }
+            long sheetsPerCopy = "2".equals(newPrintSide) ? ((newPageCount + 1) / 2) : newPageCount;
+            long newTotalSheets = newPrintCount * sheetsPerCopy;
+
+            // 对比是否有库存相关字段变化
+            long oldTotalSheets = old.getTotalPages() != null ? old.getTotalPages() : 0L;
+            boolean paperChanged = !java.util.Objects.equals(newPaperGoodsId, old.getPaperGoodsId());
+            boolean sheetsChanged = newTotalSheets != oldTotalSheets;
+
+            if (paperChanged || sheetsChanged)
+            {
+                // 1. 作废旧出库单，库存自动回退
+                stockOutService.cancelEduStockOut(old.getOutId());
+
+                // 2. 校验新库存（旧出库已作废，当前库存已包含回退量）
+                StockGoods paperGoods = stockGoodsMapper.selectEduGoodsByGoodsId(newPaperGoodsId);
+                if (paperGoods == null)
+                {
+                    throw new ServiceException("选中的用纸物品不存在！");
+                }
+                long currentStock = paperGoods.getStockNum() == null ? 0L : paperGoods.getStockNum();
+                long conversionRate = paperGoods.getConversionRate() == null ? 0L : paperGoods.getConversionRate();
+                long remainSheets = paperGoods.getRemainSheets() == null ? 0L : paperGoods.getRemainSheets();
+                long totalStockNum = currentStock * conversionRate + remainSheets;
+                if (totalStockNum < newTotalSheets)
+                {
+                    String sideDesc = "2".equals(newPrintSide) ? "双页印刷" : "单页印刷";
+                    throw new ServiceException("用纸【" + paperGoods.getGoodsName() + "】库存不足，当前库存为 " + totalStockNum
+                            + " 张，本次印刷总耗纸需求为 " + newTotalSheets + " 张（" + newPrintCount + "份 × 每份" + newPageCount + "页[" + sideDesc + "，耗纸" + sheetsPerCopy + "张/份]）！");
+                }
+
+                // 3. 创建新出库单扣减库存
+                String receiver = StringUtils.isNotEmpty(old.getTeacherName()) ? old.getTeacherName() : "文印登记";
+                String op = StringUtils.isNotEmpty(eduPrintRecord.getOperator()) ? eduPrintRecord.getOperator() : old.getOperator();
+                String sideDesc = "2".equals(newPrintSide) ? "双页印刷" : "单页印刷";
+
+                StockOut stockOut = new StockOut();
+                stockOut.setOutType("3");
+                stockOut.setReceiver(receiver);
+                stockOut.setOperator(op);
+                stockOut.setOutTime(eduPrintRecord.getPrintTime() != null ? eduPrintRecord.getPrintTime() : old.getPrintTime());
+                stockOut.setRemark("关联印刷登记【" + (StringUtils.isNotEmpty(eduPrintRecord.getPrintName()) ? eduPrintRecord.getPrintName() : old.getPrintName())
+                        + "】用纸出库(修改后 " + newPrintCount + "份 × 每份" + newPageCount + "页[" + sideDesc + "] = " + newTotalSheets + "张)");
+
+                List<StockOutItem> items = new ArrayList<>();
+                StockOutItem item = new StockOutItem();
+                item.setGoodsId(newPaperGoodsId);
+                item.setQuantity(newTotalSheets);
+                items.add(item);
+                stockOut.setItemList(items);
+                stockOutService.insertEduStockOut(stockOut);
+
+                // 4. 回写新出库单ID和新耗纸量
+                eduPrintRecord.setOutId(stockOut.getOutId());
+                eduPrintRecord.setTotalPages(newTotalSheets);
+                eduPrintRecord.setPaperGoodsId(newPaperGoodsId);
+                eduPrintRecord.setPrintCount(newPrintCount);
+                eduPrintRecord.setPageCount(newPageCount);
+                eduPrintRecord.setPrintSide(newPrintSide);
+            }
+        }
+
         eduPrintRecord.setUpdateTime(DateUtils.getNowDate());
         if (eduPrintRecord.getClassId() != null && eduClassMapper != null && StringUtils.isEmpty(eduPrintRecord.getClassName()))
         {
@@ -313,6 +405,93 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
         EduPrintRecord updateObj = new EduPrintRecord();
         updateObj.setPrintId(printId);
         updateObj.setStatus("2"); // 2-已作废
+        updateObj.setUpdateTime(DateUtils.getNowDate());
+        return eduPrintRecordMapper.updateEduPrintRecord(updateObj);
+    }
+
+    /**
+     * 记录印刷错误（创建错误出库单扣减库存，回写 error_count/error_out_id）
+     *
+     * @param eduPrintRecord 包含 printId、errorCount、errorRemark
+     * @return 结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int recordPrintError(EduPrintRecord eduPrintRecord)
+    {
+        EduPrintRecord old = eduPrintRecordMapper.selectEduPrintRecordByPrintId(eduPrintRecord.getPrintId());
+        if (old == null)
+        {
+            throw new ServiceException("印刷登记记录不存在！");
+        }
+        if ("2".equals(old.getStatus()))
+        {
+            throw new ServiceException("该印刷登记已作废，不能记录印刷错误！");
+        }
+
+        Long errorCount = eduPrintRecord.getErrorCount();
+        if (errorCount == null || errorCount <= 0)
+        {
+            throw new ServiceException("印刷错误张数必须大于0！");
+        }
+
+        // 若已有错误出库单，先作废回退库存（允许多次修正错误数量）
+        if (old.getErrorOutId() != null)
+        {
+            try
+            {
+                stockOutService.cancelEduStockOut(old.getErrorOutId());
+            }
+            catch (Exception e)
+            {
+                // 忽略已作废的情况
+            }
+        }
+
+        // 校验库存（用同一纸张类型，错误张数单独扣减）
+        Long paperGoodsId = old.getPaperGoodsId();
+        StockGoods paperGoods = stockGoodsMapper.selectEduGoodsByGoodsId(paperGoodsId);
+        if (paperGoods == null)
+        {
+            throw new ServiceException("关联的用纸物品不存在！");
+        }
+        long currentStock = paperGoods.getStockNum() == null ? 0L : paperGoods.getStockNum();
+        long conversionRate = paperGoods.getConversionRate() == null ? 0L : paperGoods.getConversionRate();
+        long remainSheets = paperGoods.getRemainSheets() == null ? 0L : paperGoods.getRemainSheets();
+        long totalStockNum = currentStock * conversionRate + remainSheets;
+        if (totalStockNum < errorCount)
+        {
+            throw new ServiceException("用纸【" + paperGoods.getGoodsName() + "】库存不足，当前库存为 " + totalStockNum
+                    + " 张，本次印刷错误需扣减 " + errorCount + " 张！");
+        }
+
+        // 创建错误出库单
+        String receiver = StringUtils.isNotEmpty(old.getTeacherName()) ? old.getTeacherName() : "文印登记";
+        String op = StringUtils.isNotEmpty(eduPrintRecord.getOperator()) ? eduPrintRecord.getOperator() : old.getOperator();
+        String errorRemark = StringUtils.isNotEmpty(eduPrintRecord.getErrorRemark()) ? eduPrintRecord.getErrorRemark() : "";
+
+        StockOut stockOut = new StockOut();
+        stockOut.setOutType("3");
+        stockOut.setReceiver(receiver);
+        stockOut.setOperator(op);
+        stockOut.setOutTime(DateUtils.getNowDate());
+        stockOut.setRemark("关联印刷登记【" + old.getPrintName() + "】印刷错误损耗 " + errorCount + " 张"
+                + (StringUtils.isNotEmpty(errorRemark) ? "，原因：" + errorRemark : ""));
+
+        List<StockOutItem> items = new ArrayList<>();
+        StockOutItem item = new StockOutItem();
+        item.setGoodsId(paperGoodsId);
+        item.setQuantity(errorCount);
+        items.add(item);
+        stockOut.setItemList(items);
+        stockOutService.insertEduStockOut(stockOut);
+
+        // 回写错误统计字段
+        EduPrintRecord updateObj = new EduPrintRecord();
+        updateObj.setPrintId(eduPrintRecord.getPrintId());
+        updateObj.setErrorCount(errorCount);
+        updateObj.setErrorRemark(errorRemark);
+        updateObj.setErrorOutId(stockOut.getOutId());
         updateObj.setUpdateTime(DateUtils.getNowDate());
         return eduPrintRecordMapper.updateEduPrintRecord(updateObj);
     }
