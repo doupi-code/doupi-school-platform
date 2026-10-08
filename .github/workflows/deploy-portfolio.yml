@@ -1,0 +1,45 @@
+name: Deploy Portfolio (Static)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'doupi-portfolio/**'
+      - 'deploy-portfolio.sh'
+      - '.github/workflows/deploy-portfolio.yml'
+  workflow_dispatch:
+
+# 每个 workflow 独立锁：同 workflow 快速重推只保留最新，不同 workflow 可并发不互相取消
+concurrency:
+  group: doupi-deploy-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 作品集为纯静态单文件，无依赖下载，仅同步代码 + 拷贝文件，用时很短
+    timeout-minutes: 5
+    steps:
+      - name: 校验部署密钥
+        run: |
+          if [ -z "${{ secrets.SERVER_HOST }}" ] || [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
+            echo "::error::未检测到 GitHub Secrets (SERVER_HOST / SERVER_SSH_KEY)，请在仓库 Settings -> Secrets and variables -> Actions 中配置。"
+            exit 1
+          fi
+
+      # 全程只建立一次 SSH 连接发送触发指令，不传输任何构建产物，
+      # 代码拉取、文件同步全部由服务器本地脚本完成
+      - name: SSH 触发服务器本地部署
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 22 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "${{ secrets.SERVER_USER || 'cicd' }}@${{ secrets.SERVER_HOST }}" \
+            'WS=/data/deploy-workspace/doupi-school-platform
+             if [ ! -d "$WS/.git" ]; then
+               git clone -b main --depth 1 git@github.com:doupi-code/doupi-school-platform.git "$WS"
+             fi
+             bash "$WS/deploy-portfolio.sh"'
