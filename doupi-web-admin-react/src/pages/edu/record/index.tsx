@@ -1152,8 +1152,8 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
-  // 打开修改弹窗（仅待印刷状态）
-  const handleOpenEdit = (record: any) => {
+  // 打开快速修改弹窗（仅待印刷状态，独立于主表单编辑）
+  const handleOpenQuickEdit = (record: any) => {
     setEditTarget(record);
     editForm.resetFields();
     editForm.setFieldsValue({
@@ -1673,7 +1673,7 @@ const PrintRecordPage: React.FC = () => {
               size="small"
               icon={<EditOutlined />}
               style={{ color: '#1677FF' }}
-              onClick={() => handleOpenEdit(record)}
+              onClick={() => handleOpenQuickEdit(record)}
             >
               修改
             </Button>
@@ -2842,7 +2842,7 @@ const PrintRecordPage: React.FC = () => {
                   placeholder="选择用纸"
                   showSearch
                   optionFilterProp="children"
-                  options={goodsList.map((g: any) => ({
+                  options={paperGoodsList.map((g: any) => ({
                     label: `${g.goodsName}（库存 ${g.stockNum || 0} ${g.unitName || '箱'} × ${g.conversionRate || 1}张/箱${g.remainSheets ? ' + ' + g.remainSheets + '张' : ''}）`,
                     value: g.goodsId,
                   }))}
