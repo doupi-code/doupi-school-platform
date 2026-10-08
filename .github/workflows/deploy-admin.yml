@@ -9,9 +9,9 @@ on:
       - '.github/workflows/deploy-admin.yml'
   workflow_dispatch:
 
-# 三个部署共用同一把锁：串行执行，避免并发争抢服务器上的 git 工作区
+# 每个 workflow 独立锁：同 workflow 快速重推只保留最新，不同 workflow 可并发不互相取消
 concurrency:
-  group: doupi-deploy
+  group: doupi-deploy-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
