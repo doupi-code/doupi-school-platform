@@ -57,6 +57,11 @@ body {
   padding-right: 4px !important;
 }
 
+/* 详情面板（Descriptions）标签列禁止换行，避免“纸张总消耗量 / 关联出库单号 / 成品拍照留样”等中文标签一字拆行 */
+.ant-descriptions-item-label {
+  white-space: nowrap !important;
+}
+
 /* 消除菜单折叠展开时的重叠、重影与高度错位 */
 .ant-menu-sub.ant-menu-inline {
   background: transparent !important;

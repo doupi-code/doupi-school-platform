@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import {
@@ -486,6 +486,16 @@ const StockOutPage: React.FC = () => {
       setDetailOpen(true);
     }
   };
+
+  // 从文印登记页等其他页面通过 ?outId= 跳转时，自动打开对应出库单详情
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const outId = searchParams.get('outId');
+    if (outId) {
+      handleViewDetail({ outId: Number(outId) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const columns: ProColumns[] = [
     {

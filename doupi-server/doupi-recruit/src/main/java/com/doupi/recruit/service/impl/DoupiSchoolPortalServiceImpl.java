@@ -57,7 +57,7 @@ public class DoupiSchoolPortalServiceImpl implements IDoupiSchoolPortalService
         siteData.put("hotlines", Arrays.asList("027-81777887", "027-81777838"));
         siteData.put("admissionsLine", "400-0000-000");
         siteData.put("officeHours", "周一至周日 8:30–17:30");
-        siteData.put("icp", "鄂ICP备20260930号-1");
+        siteData.put("icp", "鄂ICP备2026055716号-1");
 
         // 核心成效数据
         List<Map<String, Object>> results = new ArrayList<>();

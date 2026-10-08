@@ -12,7 +12,7 @@ App({
 
     // 默认 API 网关地址配置（优先使用开发者工具调试注入，禁止生产硬编码）
     const defaultApiUrl = (typeof __wxConfig !== 'undefined' && __wxConfig.envVersion === 'release')
-      ? 'https://api.doupi.vip'
+      ? 'https://doupi.cloud'
       : 'http://localhost:8080';
 
     if (!wx.getStorageSync('api_base_url')) {

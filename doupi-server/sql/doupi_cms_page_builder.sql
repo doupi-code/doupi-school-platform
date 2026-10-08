@@ -117,7 +117,7 @@ INSERT INTO `doupi_cms_global` (`category`, `config_content`, `remark`) VALUES
     "officeHours": "周一至周日 8:30–17:30"
   },
   "copyright": "© 2026 汉外华襄复读中心 · 版权所有",
-  "icp": "鄂ICP备20260930号-1"
+  "icp": "鄂ICP备2026055716号-1"
 }', '官网全站底部页脚配置')
 ON DUPLICATE KEY UPDATE `config_content`=VALUES(`config_content`);
 

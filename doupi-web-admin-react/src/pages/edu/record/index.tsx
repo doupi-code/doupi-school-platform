@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import {
@@ -89,6 +90,7 @@ const getFileName = (url?: string): string => {
 
 const PrintRecordPage: React.FC = () => {
   const actionRef = useRef<ActionType>(undefined);
+  const navigate = useNavigate();
   const { name: currentUserName, nickName: currentNickName } = useUserStore();
   const [form] = Form.useForm();
   const [completeForm] = Form.useForm();
@@ -1198,6 +1200,13 @@ const PrintRecordPage: React.FC = () => {
     });
   };
 
+  // 查看关联出库单：跳转到出库单管理页并自动打开对应出库单详情
+  const handleViewOut = (record: any) => {
+    if (record?.outId) {
+      navigate(`/stock/out?outId=${record.outId}`);
+    }
+  };
+
   // 打开完成并上传成品效果图
   const handleOpenComplete = (record: any) => {
     setCompleteTarget(record);
@@ -1591,6 +1600,18 @@ const PrintRecordPage: React.FC = () => {
       },
     },
     {
+      title: '申请教师',
+      dataIndex: 'teacherName',
+      width: 100,
+      align: 'center',
+    },
+    {
+      title: '经办人',
+      dataIndex: 'operator',
+      width: 90,
+      align: 'center',
+    },
+    {
       title: '印刷用纸',
       dataIndex: 'paperType',
       width: 140,
@@ -1715,12 +1736,6 @@ const PrintRecordPage: React.FC = () => {
         ),
     },
     {
-      title: '申请教师',
-      dataIndex: 'teacherName',
-      width: 100,
-      align: 'center',
-    },
-    {
       title: '年级',
       dataIndex: 'grade',
       width: 85,
@@ -1741,12 +1756,6 @@ const PrintRecordPage: React.FC = () => {
       render: (_, record) => record.className || '-',
     },
     {
-      title: '经办人',
-      dataIndex: 'operator',
-      width: 90,
-      align: 'center',
-    },
-    {
       title: '印刷时间',
       dataIndex: 'printTime',
       width: 160,
@@ -1764,10 +1773,7 @@ const PrintRecordPage: React.FC = () => {
           <Tag
             color="processing"
             style={{ cursor: 'pointer', fontWeight: 500 }}
-            onClick={() => {
-              setCurrentRecord(record);
-              setDetailOpen(true);
-            }}
+            onClick={() => handleViewOut(record)}
           >
             {record.outNo}
           </Tag>
@@ -3187,7 +3193,13 @@ const PrintRecordPage: React.FC = () => {
             <Descriptions.Item label="印刷时间">{currentRecord.printTime}</Descriptions.Item>
             <Descriptions.Item label="关联出库单号" span={2}>
               {currentRecord.outNo ? (
-                <Tag color="cyan">{currentRecord.outNo}</Tag>
+                <Tag
+                  color="cyan"
+                  style={{ cursor: 'pointer', fontWeight: 500 }}
+                  onClick={() => handleViewOut(currentRecord)}
+                >
+                  {currentRecord.outNo}
+                </Tag>
               ) : (
                 <Text type="secondary">未生成出库单</Text>
               )}

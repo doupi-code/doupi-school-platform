@@ -35,7 +35,7 @@ INSERT INTO `doupi_cms_config` (`config_key`, `config_value`, `config_name`, `re
 ('hotlines', '["027-81777887", "027-81777838"]', '官方咨询热线', '全站悬浮与页脚'),
 ('admissions_line', '400-0000-000', '全国招生专线', '简章与咨询页'),
 ('office_hours', '周一至周日 8:30–17:30', '咨询接待时间', '访校接待时段'),
-('icp', '鄂ICP备20260930号-1', 'ICP备案号', '页脚备案'),
+('icp', '鄂ICP备2026055716号-1', 'ICP备案号', '页脚备案'),
 ('stat_results', '[{"n":"92.6%","label":"2026 届本科上线率"},{"n":"+86","label":"平均提分（分）"},{"n":"318","label":"600 分以上人数"},{"n":"146","label":"双一流院校录取"}]', '核心办学成效战报', '首页数据看板'),
 ('stat_campus', '[{"n":"130","label":"亩校园面积"},{"n":"12","label":"万㎡建筑面积"},{"n":"1100","label":"人千人礼堂"},{"n":"10","label":"万册图书馆藏"}]', '校园硬核硬件指标', '走进校园')
 ON DUPLICATE KEY UPDATE `config_value`=VALUES(`config_value`), `config_name`=VALUES(`config_name`);

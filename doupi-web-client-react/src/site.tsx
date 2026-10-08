@@ -268,7 +268,7 @@ function SiteFooter({
   const siteNameEn = brand?.nameEn || config.siteNameEn || "HUAXIANG SENIOR YEAR CENTER";
   const address = brand?.address || config.address || "武汉市江夏区武汉海淀外国语实验学校（北门）";
   const admissionsLine = brand?.admissionsLine || config.admissionsLine || "400-0000-000";
-  const icp = footerConfig?.icp || config.icp || "鄂ICP备20260930号-1";
+  const icp = footerConfig?.icp || config.icp || "鄂ICP备2026055716号-1";
   const copyright = footerConfig?.copyright || `© 2026 ${siteName} · 版权所有`;
 
   return (
@@ -369,7 +369,12 @@ function SiteFooter({
         <span className="hx-foot-word" aria-hidden="true">
           {(siteNameEn || "HUAXIANG").split(" ")[0]}
         </span>
-        <small>{icp}</small>
+        <span className="hx-foot-filings">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icp}</a>
+          <i aria-hidden="true" />
+          {/* 公安备案号：审核中（审核通过后替换为真实号码并补链接） */}
+          <span>公安备案号：审核中</span>
+        </span>
       </div>
     </footer>
   );

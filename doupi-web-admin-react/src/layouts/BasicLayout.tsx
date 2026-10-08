@@ -281,6 +281,30 @@ const BasicLayout: React.FC = () => {
           );
         },
       }}
+      footerRender={() => (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 12,
+            padding: '0 16px 24px',
+            color: 'rgba(0, 0, 0, 0.45)',
+            fontSize: 13,
+          }}
+        >
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'rgba(0, 0, 0, 0.45)' }}
+          >
+            鄂ICP备2026055716号-1
+          </a>
+          <span>/</span>
+          <span>公安备案号：审核中</span>
+        </div>
+      )}
     >
       <div style={{ width: '100%', minWidth: 0, minHeight: 'calc(100vh - 80px)', boxSizing: 'border-box' }}>
         <ErrorBoundary>

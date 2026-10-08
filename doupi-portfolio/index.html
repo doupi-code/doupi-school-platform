@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>豆皮 · 个人作品集</title>
+<meta name="description" content="豆皮 · 个人作品集 — 在教育的土壤上，做有温度的数字产品。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f6f3ee;
+    --paper-2: #efebe3;
+    --paper-3: #e9e3d8;
+    --ink: #1c1917;
+    --muted: #7a7369;
+    --faint: #a89f92;
+    --accent: #b4552a;
+    --accent-soft: rgba(180, 85, 42, 0.10);
+    --line: #e2dcd1;
+    --serif-cn: "Noto Serif SC", "Songti SC", "STSong", serif;
+    --serif-en: "Cormorant Garamond", Georgia, serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+    --sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+    --maxw: 1180px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* 细腻纸张颗粒质感 */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* ───────── Header ───────── */
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px clamp(22px, 5vw, 56px);
+    background: rgba(246, 243, 238, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s ease;
+  }
+  header.scrolled { border-bottom-color: var(--line); }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .brand mark {
+    font-family: var(--serif-cn);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: none;
+  }
+  .brand .dot { color: var(--accent); }
+  .brand small {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  nav { display: flex; align-items: center; gap: 34px; }
+  nav a {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    position: relative;
+    transition: color .25s ease;
+  }
+  nav a::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: -4px;
+    width: 0; height: 1px;
+    background: var(--ink);
+    transition: width .3s ease;
+  }
+  nav a:hover { color: var(--ink); }
+  nav a:hover::after { width: 100%; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    padding: 7px 13px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.4);
+  }
+  .status-pill i {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #4f9d5d;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(79,157,93,0.16);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(79,157,93,0.16); }
+    50% { box-shadow: 0 0 0 6px rgba(79,157,93,0.05); }
+  }
+
+  /* ───────── Hero ───────── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 140px clamp(22px, 6vw, 72px) 90px;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    width: 100%;
+  }
+  .hero-ghost {
+    position: absolute;
+    top: 14%;
+    right: clamp(10px, 4vw, 40px);
+    font-family: var(--serif-en);
+    font-weight: 600;
+    font-style: italic;
+    font-size: clamp(80px, 17vw, 260px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--paper-3);
+    user-select: none;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .hero .kicker { margin-bottom: 30px; display: block; }
+  .hero h1 {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: clamp(58px, 12vw, 150px);
+    line-height: 0.98;
+    letter-spacing: 0.02em;
+  }
+  .hero h1 .accent { color: var(--accent); }
+  .hero .sub {
+    margin-top: 30px;
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: clamp(17px, 2.4vw, 24px);
+    color: var(--muted);
+    letter-spacing: 0.01em;
+  }
+  .hero .desc {
+    margin-top: 18px;
+    max-width: 520px;
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.85;
+  }
+  .hero-actions {
+    margin-top: 46px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 30px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: transform .25s ease, background .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .btn .arrow { transition: transform .25s ease; }
+  .btn:hover .arrow { transform: translateX(4px); }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-ghost:hover { border-color: var(--ink); transform: translateY(-2px); }
+
+  /* 滚动提示 */
+  .scroll-hint {
+    position: absolute;
+    bottom: 34px;
+    left: clamp(22px, 6vw, 72px);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--faint);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scroll-hint::after {
+    content: "";
+    width: 1px; height: 44px;
+    background: var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .scroll-hint::after { animation: lineDrip 2.2s ease-in-out infinite; }
+  @keyframes lineDrip {
+    0% { transform: scaleY(0); transform-origin: top; }
+    50% { transform: scaleY(1); transform-origin: top; }
+    51% { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  /* ───────── Works 索引 ───────── */
+  .works {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 40px clamp(22px, 6vw, 72px) 110px;
+  }
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 46px;
+    padding-bottom: 26px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-head h2 {
+    font-family: var(--serif-cn);
+    font-weight: 600;
+    font-size: clamp(30px, 4vw, 46px);
+    line-height: 1.1;
+  }
+  .section-head .idx {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--faint);
+  }
+
+  .work-list { list-style: none; }
+  .work-row {
+    display: grid;
+    grid-template-columns: 64px 1.2fr 2fr auto auto;
+    align-items: center;
+    gap: 28px;
+    padding: 34px 12px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    transition: padding-left .35s ease, background .35s ease;
+  }
+  .work-row:last-child { border-bottom: 1px solid var(--line); }
+  .work-row a.fill {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  .work-num {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--faint);
+  }
+  .work-title {
+    font-family: var(--serif-cn);
+    font-weight: 600;
+    font-size: clamp(20px, 2.6vw, 27px);
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+  }
+  .work-title small {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--faint);
+    font-weight: 400;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  .work-desc {
+    font-size: 14.5px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .work-state {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+  }
+  .work-state.live { color: #3f7d4d; }
+  .work-state.soon { color: var(--faint); }
+  .work-arrow {
+    width: 42px; height: 42px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    color: var(--ink);
+    transition: background .35s ease, color .35s ease, transform .35s ease, border-color .35s ease;
+  }
+
+  /* 可点击行的悬浮态 */
+  .work-row.linked:hover { padding-left: 28px; background: var(--paper-2); }
+  .work-row.linked:hover .work-arrow {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    transform: rotate(-45deg);
+  }
+  .work-row.linked:hover .work-title { color: var(--accent); }
+
+  /* 开发中的行 */
+  .work-row.wip { opacity: 0.62; }
+  .work-row.wip .work-arrow { border-style: dashed; color: var(--faint); }
+
+  /* ───────── 开发中通栏 ───────── */
+  .progress-band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
+    overflow: hidden;
+    padding: 34px 0;
+  }
+  .progress-track {
+    display: flex;
+    gap: 60px;
+    white-space: nowrap;
+    animation: marquee 30s linear infinite;
+  }
+  .progress-track span {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: clamp(22px, 3.4vw, 38px);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 60px;
+  }
+  .progress-track b {
+    font-weight: 500;
+  }
+  .progress-track i {
+    color: var(--accent);
+    font-style: normal;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ───────── About ───────── */
+  .about {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 120px clamp(22px, 6vw, 72px);
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: clamp(40px, 7vw, 120px);
+  }
+  .about h2 {
+    font-family: var(--serif-cn);
+    font-weight: 600;
+    font-size: clamp(28px, 3.6vw, 40px);
+    line-height: 1.25;
+  }
+  .about .body { display: flex; flex-direction: column; gap: 22px; }
+  .about .body p {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.95;
+  }
+  .about .body .em {
+    font-family: var(--serif-cn);
+    font-size: 20px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .about .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    margin-top: 12px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+  }
+  .about .meta div b {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--faint);
+    display: block;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .about .meta div span { font-size: 15px; color: var(--ink); }
+
+  /* ───────── Footer ───────── */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 46px clamp(22px, 6vw, 72px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  footer .f-brand {
+    font-family: var(--serif-cn);
+    font-size: 22px;
+    font-weight: 700;
+  }
+  footer .f-brand .dot { color: var(--accent); }
+  footer p {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+  }
+  footer .f-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  footer .f-filings {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+  }
+  footer .f-filings a { color: var(--faint); transition: color .25s ease; }
+  footer .f-filings a:hover { color: var(--ink); }
+
+  /* ───────── 动效 ───────── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .8s cubic-bezier(.2,.6,.2,1), transform .8s cubic-bezier(.2,.6,.2,1);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+  .work-row { transition-delay: 0s; }
+  .work-row.reveal.in { transition-delay: calc(var(--i, 0) * 70ms); }
+
+  /* 首屏载入交错动画 */
+  .load-in {
+    opacity: 0;
+    transform: translateY(24px);
+    animation: rise .9s cubic-bezier(.2,.6,.2,1) forwards;
+  }
+  @keyframes rise {
+    to { opacity: 1; transform: none; }
+  }
+  .d1 { animation-delay: .05s; }
+  .d2 { animation-delay: .18s; }
+  .d3 { animation-delay: .3s; }
+  .d4 { animation-delay: .42s; }
+  .d5 { animation-delay: .55s; }
+
+  /* ───────── 响应式 ───────── */
+  @media (max-width: 860px) {
+    nav { display: none; }
+    header .status-pill { display: none; }
+    .work-row {
+      grid-template-columns: 44px 1fr auto;
+      grid-template-areas: "num title state" "num desc arrow";
+      gap: 12px 20px;
+      padding: 28px 6px;
+    }
+    .work-num { grid-area: num; }
+    .work-title { grid-area: title; }
+    .work-desc { grid-area: desc; }
+    .work-state { grid-area: state; }
+    .work-arrow { grid-area: arrow; }
+    .about { grid-template-columns: 1fr; }
+    .hero-ghost { top: 8%; }
+  }
+</style>
+</head>
+<body>
+
+<header id="top">
+  <div class="brand">
+    <mark>豆皮<em class="dot">.</em></mark>
+    <small>Personal Works</small>
+  </div>
+  <nav>
+    <a href="#works">作品</a>
+    <a href="#about">关于</a>
+    <a href="#foot">联系</a>
+  </nav>
+  <span class="status-pill"><i></i>持续更新中</span>
+</header>
+
+<main>
+  <!-- ───── Hero ───── -->
+  <section class="hero">
+    <div class="hero-ghost" aria-hidden="true">Portfolio</div>
+    <span class="kicker load-in d1">Personal Works — 2026</span>
+    <h1 class="load-in d2">豆皮<span class="accent">·</span><br />个人作品集</h1>
+    <p class="sub load-in d3">Crafting digital tools for education.</p>
+    <p class="desc load-in d4">
+      在教育的土壤上，做有温度的数字产品。这里陈列我的部分作品，
+      以及正在酝酿中的新尝试。
+    </p>
+    <div class="hero-actions load-in d5">
+      <!-- 官网首页入口 -->
+      <a class="btn btn-primary" href="https://www.doupi.cloud/">进入官网 <span class="arrow">→</span></a>
+      <!-- 管理后台入口 -->
+      <a class="btn btn-ghost" href="/admin">管理后台 <span class="arrow">↗</span></a>
+    </div>
+    <div class="scroll-hint">Scroll</div>
+  </section>
+
+  <!-- ───── Works 索引 ───── -->
+  <section class="works" id="works">
+    <div class="section-head reveal">
+      <div>
+        <p class="kicker">Selected Works</p>
+        <h2>作品</h2>
+      </div>
+      <span class="idx">Indexed / 2026</span>
+    </div>
+
+    <ul class="work-list">
+      <li class="work-row linked reveal" style="--i:0">
+        <a class="fill" href="https://www.doupi.cloud/" aria-label="访问豆皮官网"></a>
+        <span class="work-num">01</span>
+        <h3 class="work-title">
+          豆皮官网
+          <small>School Portal Website</small>
+        </h3>
+        <p class="work-desc">学校对外展示与招生门户，面向访客的官网首页。</p>
+        <span class="work-state live">已上线 · LIVE</span>
+        <span class="work-arrow">↗</span>
+      </li>
+
+      <li class="work-row linked reveal" style="--i:1">
+        <a class="fill" href="/admin" aria-label="访问豆皮管理后台"></a>
+        <span class="work-num">02</span>
+        <h3 class="work-title">
+          豆皮管理后台
+          <small>Admin Platform</small>
+        </h3>
+        <p class="work-desc">教务、印刷、库存与内容的一体化综合运营后台。</p>
+        <span class="work-state live">已上线 · LIVE</span>
+        <span class="work-arrow">↗</span>
+      </li>
+
+      <li class="work-row wip reveal" style="--i:2">
+        <span class="work-num">03</span>
+        <h3 class="work-title">
+          豆皮小程序
+          <small>WeChat Mini Program</small>
+        </h3>
+        <p class="work-desc">移动端服务入口，逐步联通预约与查询。</p>
+        <span class="work-state soon">开发中 · SOON</span>
+        <span class="work-arrow">○</span>
+      </li>
+
+      <li class="work-row wip reveal" style="--i:3">
+        <span class="work-num">04</span>
+        <h3 class="work-title">
+          豆皮 App
+          <small>Mobile Application</small>
+        </h3>
+        <p class="work-desc">原生客户端，承载更完整的使用体验。</p>
+        <span class="work-state soon">开发中 · SOON</span>
+        <span class="work-arrow">○</span>
+      </li>
+
+      <li class="work-row wip reveal" style="--i:4">
+        <span class="work-num">05</span>
+        <h3 class="work-title">
+          更多作品
+          <small>More Coming</small>
+        </h3>
+        <p class="work-desc">新的构想正在筹备中，敬请期待。</p>
+        <span class="work-state soon">规划中 · TBD</span>
+        <span class="work-arrow">○</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ───── 陆续开发中通栏 ───── -->
+  <div class="progress-band reveal" aria-hidden="true">
+    <div class="progress-track">
+      <span><b>作品陆续开发中</b><i>✦</i><b>More Works In Progress</b><i>✦</i></span>
+      <span><b>作品陆续开发中</b><i>✦</i><b>More Works In Progress</b><i>✦</i></span>
+    </div>
+  </div>
+
+  <!-- ───── About ───── -->
+  <section class="about" id="about">
+    <div class="reveal">
+      <p class="kicker">About</p>
+      <h2>关于我</h2>
+    </div>
+    <div class="body reveal">
+      <p class="em">
+        「豆皮」是一段持续生长的创作轨迹：从一次真实需求出发，
+        把想法打磨成可用、也耐用的产品。
+      </p>
+      <p>
+        <!-- 占位：请替换为你的真实个人简介 -->
+        （此处为个人简介占位文案 —— 写一段关于你的背景、专注方向，
+        以及你想用作品讲述的故事。）
+      </p>
+      <div class="meta">
+        <div><b>Focus</b><span>教育数字化 · Web</span></div>
+        <div><b>Location</b><span>中国</span></div>
+        <div><b>Status</b><span>开放合作</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="foot">
+  <div class="f-brand">豆皮<em class="dot">.</em></div>
+  <div class="f-right">
+    <div class="f-filings">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">鄂ICP备2026055716号-1</a>
+      <span>公安备案号：审核中</span>
+    </div>
+    <p>© 2026 豆皮 · 个人作品集 — 占位版权信息</p>
+  </div>
+</footer>
+
+<script>
+  // 滚动时给 header 加描边
+  const header = document.getElementById('top');
+  const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 10);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // 滚动进入视口时交错的 reveal 动画
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ export const defaultSiteConfig: SiteConfig = {
   hotlines: ["027-81777887", "027-81777838"],
   admissionsLine: "400-0000-000",
   officeHours: "周一至周日 8:30 — 18:00",
-  icp: "鄂ICP备20260930号-1",
+  icp: "鄂ICP备2026055716号-1",
   statResults: [
     { n: "92.6%", label: "2026 届本科上线率" },
     { n: "+86", label: "平均提分（分）" },

@@ -287,6 +287,10 @@
   footer.hx-foot .footer-brand{font-size:inherit;color:inherit}
   footer.hx-foot .brand-mark{background:var(--accent);flex:none}
   footer.hx-foot .hx-foot-bar{opacity:1;color:rgba(255,255,255,.5)}
+  .hx-foot-filings{display:flex;align-items:center;gap:14px;font-size:12px;line-height:1.6}
+  .hx-foot-filings a{color:inherit;text-decoration:none;transition:opacity .2s ease}
+  .hx-foot-filings a:hover{opacity:.7}
+  .hx-foot-filings i{width:0;height:12px;border-left:1px solid currentColor;opacity:.4}
   @media(max-width:1000px){.site-head{grid-template-columns:1fr auto}}
 }
 
