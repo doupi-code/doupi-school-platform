@@ -10,7 +10,7 @@ TRUNCATE TABLE edu_class;
 INSERT INTO edu_class (class_id, grade, class_name, student_num, create_time) VALUES
 (1, '高三', '高三(1)班·卓越拔尖班', 45, NOW()),
 (2, '高三', '高三(2)班·清北冲刺班', 48, NOW()),
-(3, '高三复读', '高三复读(1)班·提分班', 52, NOW()),
+(3, '复读部', '高三复读(1)班·提分班', 52, NOW()),
 (4, '高二', '高二(1)班·重点实验班', 46, NOW()),
 (5, '高二', '高二(2)班·理科特色班', 47, NOW()),
 (6, '高一', '高一(1)班·名校火箭班', 50, NOW()),
@@ -24,7 +24,7 @@ INSERT INTO edu_teacher (teacher_id, teacher_name, dept, grade, class_ids, subje
 (2, '李秀英', '高中教学部', '高三', '1,3', '高中英语', '13800138002', NOW()),
 (3, '王强', '高中教学部', '高二', '4,5', '高中物理', '13800138003', NOW()),
 (4, '刘芳', '高中教学部', '高一', '6,7', '高中语文', '13800138004', NOW()),
-(5, '陈德明', '复读部教研室', '高三复读', '3', '高中化学', '13800138005', NOW()),
+(5, '陈德明', '复读部教研室', '复读部', '3', '高中化学', '13800138005', NOW()),
 (6, '赵红梅', '艺体教研组', '高二', '4,5', '高中生物', '13800138006', NOW());
 
 DELETE FROM sys_user_role WHERE user_id > 1;
@@ -34,7 +34,7 @@ INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, user_type, email, 
 (3, 103, 'lixy', '李秀英', '00', 'lixy@doupi.edu', '13800138002', '1', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '高三', '高中英语', '1,3', '英语学科带头人', NOW()),
 (4, 103, 'wangq', '王强', '00', 'wangq@doupi.edu', '13800138003', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '高二', '高中物理', '4,5', '物理奥赛金牌教练', NOW()),
 (5, 103, 'liuf', '刘芳', '00', 'liuf@doupi.edu', '13800138004', '1', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '高一', '高中语文', '6,7', '语文学科名师', NOW()),
-(6, 103, 'chendm', '陈德明', '00', 'chendm@doupi.edu', '13800138005', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '高三复读', '高中化学', '3', '高三复读部班主任', NOW()),
+(6, 103, 'chendm', '陈德明', '00', 'chendm@doupi.edu', '13800138005', '0', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '复读部', '高中化学', '3', '高三复读部班主任', NOW()),
 (7, 103, 'zhaohm', '赵红梅', '00', 'zhaohm@doupi.edu', '13800138006', '1', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '高二', '高中生物', '4,5', '理科综合教研组长', NOW());
 
 INSERT INTO sys_user_role (user_id, role_id) VALUES
@@ -60,7 +60,7 @@ INSERT INTO edu_print_record (print_name, paper_goods_id, paper_type, print_coun
 ('高三英语高考核心词汇专项训练', 1, 'A4', 100, 8, '2', 800, 2, '高三', 2, '高三(2)班·清北冲刺班', 'admin', DATE_SUB(NOW(), INTERVAL 5 HOUR), '1', '高考阅读提分突破', DATE_SUB(NOW(), INTERVAL 5 HOUR)),
 ('高二物理电磁感应典型例题讲义', 1, 'A4', 93, 6, '2', 558, 3, '高二', 4, '高二(1)班·重点实验班', 'admin', DATE_SUB(NOW(), INTERVAL 1 DAY), '1', '培优拓展训练讲义', DATE_SUB(NOW(), INTERVAL 1 DAY)),
 ('高一语文古诗文群文阅读精编', 1, 'A4', 99, 5, '1', 495, 4, '高一', 6, '高一(1)班·名校火箭班', 'admin', DATE_SUB(NOW(), INTERVAL 1 DAY), '1', '必修一重点文言文导学', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-('高三复读部化学方程式配平专题卷', 3, '16K', 52, 3, '1', 156, 5, '高三复读', 3, '高三复读(1)班·提分班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '基础过关天天清', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('高三复读部化学方程式配平专题卷', 3, '16K', 52, 3, '1', 156, 5, '复读部', 3, '高三复读(1)班·提分班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '基础过关天天清', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 ('高二生物遗传系谱图解密演练', 1, 'A4', 93, 4, '2', 372, 6, '高二', 5, '高二(2)班·理科特色班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '微专题突破集训', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 ('汉外华襄2026秋季招生说明会资料', 1, 'A4', 200, 2, '2', 400, 1, '高中部', NULL, '招生办', 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), '1', '家长开放日发放物料', DATE_SUB(NOW(), INTERVAL 3 DAY)),
 ('高一数学函数概念与单调性检测题', 2, '8K', 99, 2, '1', 198, 1, '高一', 7, '高一(2)班·综合实验班', 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), '1', '周考周周清过关检测', DATE_SUB(NOW(), INTERVAL 3 DAY));
