@@ -72,3 +72,5 @@ scripts/*.tar.gz
 
 # WorkBuddy 项目数据目录
 .workbuddy/
+"doupi-web-admin-react/dist/" 
+"doupi-web-client-react/dist/" 
