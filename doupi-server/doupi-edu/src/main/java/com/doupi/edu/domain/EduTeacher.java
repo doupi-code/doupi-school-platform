@@ -45,6 +45,12 @@ public class EduTeacher extends BaseEntity
     /** $column.columnComment */
     private String delFlag;
 
+    /** 人员类型（前端传入，用于新建时分配角色：1任课老师 2行政人员），不持久化 */
+    private String teacherType;
+
+    /** 角色ID数组（前端传入，用于新建时分配角色），不持久化 */
+    private Long[] roleIds;
+
     public void setTeacherId(Long teacherId) 
     {
         this.teacherId = teacherId;
@@ -123,6 +129,26 @@ public class EduTeacher extends BaseEntity
     public String getDelFlag() 
     {
         return delFlag;
+    }
+
+    public void setTeacherType(String teacherType) 
+    {
+        this.teacherType = teacherType;
+    }
+
+    public String getTeacherType() 
+    {
+        return teacherType;
+    }
+
+    public void setRoleIds(Long[] roleIds) 
+    {
+        this.roleIds = roleIds;
+    }
+
+    public Long[] getRoleIds() 
+    {
+        return roleIds;
     }
 
     @Override

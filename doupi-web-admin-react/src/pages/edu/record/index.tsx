@@ -399,6 +399,7 @@ const PrintRecordPage: React.FC = () => {
 
     teacherForm.resetFields();
     teacherForm.setFieldsValue({
+      teacherType: '1',
       teacherName: rawName,
       grade: currentGrade || selectedGrade || '',
       subject: tempEntry?.subject || '',
@@ -2752,14 +2753,37 @@ const PrintRecordPage: React.FC = () => {
       >
         <Form form={teacherForm} layout="vertical" preserve={false}>
           <Form.Item
-            name="teacherName"
-            label="教师姓名"
-            rules={[{ required: true, message: '请输入教师姓名' }]}
+            name="teacherType"
+            label="人员类型"
+            rules={[{ required: true, message: '请选择人员类型' }]}
           >
-            <Input placeholder="如：张老师" autoFocus />
+            <Radio.Group>
+              <Radio value="1">任课老师</Radio>
+              <Radio value="2">行政人员</Radio>
+            </Radio.Group>
           </Form.Item>
-          <Form.Item name="subject" label="任教学科" rules={[{ required: true, message: '请输入任教学科' }]}>
-            <Input placeholder="如：数学、语文、英语" />
+          <Form.Item
+            name="teacherName"
+            label="姓名"
+            rules={[{ required: true, message: '请输入姓名' }]}
+          >
+            <Input placeholder="如：汪思雅" autoFocus />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.teacherType !== cur.teacherType}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue('teacherType') === '1' ? (
+                <Form.Item
+                  name="subject"
+                  label="任教学科"
+                  rules={[{ required: true, message: '请输入任教学科' }]}
+                >
+                  <Input placeholder="如：语文、数学、英语" />
+                </Form.Item>
+              ) : null
+            }
           </Form.Item>
           <Form.Item name="grade" label="任教年级">
             <Select placeholder="请选择任教年级" allowClear>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Space, Tag } from 'antd';
+import { Alert, Button, Form, Input, message, Modal, Popconfirm, Select, Space, Tag, Radio } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Authorized from '@/components/Authorized';
@@ -376,6 +376,18 @@ const TeacherPage: React.FC = () => {
           onValuesChange={(_ch, all) => triggerSaveTeacherDraft(all)}
         >
           <Form.Item
+            name="teacherType"
+            label="人员类型"
+            rules={editingId ? [] : [{ required: true, message: '请选择人员类型' }]}
+            initialValue="1"
+          >
+            <Radio.Group>
+              <Radio value="1">任课老师</Radio>
+              <Radio value="2">行政人员</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
             name="teacherName"
             label="教师姓名"
             rules={[{ required: true, message: '请输入教师姓名' }]}
@@ -420,7 +432,7 @@ const TeacherPage: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item name="subject" label="任教学科" rules={[{ required: true }]}>
+          <Form.Item name="subject" label="任教学科">
             <Input placeholder="如：数学、语文、英语、物理" />
           </Form.Item>
 

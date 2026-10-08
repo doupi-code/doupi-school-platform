@@ -1,12 +1,16 @@
 package com.doupi.edu.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.doupi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.doupi.edu.mapper.EduTeacherMapper;
 import com.doupi.edu.domain.EduTeacher;
 import com.doupi.edu.service.IEduTeacherService;
+import com.doupi.system.domain.SysUserRole;
+import com.doupi.system.mapper.SysUserRoleMapper;
 
 /**
  * 教职工档案Service业务层处理
@@ -19,6 +23,9 @@ public class EduTeacherServiceImpl implements IEduTeacherService
 {
     @Autowired
     private EduTeacherMapper eduTeacherMapper;
+
+    @Autowired
+    private SysUserRoleMapper sysUserRoleMapper;
 
     /**
      * 查询教职工档案
@@ -51,11 +58,41 @@ public class EduTeacherServiceImpl implements IEduTeacherService
      * @return 结果
      */
     @Override
+    @Transactional
     public int insertEduTeacher(EduTeacher eduTeacher)
     {
         eduTeacher.setDelFlag("0");
         eduTeacher.setCreateTime(DateUtils.getNowDate());
-        return eduTeacherMapper.insertEduTeacher(eduTeacher);
+        int rows = eduTeacherMapper.insertEduTeacher(eduTeacher);
+
+        // 根据前端传入的人员类型或角色ID，为新用户分配角色
+        Long[] roleIds = eduTeacher.getRoleIds();
+        if (roleIds == null && eduTeacher.getTeacherType() != null)
+        {
+            // 人员类型：1=任课老师(role_id=4) 2=行政人员(role_id=6)
+            if ("1".equals(eduTeacher.getTeacherType()))
+            {
+                roleIds = new Long[]{4L};
+            }
+            else if ("2".equals(eduTeacher.getTeacherType()))
+            {
+                roleIds = new Long[]{6L};
+            }
+        }
+        if (roleIds != null && roleIds.length > 0)
+        {
+            List<SysUserRole> list = new ArrayList<>(roleIds.length);
+            for (Long roleId : roleIds)
+            {
+                SysUserRole ur = new SysUserRole();
+                ur.setUserId(eduTeacher.getTeacherId());
+                ur.setRoleId(roleId);
+                list.add(ur);
+            }
+            sysUserRoleMapper.batchUserRole(list);
+        }
+
+        return rows;
     }
 
     /**
