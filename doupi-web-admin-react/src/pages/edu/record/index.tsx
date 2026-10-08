@@ -64,7 +64,7 @@ import {
   ocrParse,
   uploadFile,
 } from '@/api/edu/record';
-import { listTeacher } from '@/api/edu/teacher';
+import { listTeacher, addTeacher } from '@/api/edu/teacher';
 import { listClass } from '@/api/edu/class';
 import { listGoods } from '@/api/stock/goods';
 import dayjs from 'dayjs';
@@ -136,6 +136,11 @@ const PrintRecordPage: React.FC = () => {
   // 动态联动状态
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [previewTotalSheets, setPreviewTotalSheets] = useState(50);
+
+  // 快捷新建教师弹窗
+  const [teacherForm] = Form.useForm();
+  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
+  const [teacherSaving, setTeacherSaving] = useState(false);
 
   // 追踪当前选中的关联用纸物品，用于动态换算库存与耗纸量
   const watchedPaperGoodsId = Form.useWatch('paperGoodsId', form);
@@ -382,6 +387,63 @@ const PrintRecordPage: React.FC = () => {
         setSelectedGrade(t.grade);
       }
       triggerSaveRecordDraft(form.getFieldsValue());
+    }
+  };
+
+  // 快捷新建教师：从当前表单预填识别到的教师信息，打开精简新建弹窗
+  const handleQuickAddTeacher = () => {
+    const currentTeacherName = form.getFieldValue('teacherName');
+    const currentGrade = form.getFieldValue('grade');
+    const tempEntry = teacherList.find((t) => t.teacherId === -999);
+    const rawName = tempEntry?.rawName || currentTeacherName || '';
+
+    teacherForm.resetFields();
+    teacherForm.setFieldsValue({
+      teacherName: rawName,
+      grade: currentGrade || selectedGrade || '',
+      subject: tempEntry?.subject || '',
+      status: '0',
+    });
+    setTeacherModalOpen(true);
+  };
+
+  // 保存新教师：创建后刷新列表并自动选中
+  const handleSaveNewTeacher = async () => {
+    try {
+      const values = await teacherForm.validateFields();
+      setTeacherSaving(true);
+      const payload = {
+        ...values,
+        classIds: '',
+      };
+      await addTeacher(payload);
+      message.success('教师档案创建成功！');
+
+      // 刷新教师列表
+      const res: any = await listTeacher({ pageSize: 500 });
+      const freshList = res?.rows || [];
+      setTeacherList(freshList);
+
+      // 按姓名匹配新创建的教师并自动选中
+      const newTeacher = freshList.find(
+        (t: any) => t.teacherName === values.teacherName
+      );
+      if (newTeacher) {
+        form.setFieldsValue({
+          teacherId: newTeacher.teacherId,
+          teacherName: newTeacher.teacherName,
+          grade: newTeacher.grade || form.getFieldValue('grade'),
+        });
+        if (newTeacher.grade) {
+          setSelectedGrade(newTeacher.grade);
+        }
+      }
+      setTeacherModalOpen(false);
+      triggerSaveRecordDraft(form.getFieldsValue());
+    } catch (e: any) {
+      message.error(e.message || '教师创建失败');
+    } finally {
+      setTeacherSaving(false);
     }
   };
 
@@ -2111,6 +2173,22 @@ const PrintRecordPage: React.FC = () => {
                     label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
                     value: t.teacherId,
                   }))}
+                  dropdownRender={(menu) => (
+                    <>
+                      {menu}
+                      <Divider style={{ margin: '4px 0' }} />
+                      <div style={{ padding: '4px 8px' }}>
+                        <Button
+                          type="link"
+                          icon={<PlusOutlined />}
+                          onClick={handleQuickAddTeacher}
+                          style={{ padding: 0 }}
+                        >
+                          新建教师
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 />
               </Form.Item>
             </Col>
@@ -2660,6 +2738,42 @@ const PrintRecordPage: React.FC = () => {
             </Descriptions.Item>
           </Descriptions>
         )}
+      </Modal>
+
+      {/* 快捷新建教师弹窗 */}
+      <Modal
+        title="快捷新建教师"
+        open={teacherModalOpen}
+        onOk={handleSaveNewTeacher}
+        onCancel={() => setTeacherModalOpen(false)}
+        confirmLoading={teacherSaving}
+        width={480}
+        destroyOnHidden
+      >
+        <Form form={teacherForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="teacherName"
+            label="教师姓名"
+            rules={[{ required: true, message: '请输入教师姓名' }]}
+          >
+            <Input placeholder="如：张老师" autoFocus />
+          </Form.Item>
+          <Form.Item name="subject" label="任教学科" rules={[{ required: true, message: '请输入任教学科' }]}>
+            <Input placeholder="如：数学、语文、英语" />
+          </Form.Item>
+          <Form.Item name="grade" label="任教年级">
+            <Select placeholder="请选择任教年级" allowClear>
+              <Select.Option value="高一">高一年级</Select.Option>
+              <Select.Option value="高二">高二年级</Select.Option>
+              <Select.Option value="高三">高三年级</Select.Option>
+              <Select.Option value="复读部">高三复读部</Select.Option>
+              <Select.Option value="初中部">初中部</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="phone" label="联系电话">
+            <Input placeholder="选填，手机或办公电话" />
+          </Form.Item>
+        </Form>
       </Modal>
     </PageContainer>
   );
