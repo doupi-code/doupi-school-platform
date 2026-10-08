@@ -61,6 +61,8 @@ import {
   delRecord,
   cancelRecord,
   completeRecord,
+  completeRecords,
+  cancelRecords,
   recordPrintError,
   textParse,
   ocrParse,
@@ -73,6 +75,17 @@ import dayjs from 'dayjs';
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
+
+// 从附件 URL 提取文件名（用于详情展示，避免整条 URL 裸露）
+const getFileName = (url?: string): string => {
+  if (!url) return '附件';
+  const seg = url.split('/').pop() || url;
+  try {
+    return decodeURIComponent(seg);
+  } catch {
+    return seg;
+  }
+};
 
 const PrintRecordPage: React.FC = () => {
   const actionRef = useRef<ActionType>(undefined);
@@ -115,6 +128,9 @@ const PrintRecordPage: React.FC = () => {
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
   const [queueModalOpen, setQueueModalOpen] = useState<boolean>(false);
+
+  // 粘贴微信聊天记录时，同步复制出来的实际文件（按原始文件名索引上传后的 URL）
+  const pastedAttachmentsRef = useRef<Record<string, string>>({});
 
   // 当前选中的队列任务
   const currentQueueTask = React.useMemo(() => {
@@ -650,6 +666,19 @@ const PrintRecordPage: React.FC = () => {
     return null;
   };
 
+  // 根据识别到的原始文档名，匹配粘贴上传的附件 URL（支持精确与去扩展名/括号去噪的模糊匹配）
+  const findPastedAttachment = (docName?: string): string => {
+    if (!docName) return '';
+    const map = pastedAttachmentsRef.current || {};
+    if (map[docName]) return map[docName];
+    const clean = (s: string) => s.replace(/\.[^/.]+$/, '').replace(/[\[\]【】\s]/g, '').trim();
+    const target = clean(docName);
+    for (const key of Object.keys(map)) {
+      if (clean(key) === target) return map[key];
+    }
+    return '';
+  };
+
   // 将识别任务数据统一回填并唤起新增表单弹窗（支持单任务与多任务/跨天队列任务）
   const applyTaskToForm = (
     task: any,
@@ -821,7 +850,7 @@ const PrintRecordPage: React.FC = () => {
       printTime: parseChatTime(task.timeSnippet) || dayjs(),
       status: '0',
       remark: remarkText,
-      attachment: task.attachment || '',
+      attachment: task.attachment || findPastedAttachment(task.originalDocName),
       resultImg: task.resultImg || '',
     };
 
@@ -1126,6 +1155,49 @@ const PrintRecordPage: React.FC = () => {
     });
   };
 
+  // 批量完成
+  const handleBatchComplete = async () => {
+    if (selectedRowKeys.length === 0) return;
+    Modal.confirm({
+      title: `确认将选中的 ${selectedRowKeys.length} 项标记为「已完成」？`,
+      content: '仅更新状态，不影响已出库的耗材库存。',
+      okText: '确认完成',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await completeRecords(selectedRowKeys.map((k) => Number(k)));
+          message.success('批量完成成功');
+          setSelectedRowKeys([]);
+          actionRef.current?.reload();
+        } catch (e: any) {
+          message.error(e.message || '批量完成失败');
+        }
+      },
+    });
+  };
+
+  // 批量作废
+  const handleBatchCancel = async () => {
+    if (selectedRowKeys.length === 0) return;
+    Modal.confirm({
+      title: `确认作废选中的 ${selectedRowKeys.length} 项印刷记录？`,
+      content: '关联出库单将同步作废，扣减的耗材纸张库存将自动回退。',
+      okText: '确认作废',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await cancelRecords(selectedRowKeys.map((k) => Number(k)));
+          message.success('批量作废成功，关联耗材库存已自动回退');
+          setSelectedRowKeys([]);
+          actionRef.current?.reload();
+        } catch (e: any) {
+          message.error(e.message || '批量作废失败');
+        }
+      },
+    });
+  };
+
   // 打开完成并上传成品效果图
   const handleOpenComplete = (record: any) => {
     setCompleteTarget(record);
@@ -1273,15 +1345,16 @@ const PrintRecordPage: React.FC = () => {
     handleParsedResult(d);
   };
 
-  // 微信文本智能一键提取
-  const handleParseText = async () => {
-    if (!rawText.trim()) {
+  // 微信文本智能一键提取（可传入指定文本，供粘贴事件直接调用）
+  const parseAndHandleText = async (text: string) => {
+    const t = (text || '').trim();
+    if (!t) {
       message.warning('请先粘贴微信聊天文字');
       return;
     }
     setParsingText(true);
     try {
-      const res: any = await textParse({ text: rawText });
+      const res: any = await textParse({ text: t });
       if (res && res.data) {
         handleParsedResult(res.data);
       } else {
@@ -1291,6 +1364,38 @@ const PrintRecordPage: React.FC = () => {
       message.error(e.message || '文本提取失败，请手动录入');
     } finally {
       setParsingText(false);
+    }
+  };
+
+  const handleParseText = async () => {
+    await parseAndHandleText(rawText);
+  };
+
+  // 批量上传粘贴复制出来的文档文件，并按原始文件名缓存 URL 供后续关联
+  const uploadPastedDocs = async (files: File[]) => {
+    const valid = files.filter((f) => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      return ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'wps'].includes(ext);
+    });
+    if (valid.length === 0) return;
+    message.loading({ content: `检测到已复制 ${valid.length} 个文件，正在上传...`, key: 'paste-docs' });
+    let uploaded = 0;
+    for (const f of valid) {
+      try {
+        const formData = new FormData();
+        formData.append('file', f);
+        const res: any = await uploadFile(formData);
+        const url = res.url || res.fileName || '';
+        if (url) {
+          pastedAttachmentsRef.current[f.name] = url;
+          uploaded++;
+        }
+      } catch (err: any) {
+        message.error({ content: `文件 ${f.name} 上传失败：${err.message}`, key: 'paste-docs' });
+      }
+    }
+    if (uploaded > 0) {
+      message.success({ content: `已上传 ${uploaded} 个原稿文件，将按文件名自动关联到对应登记任务`, key: 'paste-docs' });
     }
   };
 
@@ -1314,20 +1419,48 @@ const PrintRecordPage: React.FC = () => {
     return false;
   };
 
-  // 弹窗内快捷按 Ctrl+V 粘贴截图自动识别
-  const handleModalPaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
-        if (file) {
-          e.preventDefault();
-          message.info('检测到剪贴板截图，正在进行离线 OCR 识别...');
-          handleOcrUpload(file);
-          return;
+  // 文本解析弹窗粘贴：支持同时粘贴文本（聊天记录）与微信复制出来的实际文件
+  const handleModalPaste = async (e: React.ClipboardEvent) => {
+    const cd = e.clipboardData;
+    if (!cd) return;
+
+    // 收集剪贴板中的文件（文档 / 图片）
+    const files: File[] = [];
+    if (cd.files && cd.files.length > 0) {
+      for (let i = 0; i < cd.files.length; i++) files.push(cd.files[i]);
+    } else if (cd.items) {
+      for (let i = 0; i < cd.items.length; i++) {
+        const item = cd.items[i];
+        if (item.kind === 'file') {
+          const f = item.getAsFile();
+          if (f) files.push(f);
         }
       }
+    }
+
+    // 图片 → 离线 OCR
+    const imgFile = files.find((f) => f.type.startsWith('image/'));
+    if (imgFile) {
+      e.preventDefault();
+      message.info('检测到剪贴板截图，正在进行离线 OCR 识别...');
+      handleOcrUpload(imgFile);
+      return;
+    }
+
+    // 文档文件 → 上传并缓存为附件
+    const docFiles = files.filter((f) => !f.type.startsWith('image/'));
+    if (docFiles.length > 0) {
+      e.preventDefault();
+      await uploadPastedDocs(docFiles);
+    }
+
+    // 纯文本（微信复制的聊天记录）→ 填入并自动解析
+    let text = '';
+    try { text = cd.getData('text/plain') || ''; } catch { text = ''; }
+    if (text.trim()) {
+      e.preventDefault();
+      setRawText(text);
+      await parseAndHandleText(text);
     }
   };
 
@@ -1763,6 +1896,22 @@ const PrintRecordPage: React.FC = () => {
         tableAlertRender={({ selectedRowKeys }) => (
           <Space size={16}>
             <span>已选 {selectedRowKeys.length} 项</span>
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              onClick={handleBatchComplete}
+            >
+              批量完成
+            </Button>
+            <Button
+              size="small"
+              danger
+              icon={<StopOutlined />}
+              onClick={handleBatchCancel}
+            >
+              批量作废
+            </Button>
             <Button
               type="primary"
               size="small"
@@ -3045,8 +3194,14 @@ const PrintRecordPage: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="原稿附件" span={2}>
               {currentRecord.attachment ? (
-                <a href={currentRecord.attachment} target="_blank" rel="noreferrer">
-                  {currentRecord.attachment}
+                <a
+                  href={currentRecord.attachment}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={currentRecord.attachment}
+                  style={{ color: '#1677FF' }}
+                >
+                  <PaperClipOutlined /> {getFileName(currentRecord.attachment)}
                 </a>
               ) : (
                 '-'

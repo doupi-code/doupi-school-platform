@@ -630,28 +630,29 @@ public class EduPrintIntentExtractor
                 matchedFiles.add(rawFile);
             }
 
-            // 2. 逐个文件智能推断绑定印刷份数
+            // 2. 逐个文件智能推断绑定印刷份数（两阶段：先独立求“明确份数”，再做同批继承，最后兜底）
+            int fileCount = matchedFiles.size();
+            Long[] explicitCounts = new Long[fileCount];
             Long lastEachCount = null; // 记录前序指令中“各打/各印X份”的各份数值
 
-            for (int k = 0; k < matchedFiles.size(); k++) 
+            // ---- 阶段一：为每个文件独立求“明确份数”（来自相邻发言），暂不兜底 ----
+            for (int k = 0; k < fileCount; k++) 
             {
-                String rawFile = matchedFiles.get(k);
                 int currentFilePos = fileIndices.get(k);
                 int prevFilePos = (k == 0) ? 0 : (fileIndices.get(k - 1) + 1);
-                int nextFilePos = (k == matchedFiles.size() - 1) ? (ctx.allMessages.size() - 1) : (fileIndices.get(k + 1) - 1);
+                int nextFilePos = (k == fileCount - 1) ? (ctx.allMessages.size() - 1) : (fileIndices.get(k + 1) - 1);
 
                 Long resolvedCount = null;
 
-                // 优先 A：检查在当前文件与上一文件之间的前置发言（如老师先说“龙老师，帮忙打13份，谢谢”或“这个各打25份”，然后发送文件）
+                // 优先 A：前置发言（如老师先说“龙老师，帮忙打13份，谢谢”或“这个各打25份”，然后发送文件）
                 if (currentFilePos > 0) 
                 {
                     for (int j = currentFilePos - 1; j >= prevFilePos; j--) 
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        // 遇到时间戳或系统消息，跨越了对话会话分界，停止向前追溯并清除前序跨天继承
-                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
-                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天|\\d{1,2}:\\d{2}|\\d{4}年).*"))) 
+                        // 遇到跨天分界（SYSTEM 消息 / 星期、纯时间等时间戳），停止向前追溯并清除前序跨天继承
+                        if (isCountScanBoundary(m)) 
                         {
                             lastEachCount = null;
                             break;
@@ -679,16 +680,15 @@ public class EduPrintIntentExtractor
                     resolvedCount = lastEachCount;
                 }
 
-                // 规则 C：检查在当前文件与下一文件之间的后置发言（如发送文件后紧接着说“打40份”或“各55份”）
+                // 规则 C：后置发言（发送文件后紧接着说“打40份”或“各55份”）
                 if (resolvedCount == null && currentFilePos >= 0) 
                 {
                     for (int j = currentFilePos + 1; j <= nextFilePos; j++) 
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        // 同样，后置检索也不能跨越时间戳
-                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
-                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天|\\d{1,2}:\\d{2}|\\d{4}年).*"))) 
+                        // 后置检索同样不能跨越跨天分界
+                        if (isCountScanBoundary(m)) 
                         {
                             break;
                         }
@@ -705,11 +705,44 @@ public class EduPrintIntentExtractor
                     }
                 }
 
-                // 规则 D：兜底使用全局提取到的份数或默认1份
-                if (resolvedCount == null) 
+                explicitCounts[k] = resolvedCount;
+            }
+
+            // ---- 阶段二：同批连续文件共享份数 ----
+            // 中间无跨天分界的相邻文件视为同一批；批内只要有一个文件拿到明确份数，其余未明确者共享。
+            for (int k = 0; k < fileCount; k++) 
+            {
+                if (explicitCounts[k] != null) continue;
+
+                Long inherited = null;
+                // 向后借同批文件的明确份数
+                for (int j = k + 1; j < fileCount; j++) 
                 {
-                    resolvedCount = (baseResult.getPrintCount() != null && baseResult.getPrintCount() > 0) ? baseResult.getPrintCount() : 1L;
+                    if (hasDateBoundaryBetweenFiles(ctx, fileIndices, j - 1, j)) break;
+                    if (explicitCounts[j] != null) { inherited = explicitCounts[j]; break; }
                 }
+                // 向前借
+                if (inherited == null) 
+                {
+                    for (int j = k - 1; j >= 0; j--) 
+                    {
+                        if (hasDateBoundaryBetweenFiles(ctx, fileIndices, j, j + 1)) break;
+                        if (explicitCounts[j] != null) { inherited = explicitCounts[j]; break; }
+                    }
+                }
+                if (inherited != null) explicitCounts[k] = inherited;
+            }
+
+            for (int k = 0; k < matchedFiles.size(); k++) 
+            {
+                String rawFile = matchedFiles.get(k);
+                int currentFilePos = fileIndices.get(k);
+                int prevFilePos = (k == 0) ? 0 : (fileIndices.get(k - 1) + 1);
+                int nextFilePos = (k == matchedFiles.size() - 1) ? (ctx.allMessages.size() - 1) : (fileIndices.get(k + 1) - 1);
+
+                // 规则 D：兜底使用全局提取到的份数或默认1份
+                Long resolvedCount = (explicitCounts[k] != null) ? explicitCounts[k] 
+                    : ((baseResult.getPrintCount() != null && baseResult.getPrintCount() > 0) ? baseResult.getPrintCount() : 1L);
 
                 // 检查当前文件附近的发言是否单独指定了单面/双面
                 String resolvedSide = null;
@@ -822,6 +855,42 @@ public class EduPrintIntentExtractor
             list.add(item);
         }
         return list;
+    }
+
+    /**
+     * 判断某消息是否为份数绑定的扫描分界：
+     * SYSTEM 消息（跨天分界）或星期/纯时间等时间戳（截图识别格式）都视为分界。
+     * 注意：不包含 "yyyy年MM月dd日"——这一类在文本解析中同日为普通消息、跨天才为 SYSTEM，
+     * 已在 EduOcrServiceImpl 中区分处理，这里不应再次按日期文本打断。
+     */
+    private static boolean isCountScanBoundary(ChatTopologyParser.ChatMessage m) 
+    {
+        if (m == null) return true;
+        if (m.role == ChatTopologyParser.MessageRole.SYSTEM) return true;
+        return m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天|\\d{1,2}:\\d{2}).*");
+    }
+
+    /**
+     * 判断两个文件之间（按 allMessages 位置区间）是否存在跨天分界（SYSTEM 消息）。
+     * 用于“同批连续文件共享份数”判定：中间有分界则不属于同一批。
+     */
+    private static boolean hasDateBoundaryBetweenFiles(
+        ChatTopologyParser.ChatDialogContext ctx,
+        List<Integer> fileIndices,
+        int fileA,
+        int fileB
+    ) 
+    {
+        if (ctx == null || ctx.allMessages == null || fileIndices == null) return false;
+        int from = fileIndices.get(fileA);
+        int to = fileIndices.get(fileB);
+        if (from > to) { int t = from; from = to; to = t; }
+        for (int i = from; i <= to; i++) 
+        {
+            ChatTopologyParser.ChatMessage m = ctx.allMessages.get(i);
+            if (m.role == ChatTopologyParser.MessageRole.SYSTEM) return true;
+        }
+        return false;
     }
 
     private static String findNearestTimeSnippet(ChatTopologyParser.ChatDialogContext ctx, String fileName) 

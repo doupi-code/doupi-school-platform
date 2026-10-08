@@ -76,6 +76,22 @@ public interface IEduPrintRecordService
     public int cancelEduPrintRecord(Long printId);
 
     /**
+     * 批量完成印刷登记（将选中记录标记为已完成）
+     * 
+     * @param printIds 需要完成的印刷登记主键集合
+     * @return 结果
+     */
+    public int completeEduPrintRecordByPrintIds(Long[] printIds);
+
+    /**
+     * 批量作废印刷登记（同步作废关联耗材出库单并回退库存）
+     * 
+     * @param printIds 需要作废的印刷登记主键集合
+     * @return 结果
+     */
+    public int cancelEduPrintRecordByPrintIds(Long[] printIds);
+
+    /**
      * 记录印刷错误（创建错误出库单扣减库存，回写 error_count/error_out_id）
      * 
      * @param eduPrintRecord 包含 printId、errorCount、errorRemark

@@ -121,6 +121,17 @@ public class EduPrintRecordController extends BaseController
     }
 
     /**
+     * 批量完成印刷登记
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:edit')")
+    @Log(title = "批量完成印刷", businessType = BusinessType.UPDATE)
+    @PutMapping("/complete/batch")
+    public AjaxResult completeBatch(@RequestBody Long[] printIds)
+    {
+        return toAjax(eduPrintRecordService.completeEduPrintRecordByPrintIds(printIds));
+    }
+
+    /**
      * 作废印刷登记（同步作废关联耗材出库单并回退库存）
      */
     @PreAuthorize("@ss.hasPermi('edu:record:edit')")
@@ -129,6 +140,17 @@ public class EduPrintRecordController extends BaseController
     public AjaxResult cancel(@PathVariable Long printId)
     {
         return toAjax(eduPrintRecordService.cancelEduPrintRecord(printId));
+    }
+
+    /**
+     * 批量作废印刷登记（同步作废关联耗材出库单并回退库存）
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:edit')")
+    @Log(title = "批量作废印刷登记", businessType = BusinessType.UPDATE)
+    @PutMapping("/cancel/batch")
+    public AjaxResult cancelBatch(@RequestBody Long[] printIds)
+    {
+        return toAjax(eduPrintRecordService.cancelEduPrintRecordByPrintIds(printIds));
     }
 
     /**

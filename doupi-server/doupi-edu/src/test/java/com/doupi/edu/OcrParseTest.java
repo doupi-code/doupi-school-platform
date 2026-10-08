@@ -697,6 +697,51 @@ public class OcrParseTest
         pwResult.println("份数: " + result.getPrintCount() + " | 纸张: " + result.getPaperType());
         pwResult.close();
     }
+
+    @Test
+    public void testUserReportedMultiFileChatLog() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+
+        String chatText =
+            "王贤武\n" +
+            "2026年08月20日  9:30\n" +
+            "[文件] 默写训练（必修上文言文）.doc\n" +
+            "\n" +
+            "王贤武\n" +
+            "2026年08月20日  9:30\n" +
+            "[文件] 默写训练（必修上古诗词）.doc\n" +
+            "\n" +
+            "王贤武\n" +
+            "2026年08月20日  9:30\n" +
+            "40份。下午来拿。\n" +
+            "\n" +
+            "王贤武\n" +
+            "2026年08月21日 11:02\n" +
+            "[文件] 高三(7)班登分表.doc\n" +
+            "\n" +
+            "王贤武\n" +
+            "2026年08月21日 11:02\n" +
+            "龙老师，麻烦你印10份。";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+
+        System.out.println("========== [用户报告-跨天多文件聊天记录] ==========");
+        System.out.println("文档列表: " + result.getDocumentList());
+        System.out.println("全局份数: " + result.getPrintCount());
+        System.out.println("任务数: " + result.getTaskList().size());
+        for (int i = 0; i < result.getTaskList().size(); i++) {
+            EduPrintOcrResult.PrintTaskItem t = result.getTaskList().get(i);
+            System.out.println(String.format("任务#%d 文件=%s 名=%s 份数=%s 时间=%s",
+                i, t.getOriginalDocName(), t.getPrintName(), t.getPrintCount(), t.getTimeSnippet()));
+        }
+        System.out.println("==================================================");
+
+        Assertions.assertEquals(3, result.getTaskList().size(), "应识别出3个文件任务");
+        Assertions.assertEquals(40L, result.getTaskList().get(0).getPrintCount(), "默写训练（必修上文言文）应为40份");
+        Assertions.assertEquals(40L, result.getTaskList().get(1).getPrintCount(), "默写训练（必修上古诗词）应为40份");
+        Assertions.assertEquals(10L, result.getTaskList().get(2).getPrintCount(), "高三(7)班登分表应为10份");
+    }
 }
 
 

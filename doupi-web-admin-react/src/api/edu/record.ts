@@ -51,6 +51,24 @@ export function cancelRecord(printId: number | string) {
   });
 }
 
+// 批量完成印刷登记
+export function completeRecords(printIds: (number | string)[]) {
+  return request({
+    url: '/edu/record/complete/batch',
+    method: 'put',
+    data: printIds,
+  });
+}
+
+// 批量作废印刷登记
+export function cancelRecords(printIds: (number | string)[]) {
+  return request({
+    url: '/edu/record/cancel/batch',
+    method: 'put',
+    data: printIds,
+  });
+}
+
 // 记录印刷错误（损耗）
 export function recordPrintError(data: {
   printId: number | string;

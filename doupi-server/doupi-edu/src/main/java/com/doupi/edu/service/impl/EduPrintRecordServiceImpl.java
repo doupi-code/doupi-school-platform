@@ -410,6 +410,72 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
     }
 
     /**
+     * 批量完成印刷登记（将选中记录标记为已完成，不改动库存）
+     * 
+     * @param printIds 需要完成的印刷登记主键集合
+     * @return 结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int completeEduPrintRecordByPrintIds(Long[] printIds)
+    {
+        int count = 0;
+        if (printIds != null)
+        {
+            for (Long printId : printIds)
+            {
+                EduPrintRecord record = eduPrintRecordMapper.selectEduPrintRecordByPrintId(printId);
+                if (record == null || "2".equals(record.getStatus()))
+                {
+                    // 不存在或已作废的记录跳过
+                    continue;
+                }
+                EduPrintRecord updateObj = new EduPrintRecord();
+                updateObj.setPrintId(printId);
+                updateObj.setStatus("1"); // 1-已完成
+                updateObj.setUpdateTime(DateUtils.getNowDate());
+                count += eduPrintRecordMapper.updateEduPrintRecord(updateObj);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 批量作废印刷登记（同步作废关联耗材出库单并回退库存）
+     * 
+     * @param printIds 需要作废的印刷登记主键集合
+     * @return 结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int cancelEduPrintRecordByPrintIds(Long[] printIds)
+    {
+        int count = 0;
+        if (printIds != null)
+        {
+            for (Long printId : printIds)
+            {
+                EduPrintRecord record = eduPrintRecordMapper.selectEduPrintRecordByPrintId(printId);
+                if (record == null || "2".equals(record.getStatus()))
+                {
+                    // 不存在或已作废的记录跳过
+                    continue;
+                }
+                if (record.getOutId() != null)
+                {
+                    stockOutService.cancelEduStockOut(record.getOutId());
+                }
+                EduPrintRecord updateObj = new EduPrintRecord();
+                updateObj.setPrintId(printId);
+                updateObj.setStatus("2"); // 2-已作废
+                updateObj.setUpdateTime(DateUtils.getNowDate());
+                count += eduPrintRecordMapper.updateEduPrintRecord(updateObj);
+            }
+        }
+        return count;
+    }
+
+    /**
      * 记录印刷错误（创建错误出库单扣减库存，回写 error_count/error_out_id）
      *
      * @param eduPrintRecord 包含 printId、errorCount、errorRemark

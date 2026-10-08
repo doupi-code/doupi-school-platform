@@ -175,6 +175,7 @@ public class EduOcrServiceImpl implements IEduOcrService
         ctx.cleanChatText = text;
 
         String[] lines = text.split("\\r?\\n");
+        String prevDateCode = null; // 记录上一条时间戳的日期（yyyyMMdd），用于识别跨天分界
         for (int i = 0; i < lines.length; i++) 
         {
             String line = lines[i].trim();
@@ -193,6 +194,38 @@ public class EduOcrServiceImpl implements IEduOcrService
                     ctx.header = h;
                     continue;
                 }
+            }
+
+            // 微信"复制聊天记录"格式：发送人姓名行（纯中文姓名、与头部教师候选一致）直接跳过
+            if (isSenderNameLine(line, ctx)) 
+            {
+                continue;
+            }
+
+            // 时间戳行（如 "2026年08月20日  9:30"）：
+            // 同日保留为普通消息（供时间线展示，不阻断份数绑定）；跨天作为 SYSTEM 分界，避免份数跨天串绑
+            String dateCode = extractDateCode(line);
+            if (dateCode != null) 
+            {
+                boolean isCrossDay = (prevDateCode != null && !dateCode.equals(prevDateCode));
+                prevDateCode = dateCode;
+
+                ChatTopologyParser.ChatMessage ts = new ChatTopologyParser.ChatMessage();
+                ts.text = line;
+                ts.x = 0;
+                ts.y = i * 20;
+                if (isCrossDay) 
+                {
+                    ts.role = ChatTopologyParser.MessageRole.SYSTEM;
+                    ctx.allMessages.add(ts);
+                } 
+                else 
+                {
+                    ts.role = ChatTopologyParser.MessageRole.TEACHER;
+                    ctx.teacherMessages.add(ts);
+                    ctx.allMessages.add(ts);
+                }
+                continue;
             }
 
             ChatTopologyParser.ChatMessage msg = new ChatTopologyParser.ChatMessage();
@@ -239,6 +272,38 @@ public class EduOcrServiceImpl implements IEduOcrService
         EduPrintOcrResult result = EduPrintIntentExtractor.extract(ctx, teachers, classes, paperGoods);
         checkExistingRecordsAndArrangeQueue(result);
         return result;
+    }
+
+    /**
+     * 判断某行是否为微信"复制聊天记录"里的发送人姓名行（纯中文姓名、且与头部教师候选一致）
+     */
+    private static boolean isSenderNameLine(String line, ChatTopologyParser.ChatDialogContext ctx) 
+    {
+        if (StringUtils.isEmpty(line) || ctx == null || ctx.header == null || StringUtils.isEmpty(ctx.header.teacherCandidate)) 
+        {
+            return false;
+        }
+        String t = line.trim();
+        if (!t.matches("^[\\u4e00-\\u9fa5]{2,4}$")) 
+        {
+            return false;
+        }
+        String cand = ctx.header.teacherCandidate.replaceAll("老师$", "").trim();
+        return t.equals(cand) || t.equals(ctx.header.teacherCandidate);
+    }
+
+    /**
+     * 从时间戳行提取日期编码（yyyyMMdd），如 "2026年08月20日  9:30" -> "20260820"；非时间戳返回 null
+     */
+    private static String extractDateCode(String line) 
+    {
+        if (StringUtils.isEmpty(line)) return null;
+        String t = line.trim();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d{4})年(\\d{1,2})月(\\d{1,2})日").matcher(t);
+        if (!m.find()) return null;
+        int month = Integer.parseInt(m.group(2));
+        int day = Integer.parseInt(m.group(3));
+        return m.group(1) + String.format("%02d%02d", month, day);
     }
 
     /**
