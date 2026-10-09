@@ -962,7 +962,7 @@ const PrintRecordPage: React.FC = () => {
     // 5. 印刷份数、页数与单双面
     const printCount = task.printCount ? Number(task.printCount) : 50;
     let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
-    const printSide = task.printSide ? String(task.printSide) : '1';
+    const printSide = task.printSide ? String(task.printSide) : '2';
 
     // 若粘贴上传的原稿已被解析出页数/纸张规格，则按面积比换算覆盖智能识别的估算页数
     const docAnalysis = docAnalysisRef.current[task.originalDocName] || null;
@@ -1585,13 +1585,13 @@ const PrintRecordPage: React.FC = () => {
     await parseAndHandleText(rawText);
   };
 
-  // 批量上传粘贴复制出来的文档文件，并进入登记队列（按文件名生成登记任务、自动关联附件与页数）
-  const uploadPastedDocs = async (files: File[]) => {
+  // 批量上传粘贴复制出来的文档文件，缓存 URL 与页数，并返回生成的登记任务（是否进入登记队列由调用方决定）
+  const uploadPastedDocs = async (files: File[]): Promise<any[]> => {
     const valid = files.filter((f) => {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
       return ['doc', 'docx', 'docm', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'wps'].includes(ext);
     });
-    if (valid.length === 0) return;
+    if (valid.length === 0) return [];
     message.loading({ content: `检测到已复制 ${valid.length} 个文件，正在上传...`, key: 'paste-docs' });
 
     const tasks: any[] = [];
@@ -1615,6 +1615,7 @@ const PrintRecordPage: React.FC = () => {
           pageCount,
           paperType: 'A4',
           printCount: 50,
+          printSide: '2',
           teacherName: undefined,
           teacherMatched: false,
           alreadyRegistered: false,
@@ -1626,8 +1627,8 @@ const PrintRecordPage: React.FC = () => {
 
     if (tasks.length > 0) {
       message.success({ content: `已上传 ${tasks.length} 个原稿文件，正在进入登记流程...`, key: 'paste-docs' });
-      handleParsedResult({ taskList: tasks, teacherMatched: false, rawText: '' });
     }
+    return tasks;
   };
 
   // 文本解析弹窗粘贴：支持粘贴文本（聊天记录）与微信复制出来的实际文档文件
@@ -1649,21 +1650,28 @@ const PrintRecordPage: React.FC = () => {
       }
     }
 
-    // 文档文件 → 上传并进入登记队列
+    // 文档文件 → 上传并缓存附件 URL 与页数
     const docFiles = files.filter((f) => !f.type.startsWith('image/'));
-    if (docFiles.length > 0) {
-      e.preventDefault();
-      await uploadPastedDocs(docFiles);
-      return;
-    }
 
-    // 纯文本（微信复制的聊天记录）→ 填入并自动解析
+    // 纯文本（微信复制的聊天记录）→ 优先解析，用于提取聊天时间/单双面/教师等
     let text = '';
     try { text = cd.getData('text/plain') || ''; } catch { text = ''; }
+
     if (text.trim()) {
       e.preventDefault();
       setRawText(text);
+      // 若同时带有文档文件，先上传缓存，供文本解析出的任务按文件名关联附件
+      if (docFiles.length > 0) {
+        await uploadPastedDocs(docFiles);
+      }
       await parseAndHandleText(text);
+      return;
+    }
+
+    if (docFiles.length > 0) {
+      e.preventDefault();
+      const tasks = await uploadPastedDocs(docFiles);
+      handleParsedResult({ taskList: tasks, teacherMatched: false, rawText: '' });
     }
   };
 
