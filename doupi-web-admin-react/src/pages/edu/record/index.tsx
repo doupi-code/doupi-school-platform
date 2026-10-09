@@ -164,7 +164,8 @@ const PrintRecordPage: React.FC = () => {
   const docAnalysisRef = useRef<Record<string, any>>({});
 
   // 当前表单源文档解析信息（源页数 + 源纸张规格），用于纸张规格切换时面积比换算
-  const [sourcePageInfo, setSourcePageInfo] = useState<{ pageCount: number; sourcePaperType: string | null } | null>(null);
+  // 使用 ref 保证切换纸张规格/程序化填充时始终读取最新值，避免状态闭包导致换算错乱
+  const sourcePageInfoRef = useRef<{ pageCount: number; sourcePaperType: string | null } | null>(null);
 
   // 当前选中的队列任务
   const currentQueueTask = React.useMemo(() => {
@@ -301,7 +302,7 @@ const PrintRecordPage: React.FC = () => {
       const analysis = res?.data;
       if (!analysis) {
         message.info('未获取到文档解析结果，请手动填写页数');
-        setSourcePageInfo(null);
+        sourcePageInfoRef.current = null;
         return;
       }
       const pageCount = analysis.pageCount ? Number(analysis.pageCount) : 0;
@@ -311,7 +312,7 @@ const PrintRecordPage: React.FC = () => {
         const converted = convertPageCount(pageCount, sourcePaper, currentPaperType);
         const finalPages = converted && converted > 0 ? converted : 1;
         form.setFieldsValue({ pageCount: finalPages });
-        setSourcePageInfo({ pageCount, sourcePaperType: sourcePaper });
+        sourcePageInfoRef.current = { pageCount, sourcePaperType: sourcePaper };
         if (sourcePaper) {
           message.success(`已解析：共 ${pageCount} 页（${sourcePaper}），按 ${currentPaperType} 换算为 ${finalPages} 页`);
         } else {
@@ -319,10 +320,10 @@ const PrintRecordPage: React.FC = () => {
         }
       } else if (analysis.msg) {
         message.info(analysis.msg);
-        setSourcePageInfo(null);
+        sourcePageInfoRef.current = null;
       }
     } catch (err: any) {
-      setSourcePageInfo(null);
+      sourcePageInfoRef.current = null;
     }
   };
 
@@ -351,8 +352,8 @@ const PrintRecordPage: React.FC = () => {
     if (matchedId) {
       form.setFieldsValue({ paperGoodsId: matchedId });
     }
-    if (sourcePageInfo && sourcePageInfo.pageCount > 0) {
-      const converted = convertPageCount(sourcePageInfo.pageCount, sourcePageInfo.sourcePaperType, paperType);
+    if (sourcePageInfoRef.current && sourcePageInfoRef.current.pageCount > 0) {
+      const converted = convertPageCount(sourcePageInfoRef.current.pageCount, sourcePageInfoRef.current.sourcePaperType, paperType);
       if (converted && converted > 0) {
         form.setFieldsValue({ pageCount: converted });
       }
@@ -403,6 +404,31 @@ const PrintRecordPage: React.FC = () => {
       values?.printSide || '1'
     );
   };
+
+  // 统一以受控表单字段为单一数据源计算耗纸预览，避免 setFieldsValue 与 onValuesChange
+  // 触发时序错乱导致底部「合计耗纸」与「每份页数」不一致（A4/8K 结果对调的 bug）
+  const watchedPrintCount = Form.useWatch('printCount', form);
+  const watchedPageCount = Form.useWatch('pageCount', form);
+  const watchedPrintSide = Form.useWatch('printSide', form);
+  const watchedSplitAnswer = Form.useWatch('splitAnswer', form);
+  const watchedAnswerPageCount = Form.useWatch('answerPageCount', form);
+  const watchedAnswerPrintCount = Form.useWatch('answerPrintCount', form);
+  const watchedAnswerPrintSide = Form.useWatch('answerPrintSide', form);
+
+  useEffect(() => {
+    const values = {
+      printCount: watchedPrintCount,
+      pageCount: watchedPageCount,
+      printSide: watchedPrintSide,
+      splitAnswer: watchedSplitAnswer,
+      answerPageCount: watchedAnswerPageCount,
+      answerPrintCount: watchedAnswerPrintCount,
+      answerPrintSide: watchedAnswerPrintSide,
+    };
+    const isSplit = values.splitAnswer === undefined ? splitAnswer : !!values.splitAnswer;
+    setPreviewTotalSheets(computePreviewSheets(values, isSplit));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPrintCount, watchedPageCount, watchedPrintSide, watchedSplitAnswer, watchedAnswerPageCount, watchedAnswerPrintCount, watchedAnswerPrintSide]);
 
   // 智能识别文本中是否包含试卷与答案合并的信息
   const detectSplitAnswerInfo = (text: string, totalPages: number) => {
@@ -629,7 +655,7 @@ const PrintRecordPage: React.FC = () => {
     setEditId(null);
     setCurrentEditRecord(null);
     setOcrResult(null);
-    setSourcePageInfo(null);
+    sourcePageInfoRef.current = null;
     setModalTitle('新增印刷登记（自动生成耗材出库单联动扣库存）');
 
     // 检查是否有未保存的新增草稿
@@ -681,7 +707,7 @@ const PrintRecordPage: React.FC = () => {
     setEditId(record.printId);
     setCurrentEditRecord(record);
     setOcrResult(null);
-    setSourcePageInfo(null);
+    sourcePageInfoRef.current = null;
     setSplitAnswer(false);
     setModalTitle(`修改印刷登记信息 (ID: ${record.printId})`);
 
@@ -729,7 +755,7 @@ const PrintRecordPage: React.FC = () => {
 
       if (isEdit && currentEditRecord) {
         setSplitAnswer(false);
-        setSourcePageInfo(null);
+        sourcePageInfoRef.current = null;
         const defaultGoodsId = currentEditRecord.paperGoodsId || findGoodsByPaperType(currentEditRecord.paperType || 'A4', paperGoodsList);
         form.setFieldsValue({
           ...currentEditRecord,
@@ -743,7 +769,7 @@ const PrintRecordPage: React.FC = () => {
         );
       } else {
         setSplitAnswer(false);
-        setSourcePageInfo(null);
+        sourcePageInfoRef.current = null;
         setAnswerPageCount(1);
         setAnswerPrintCount(2);
         setAnswerPrintSide('1');
@@ -946,7 +972,7 @@ const PrintRecordPage: React.FC = () => {
       const converted = convertPageCount(srcPages, srcPaper, paperType);
       if (converted && converted > 0) {
         pageCount = converted;
-        setSourcePageInfo({ pageCount: srcPages, sourcePaperType: srcPaper });
+        sourcePageInfoRef.current = { pageCount: srcPages, sourcePaperType: srcPaper };
       }
     }
 
@@ -2768,6 +2794,15 @@ const PrintRecordPage: React.FC = () => {
                 <Button
                   type="primary"
                   onClick={() => {
+                    const t = currentQueueTask;
+                    const hasTeacher =
+                      t &&
+                      ((t.teacherId !== undefined && t.teacherId !== null && t.teacherId !== '' && Number(t.teacherId) !== -999) ||
+                        !!t.teacherName);
+                    if (!hasTeacher) {
+                      message.warning('微信聊天记录未识别出「申请教师」，请先在上方「批量指定申请教师」中选择教师');
+                      return;
+                    }
                     applyTaskToForm(
                       currentQueueTask,
                       currentTaskIndex,
