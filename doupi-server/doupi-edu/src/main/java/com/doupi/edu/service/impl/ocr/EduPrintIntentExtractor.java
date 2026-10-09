@@ -705,6 +705,13 @@ public class EduPrintIntentExtractor
                     }
                 }
 
+                // 规则 C2：从文件名本身提取份数（如 "英语练习(40份).docx"、"单元测试_35份.pdf"）
+                String targetFile = matchedFiles.get(k);
+                if (resolvedCount == null && StringUtils.isNotEmpty(targetFile)) 
+                {
+                    resolvedCount = parseCountFromSingleText(targetFile);
+                }
+
                 explicitCounts[k] = resolvedCount;
             }
 

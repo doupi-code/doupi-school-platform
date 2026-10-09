@@ -886,6 +886,17 @@ const PrintRecordPage: React.FC = () => {
     return '';
   };
 
+  // 从文件名中智能提取份数（如 "英语练习(40份).docx" -> 40）
+  const parseCountFromFilename = (fileName?: string): number => {
+    if (!fileName) return 0;
+    const m = fileName.match(/(\d{1,5})\s*(?:份|分|张|套|本)/);
+    if (m) {
+      const val = parseInt(m[1], 10);
+      if (val > 0 && val <= 50000) return val;
+    }
+    return 0;
+  };
+
   // 将识别任务数据统一回填并唤起新增表单弹窗（支持单任务与多任务/跨天队列任务）
   const applyTaskToForm = (
     task: any,
@@ -981,8 +992,12 @@ const PrintRecordPage: React.FC = () => {
       paperGoodsId = findGoodsByPaperType(paperType, paperGoodsList);
     }
 
-    // 5. 印刷份数、页数与单双面（单页默认单面）
-    const printCount = task.printCount ? Number(task.printCount) : 50;
+    // 5. 印刷份数、页数与单双面（单页默认单面；若未指定则优先尝试从文件名中提取）
+    let printCount = task.printCount ? Number(task.printCount) : 0;
+    if (!printCount || printCount <= 0) {
+      const fromName = parseCountFromFilename(task.originalDocName || task.printName || '');
+      printCount = fromName > 0 ? fromName : 50;
+    }
     let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
     let printSide = task.printSide ? String(task.printSide) : inferPrintSide(pageCount);
 
@@ -1630,13 +1645,14 @@ const PrintRecordPage: React.FC = () => {
         const pageCount = analysis?.pageCount ? Number(analysis.pageCount) : 1;
         const sourcePaper = analysis?.sourcePaperType || null;
 
+        const countFromFileName = parseCountFromFilename(f.name);
         tasks.push({
           printName: f.name.replace(/\.[^/.]+$/, ''),
           originalDocName: f.name,
           attachment: url,
           pageCount,
           paperType: inferPaperType(sourcePaper, pageCount),
-          printCount: 50,
+          printCount: countFromFileName > 0 ? countFromFileName : 50,
           printSide: inferPrintSide(pageCount),
           teacherName: undefined,
           teacherMatched: false,
@@ -1713,6 +1729,16 @@ const PrintRecordPage: React.FC = () => {
           if (pastedFile) break;
         }
       }
+    }
+
+    // 纯文本（微信聊天记录文本）→ 自动提取并预填
+    let text = '';
+    try { text = e.clipboardData.getData('text/plain') || ''; } catch { text = ''; }
+    if (!pastedFile && text.trim() && !isTextInput) {
+      e.preventDefault();
+      message.loading({ content: '检测到粘贴微信聊天文字，正在智能提取预填...', key: 'smart-paste-text' });
+      await parseAndHandleText(text);
+      return;
     }
 
     if (!pastedFile) return;
@@ -2199,14 +2225,15 @@ const PrintRecordPage: React.FC = () => {
         ]}
       />
 
-      {/* 新增 / 修改登记弹窗 */}
+      {/* 新增 / 修改登记弹窗（微信智能预填与文印登记标杆弹窗） */}
       <Modal
         title={modalTitle}
         open={modalOpen}
         onOk={handleSaveRecord}
         onCancel={() => setModalOpen(false)}
-        width={1120}
+        width={ocrResult?.taskList && ocrResult.taskList.length > 1 ? 1060 : 860}
         destroyOnHidden={false}
+        styles={{ body: { padding: '14px 18px', maxHeight: 'calc(88vh - 80px)', overflowY: 'auto' } }}
       >
         <DraftNoticeAlert
           visible={!!draftNotice?.visible}
@@ -2215,600 +2242,513 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          {/* 左栏：批量登记任务队列（仅多任务时显示，点击直接切换载入） */}
+        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          {/* 左栏：批量登记任务队列（仅在识别出多条任务时显示，自适应高度绝无大面积留白，条目多时内部分流滚动） */}
           {ocrResult?.taskList && ocrResult.taskList.length > 1 && (
             <div
               style={{
-                width: 272,
+                width: 240,
                 flexShrink: 0,
                 backgroundColor: '#FAFAFA',
                 border: '1px solid #F0F0F0',
                 borderRadius: 8,
-                padding: 12,
+                padding: '10px 10px',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4 }}>
-                <UnorderedListOutlined /> 批量登记队列（{currentTaskIndex + 1}/{ocrResult.taskList.length}）
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 600, color: '#1677FF', fontSize: 13 }}>
+                  <UnorderedListOutlined /> 批量登记队列
+                </span>
+                <Tag color="processing" style={{ margin: 0, fontSize: 11, padding: '0 6px' }}>
+                  {currentTaskIndex + 1}/{ocrResult.taskList.length}
+                </Tag>
               </div>
-              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10 }}>
-                点击任务可直接切换载入，已在库任务自动跳过
+              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 8 }}>
+                点击材料直接载入，已登记项自动跳过
               </div>
-              {ocrResult.taskList.map((task: any, idx: number) => {
-                const isCur = currentTaskIndex === idx;
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => applyTaskToForm(task, idx, ocrResult.taskList.length, ocrResult.taskList)}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      marginBottom: 6,
-                      border: isCur ? '1.5px solid #1677FF' : '1px solid #d9d9d9',
-                      backgroundColor: isCur ? '#E6F4FF' : task.alreadyRegistered ? '#F5F5F5' : '#FFFFFF',
-                      opacity: task.alreadyRegistered ? 0.75 : 1,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 'bold', fontSize: 12, color: '#595959', flexShrink: 0 }}>#{idx + 1}</span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          fontSize: 12,
-                          color: '#262626',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {task.printName}
-                      </span>
+              <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {ocrResult.taskList.map((task: any, idx: number) => {
+                  const isCur = currentTaskIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => applyTaskToForm(task, idx, ocrResult.taskList.length, ocrResult.taskList)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        border: isCur ? '1.5px solid #1677FF' : '1px solid #d9d9d9',
+                        backgroundColor: isCur ? '#E6F4FF' : task.alreadyRegistered ? '#F5F5F5' : '#FFFFFF',
+                        opacity: task.alreadyRegistered ? 0.75 : 1,
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 'bold', fontSize: 11, color: '#595959', flexShrink: 0 }}>#{idx + 1}</span>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 12,
+                            color: '#262626',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={task.printName}
+                        >
+                          {task.printName}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: '#595959' }}>
+                        <span style={{ color: task.teacherName ? '#52C41A' : '#D46B08' }}>
+                          {task.teacherName || '待指定教师'}
+                        </span>
+                        <span style={{ color: '#1677FF', fontWeight: 500 }}>{task.printCount} 份</span>
+                      </div>
+                      {task.alreadyRegistered && (
+                        <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 2 }}>✓ 已在库登记</div>
+                      )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#595959' }}>
-                      <span style={{ color: task.teacherName ? '#52C41A' : '#D46B08' }}>
-                        {task.teacherName || '未识别教师'}
-                      </span>
-                      <span style={{ color: '#1677FF', fontWeight: 500 }}>{task.printCount} 份</span>
-                    </div>
-                    {task.alreadyRegistered && (
-                      <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>✓ 已在库登记（可强制重载）</div>
-                    )}
-                  </div>
-                );
-              })}
-              {hasNextUnregisteredTask ? (
-                <div style={{ fontSize: 11, color: '#D46B08', marginTop: 8 }}>提交后自动进入下一条 ➔</div>
-              ) : (
-                <div style={{ fontSize: 11, color: '#52C41A', marginTop: 8 }}>✓ 本条为队列最后一条</div>
-              )}
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 11, textAlign: 'center' }}>
+                {hasNextUnregisteredTask ? (
+                  <span style={{ color: '#D46B08' }}>提交后自动载入下一条 ➔</span>
+                ) : (
+                  <span style={{ color: '#52C41A' }}>✓ 本条为队列最后一条</span>
+                )}
+              </div>
             </div>
           )}
 
-          {/* 右栏：登记表单 */}
+          {/* 右栏：登记表单（核心紧凑排布：零滚动、多字段横向矩阵组合、内嵌耗纸胶囊预算） */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* 兼容单纯多附件但未分任务的场景 */}
-          {ocrResult?.documentList &&
-            ocrResult.documentList.length > 1 &&
-            (!ocrResult.taskList || ocrResult.taskList.length <= 1) && (
-              <div
-                style={{
-                  marginBottom: 16,
-                  padding: '8px 12px',
-                  background: '#F0F5FF',
-                  border: '1px dashed #1677FF',
-                  borderRadius: 6,
-                }}
-              >
-                <div style={{ fontSize: 12, color: '#1677FF', fontWeight: 'bold', marginBottom: 6 }}>
-                  <PaperClipOutlined /> 检测到发送了多份文件附件，点击切换本次印刷哪份（自动同步印刷名称）：
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {ocrResult.documentList.map((doc: string, idx: number) => {
-                    const cleanName = doc.replace(/\.[^/.]+$/, '');
-                    const isSelected = form.getFieldValue('printName') === cleanName;
-                    return (
-                      <Tag
-                        key={idx}
-                        color={isSelected ? 'blue' : 'default'}
-                        style={{ cursor: 'pointer', fontSize: 12 }}
-                        onClick={() => form.setFieldsValue({ printName: cleanName })}
-                      >
-                        <PaperClipOutlined /> {doc} {isSelected && <CheckOutlined />}
-                      </Tag>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-          <div
-            style={{
-            marginBottom: 16,
-            padding: '10px 14px',
-            backgroundColor: '#F6FFED',
-            border: '1px solid #B7EB8F',
-            borderRadius: 6,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ fontSize: 13, color: '#389E0D' }}>
-            💡 支持直接粘贴微信群消息或上传微信聊天原文快速识别预填！
-          </span>
-          <Button
-            size="small"
-            type="primary"
-            ghost
-            icon={<MessageOutlined />}
-            onClick={() => {
-              setRawText('');
-              setOcrResult(null);
-              setTextModalOpen(true);
-            }}
-          >
-            智能解析填入
-          </Button>
-        </div>
-
-        <Form form={form} layout="vertical" onValuesChange={handleFormValuesChange}>
-          <Form.Item name="teacherName" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="className" hidden>
-            <Input />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={7}>
-              <Form.Item
-                name="printName"
-                label="印刷材料名称"
-                rules={[{ required: true, message: '请输入印刷名称' }]}
-              >
-                <Input placeholder="例：高三期中冲刺数学卷" />
-              </Form.Item>
-            </Col>
-            <Col span={5}>
-              <Form.Item name="paperType" label="纸张规格" rules={[{ required: true, message: '请选择纸张规格' }]}>
-                <Select placeholder="纸张规格" onChange={handlePaperTypeChange}>
-                  <Select.Option value="A4">A4</Select.Option>
-                  <Select.Option value="A3">A3</Select.Option>
-                  <Select.Option value="8K">8K</Select.Option>
-                  <Select.Option value="16K">16K</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item
-                name="printCount"
-                label="印刷份数"
-                rules={[{ required: true, message: '请输入份数' }]}
-              >
-                <InputNumber min={1} max={50000} style={{ width: '100%' }} addonAfter="份" />
-              </Form.Item>
-            </Col>
-            <Col span={3}>
-              <Form.Item
-                name="pageCount"
-                label="每份页数"
-                rules={[{ required: true, message: '请输入页数' }]}
-              >
-                <InputNumber
-                  min={1}
-                  max={200}
-                  style={{ width: '100%' }}
-                  addonAfter="页"
-                  onChange={(val) => {
-                    const newPage = Number(val) || 1;
-                    if (newPage <= 1) {
-                      form.setFieldsValue({ printSide: '1' });
-                    }
-                    if (splitAnswer && newPage > 1) {
-                      const curAnsPage = form.getFieldValue('answerPageCount') || 1;
-                      if (curAnsPage >= newPage) {
-                        const safeAnsPage = Math.max(1, newPage - 1);
-                        form.setFieldsValue({ answerPageCount: safeAnsPage });
-                        setAnswerPageCount(safeAnsPage);
-                      }
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={5}>
-              <Form.Item name="printSide" label="印刷方式" rules={[{ required: true }]}>
-                <Radio.Group buttonStyle="solid">
-                  <Radio.Button value="1">单面</Radio.Button>
-                  <Radio.Button value="2">双面</Radio.Button>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="paperGoodsId"
-                label="关联扣减用纸物品（随纸张规格自动匹配，联动出库扣库存）"
-                rules={[{ required: true, message: '请选择用纸物品！' }]}
-              >
-                <Select
-                  placeholder="选择关联扣减用纸物品"
-                  showSearch
-                  optionFilterProp="children"
-                >
-                  {paperGoodsList.map((g) => {
-                    const rate = Number(g.conversionRate) > 0 ? Number(g.conversionRate) : 1;
-                    const stock = Number(g.stockNum ?? 0);
-                    const remain = Number(g.remainSheets ?? 0);
-                    const totalSheets = stock * rate + remain;
-                    return (
-                      <Select.Option key={g.goodsId} value={g.goodsId}>
-                        {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 当前库存: {stock} {g.unit || '包'}
-                        {remain > 0 ? `又${remain}${g.baseUnit || '张'}` : ''}
-                        {rate > 1 ? ` (折合 ${totalSheets.toLocaleString()} ${g.baseUnit || '张'})` : ''}
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* 试卷与答案合并文件拆分设置面板（仅新增模式支持智能拆分录入） */}
-          {!isEdit && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '12px 16px',
-                background: splitAnswer ? '#F6FFED' : '#FAFAFA',
-                border: splitAnswer ? '1.5px solid #73D13D' : '1px solid #F0F0F0',
-                borderRadius: 8,
-                transition: 'all 0.3s ease',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Space>
-                  <Checkbox
-                    checked={splitAnswer}
-                    onChange={(e) => handleSplitAnswerToggle(e.target.checked)}
-                  >
-                    <span style={{ fontWeight: 600, color: splitAnswer ? '#237804' : '#262626', fontSize: 13 }}>
-                      📄 包含试卷与答案合并文件（自动拆分为【试卷】与【答案】两条独立记录）
-                    </span>
-                  </Checkbox>
-                  {splitAnswer && (
-                    <Tag color="success" style={{ margin: 0, fontWeight: 'bold' }}>
-                      ✓ 智能拆分已开启
-                    </Tag>
-                  )}
-                </Space>
-                <Tooltip title="适用于教师将试卷正文与参考答案放在同一个文件的场景（如总共4页，其中3页试卷、1页答案）。开启后可独立设定答案页数与印制份数，录入后系统将自动生成两条独立的文印登记，分别计算耗纸量并生成出库台账。">
-                  <QuestionCircleOutlined style={{ color: '#8c8c8c', cursor: 'pointer', fontSize: 14 }} />
-                </Tooltip>
-              </div>
-
-              {splitAnswer && (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed #B7EB8F' }}>
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item
-                        name="answerPageCount"
-                        label="答案所占页数"
-                        rules={[{ required: true, message: '请输入答案页数' }]}
-                        style={{ marginBottom: 6 }}
-                        extra={
-                          <span style={{ fontSize: 12, color: '#389E0D' }}>
-                            试卷正文折合：<b>{Math.max(1, (form.getFieldValue('pageCount') || 1) - (form.getFieldValue('answerPageCount') || 1))}</b> 页
-                          </span>
-                        }
-                      >
-                        <InputNumber
-                          min={1}
-                          max={Math.max(1, (form.getFieldValue('pageCount') || 2) - 1)}
-                          style={{ width: '100%' }}
-                          addonAfter="页"
-                          onChange={(val) => {
-                            const newAnsPage = Number(val) || 1;
-                            setAnswerPageCount(newAnsPage);
-                            const current = form.getFieldsValue();
-                            const sheets = computePreviewSheets({ ...current, answerPageCount: newAnsPage }, true);
-                            setPreviewTotalSheets(sheets);
-                            triggerSaveRecordDraft({ ...current, answerPageCount: newAnsPage });
-                          }}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={9}>
-                      <Form.Item
-                        name="answerPrintCount"
-                        label="答案印制份数"
-                        rules={[{ required: true, message: '请输入答案印制份数' }]}
-                        style={{ marginBottom: 6 }}
-                        extra={
-                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                            <Tag
-                              color="blue"
-                              style={{ cursor: 'pointer', fontSize: 11, padding: '0 4px', margin: 0 }}
-                              onClick={() => {
-                                form.setFieldsValue({ answerPrintCount: 2 });
-                                setAnswerPrintCount(2);
-                                const current = form.getFieldsValue();
-                                const sheets = computePreviewSheets({ ...current, answerPrintCount: 2 }, true);
-                                setPreviewTotalSheets(sheets);
-                                triggerSaveRecordDraft({ ...current, answerPrintCount: 2 });
-                              }}
-                            >
-                              教师备课 2份
-                            </Tag>
-                            <Tag
-                              color="blue"
-                              style={{ cursor: 'pointer', fontSize: 11, padding: '0 4px', margin: 0 }}
-                              onClick={() => {
-                                form.setFieldsValue({ answerPrintCount: 1 });
-                                setAnswerPrintCount(1);
-                                const current = form.getFieldsValue();
-                                const sheets = computePreviewSheets({ ...current, answerPrintCount: 1 }, true);
-                                setPreviewTotalSheets(sheets);
-                                triggerSaveRecordDraft({ ...current, answerPrintCount: 1 });
-                              }}
-                            >
-                              留存 1份
-                            </Tag>
-                            <Tag
-                              color="cyan"
-                              style={{ cursor: 'pointer', fontSize: 11, padding: '0 4px', margin: 0 }}
-                              onClick={() => {
-                                const mainCount = form.getFieldValue('printCount') || 50;
-                                form.setFieldsValue({ answerPrintCount: mainCount });
-                                setAnswerPrintCount(mainCount);
-                                const current = form.getFieldsValue();
-                                const sheets = computePreviewSheets({ ...current, answerPrintCount: mainCount }, true);
-                                setPreviewTotalSheets(sheets);
-                                triggerSaveRecordDraft({ ...current, answerPrintCount: mainCount });
-                              }}
-                            >
-                              同试卷份数
-                            </Tag>
-                          </div>
-                        }
-                      >
-                        <InputNumber
-                          min={1}
-                          max={50000}
-                          style={{ width: '100%' }}
-                          addonAfter="份"
-                          onChange={(val) => {
-                            const newCount = Number(val) || 1;
-                            setAnswerPrintCount(newCount);
-                            const current = form.getFieldsValue();
-                            const sheets = computePreviewSheets({ ...current, answerPrintCount: newCount }, true);
-                            setPreviewTotalSheets(sheets);
-                            triggerSaveRecordDraft({ ...current, answerPrintCount: newCount });
-                          }}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={7}>
-                      <Form.Item
-                        name="answerPrintSide"
-                        label="答案印刷方式"
-                        rules={[{ required: true }]}
-                        style={{ marginBottom: 6 }}
-                      >
-                        <Radio.Group
-                          buttonStyle="solid"
-                          onChange={(e) => {
-                            setAnswerPrintSide(e.target.value);
-                            const current = form.getFieldsValue();
-                            const sheets = computePreviewSheets({ ...current, answerPrintSide: e.target.value }, true);
-                            setPreviewTotalSheets(sheets);
-                            triggerSaveRecordDraft({ ...current, answerPrintSide: e.target.value });
-                          }}
-                        >
-                          <Radio.Button value="1">单面印</Radio.Button>
-                          <Radio.Button value="2">双面印</Radio.Button>
-                        </Radio.Group>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 实时折合耗纸量提醒卡 */}
-          <div
-            style={{
-              padding: '10px 16px',
-              background: splitAnswer ? '#F6FFED' : '#E6F4FF',
-              border: splitAnswer ? '1px solid #B7EB8F' : '1px solid #91CAFF',
-              borderRadius: 6,
-              marginBottom: 16,
-            }}
-          >
-            {splitAnswer ? (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ color: '#237804', fontSize: 13, fontWeight: 600 }}>
-                    📊 试卷与答案拆分耗纸核算明细：
-                  </span>
-                  <span style={{ fontSize: 15, fontWeight: 'bold', color: '#389E0D' }}>
-                    合计耗纸 {previewTotalSheets} 张 (约折合 {(previewTotalSheets / currentPaperRate).toFixed(2)} 包)
-                  </span>
-                </div>
+            {ocrResult?.documentList &&
+              ocrResult.documentList.length > 1 &&
+              (!ocrResult.taskList || ocrResult.taskList.length <= 1) && (
                 <div
                   style={{
-                    display: 'flex',
-                    gap: 16,
-                    fontSize: 12,
-                    color: '#595959',
-                    background: '#FFFFFF',
-                    padding: '6px 12px',
-                    borderRadius: 4,
-                    border: '1px solid #D9F7BE',
-                    flexWrap: 'wrap',
+                    marginBottom: 10,
+                    padding: '6px 10px',
+                    background: '#F0F5FF',
+                    border: '1px dashed #1677FF',
+                    borderRadius: 6,
                   }}
                 >
-                  <span>
-                    📝 <b>[试卷]</b> {Math.max(1, (form.getFieldValue('pageCount') || 1) - (form.getFieldValue('answerPageCount') || 1))}页 × {form.getFieldValue('printCount') || 0}份 ({form.getFieldValue('printSide') === '2' ? '双面' : '单面'}) ➔ 耗纸 <b>{calculateTotalSheets(form.getFieldValue('printCount') || 0, Math.max(1, (form.getFieldValue('pageCount') || 1) - (form.getFieldValue('answerPageCount') || 1)), form.getFieldValue('printSide') || '1')}</b> 张
-                  </span>
-                  <Divider type="vertical" style={{ height: 'auto' }} />
-                  <span>
-                    📖 <b>[答案]</b> {form.getFieldValue('answerPageCount') || 1}页 × {form.getFieldValue('answerPrintCount') || 2}份 ({form.getFieldValue('answerPrintSide') === '2' ? '双面' : '单面'}) ➔ 耗纸 <b>{calculateTotalSheets(form.getFieldValue('answerPrintCount') || 2, form.getFieldValue('answerPageCount') || 1, form.getFieldValue('answerPrintSide') || '1')}</b> 张
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: '#0958D9', fontSize: 13 }}>
-                  📊 自动换算实际纸张消耗总量：
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 'bold', color: '#1677FF' }}>
-                  {previewTotalSheets} 张纸 (约折合 {(previewTotalSheets / currentPaperRate).toFixed(2)} 包)
-                </span>
-              </div>
-            )}
-          </div>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="teacherId" label="申请教师" rules={[{ required: true, message: '请选择教师' }]}>
-                <Select
-                  placeholder="选择教师"
-                  showSearch
-                  style={{ width: '100%', cursor: 'pointer' }}
-                  onChange={handleTeacherChange}
-                  filterOption={(input, option) =>
-                    ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={teacherList.map((t) => ({
-                    label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
-                    value: t.teacherId,
-                  }))}
-                  dropdownRender={(menu) => (
-                    <>
-                      {menu}
-                      <Divider style={{ margin: '4px 0' }} />
-                      <div style={{ padding: '4px 8px' }}>
-                        <Button
-                          type="link"
-                          icon={<PlusOutlined />}
-                          onClick={handleQuickAddTeacher}
-                          style={{ padding: 0 }}
+                  <Space size={6} wrap>
+                    <span style={{ fontSize: 12, color: '#1677FF', fontWeight: 'bold' }}>
+                      <PaperClipOutlined /> 切换材料:
+                    </span>
+                    {ocrResult.documentList.map((doc: string, idx: number) => {
+                      const cleanName = doc.replace(/\.[^/.]+$/, '');
+                      const isSelected = form.getFieldValue('printName') === cleanName;
+                      return (
+                        <Tag
+                          key={idx}
+                          color={isSelected ? 'blue' : 'default'}
+                          style={{ cursor: 'pointer', fontSize: 11, margin: 0 }}
+                          onClick={() => form.setFieldsValue({ printName: cleanName })}
                         >
-                          新建教师
-                        </Button>
-                      </div>
-                    </>
+                          {doc} {isSelected && <CheckOutlined />}
+                        </Tag>
+                      );
+                    })}
+                  </Space>
+                </div>
+              )}
+
+            <Form form={form} layout="vertical" onValuesChange={handleFormValuesChange}>
+              <Form.Item name="teacherName" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="className" hidden>
+                <Input />
+              </Form.Item>
+
+              {/* 第 1 行：印刷材料名称 (10) + 印刷份数 (4) + 每份页数 (4) + 印刷方式 (6) */}
+              <Row gutter={10}>
+                <Col span={10}>
+                  <Form.Item
+                    name="printName"
+                    label="印刷材料名称"
+                    rules={[{ required: true, message: '请输入印刷名称' }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <Input placeholder="例：高三期中冲刺数学卷" />
+                  </Form.Item>
+                </Col>
+                <Col span={4}>
+                  <Form.Item
+                    name="printCount"
+                    label="印刷份数"
+                    rules={[{ required: true, message: '请输入份数' }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <InputNumber min={1} max={50000} style={{ width: '100%' }} addonAfter="份" />
+                  </Form.Item>
+                </Col>
+                <Col span={4}>
+                  <Form.Item
+                    name="pageCount"
+                    label="每份页数"
+                    rules={[{ required: true, message: '请输入页数' }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <InputNumber
+                      min={1}
+                      max={200}
+                      style={{ width: '100%' }}
+                      addonAfter="页"
+                      onChange={(val) => {
+                        const newPage = Number(val) || 1;
+                        if (newPage <= 1) {
+                          form.setFieldsValue({ printSide: '1' });
+                        }
+                        if (splitAnswer && newPage > 1) {
+                          const curAnsPage = form.getFieldValue('answerPageCount') || 1;
+                          if (curAnsPage >= newPage) {
+                            const safeAnsPage = Math.max(1, newPage - 1);
+                            form.setFieldsValue({ answerPageCount: safeAnsPage });
+                            setAnswerPageCount(safeAnsPage);
+                          }
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item name="printSide" label="印刷方式" rules={[{ required: true }]} style={{ marginBottom: 10 }}>
+                    <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
+                      <Radio.Button value="1" style={{ flex: 1, textAlign: 'center' }}>单面印</Radio.Button>
+                      <Radio.Button value="2" style={{ flex: 1, textAlign: 'center' }}>双面印</Radio.Button>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* 第 2 行：纸张规格 (4) + 关联扣减用纸物品 (11) + 耗纸预算徽标 (9) */}
+              <Row gutter={10}>
+                <Col span={4}>
+                  <Form.Item name="paperType" label="纸张规格" rules={[{ required: true }]} style={{ marginBottom: 10 }}>
+                    <Select placeholder="纸张规格" onChange={handlePaperTypeChange}>
+                      <Select.Option value="A4">A4</Select.Option>
+                      <Select.Option value="A3">A3</Select.Option>
+                      <Select.Option value="8K">8K</Select.Option>
+                      <Select.Option value="16K">16K</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={11}>
+                  <Form.Item
+                    name="paperGoodsId"
+                    label="关联扣减用纸物品（出库联动）"
+                    rules={[{ required: true, message: '请选择用纸物品！' }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <Select placeholder="选择关联扣减用纸物品" showSearch optionFilterProp="children">
+                      {paperGoodsList.map((g) => {
+                        const rate = Number(g.conversionRate) > 0 ? Number(g.conversionRate) : 1;
+                        const stock = Number(g.stockNum ?? 0);
+                        const remain = Number(g.remainSheets ?? 0);
+                        const totalSheets = stock * rate + remain;
+                        return (
+                          <Select.Option key={g.goodsId} value={g.goodsId}>
+                            {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 余: {stock}{g.unit || '包'}{remain > 0 ? `+${remain}张` : ''}
+                            {rate > 1 ? ` (折合${totalSheets}张)` : ''}
+                          </Select.Option>
+                        );
+                      })}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={9}>
+                  <Form.Item label="实际出库耗纸预算（自动折算）" style={{ marginBottom: 10 }}>
+                    <div
+                      style={{
+                        height: 32,
+                        padding: '0 10px',
+                        background: splitAnswer ? '#F6FFED' : '#E6F4FF',
+                        border: splitAnswer ? '1px solid #B7EB8F' : '1px solid #91CAFF',
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ fontSize: 12, color: splitAnswer ? '#237804' : '#0958D9', fontWeight: 500 }}>
+                        {splitAnswer ? '试卷+答案合计' : '总耗纸量'}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 'bold', color: splitAnswer ? '#389E0D' : '#1677FF' }}>
+                        {previewTotalSheets} 张 (≈ {(previewTotalSheets / currentPaperRate).toFixed(1)} 包)
+                      </span>
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* 第 3 行：申请教师 (7) + 年级班级 (5) + 文印经办人 (6) + 印刷时间 (6) */}
+              <Row gutter={10}>
+                <Col span={7}>
+                  <Form.Item name="teacherId" label="申请教师" rules={[{ required: true, message: '请选择教师' }]} style={{ marginBottom: 10 }}>
+                    <Select
+                      placeholder="选择申请教师"
+                      showSearch
+                      allowClear
+                      onChange={handleTeacherChange}
+                      filterOption={(input, option) =>
+                        ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={teacherList.map((t) => ({
+                        label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
+                        value: t.teacherId,
+                      }))}
+                      dropdownRender={(menu) => (
+                        <>
+                          {menu}
+                          <Divider style={{ margin: '4px 0' }} />
+                          <div style={{ padding: '2px 8px' }}>
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<PlusOutlined />}
+                              onClick={handleQuickAddTeacher}
+                              style={{ padding: 0 }}
+                            >
+                              新建教师档案
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={5}>
+                  <Form.Item name="classId" label="关联班级" style={{ marginBottom: 10 }}>
+                    <Select
+                      placeholder="选择班级"
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) =>
+                        ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={filteredClassList.map((c) => ({
+                        label: `${c.className}${c.grade ? ` (${c.grade})` : ''}`,
+                        value: c.classId,
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item name="operator" label="文印经办人" rules={[{ required: true, message: '请选择经办人' }]} style={{ marginBottom: 10 }}>
+                    <Select
+                      placeholder="文印经办人"
+                      showSearch
+                      allowClear
+                      options={operatorOptions}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item name="printTime" label="印刷时间" rules={[{ required: true }]} style={{ marginBottom: 10 }}>
+                    <DatePicker
+                      showTime
+                      format="YYYY-MM-DD HH:mm:ss"
+                      style={{ width: '100%' }}
+                      placeholder="选择印刷时间"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* 第 4 行：原稿电子附件 (8) + 成品留样 (6) + 补充备注 (10) */}
+              <Row gutter={10}>
+                <Col span={8}>
+                  <Form.Item name="attachment" label="原稿电子文件 / 附件" style={{ marginBottom: 8 }}>
+                    <FileUpload
+                      placeholder="上传原稿或粘贴文件"
+                      onUploadSuccess={(_url, uploadedName, file) => {
+                        const currentPrintName = form.getFieldValue('printName');
+                        if (!currentPrintName && uploadedName) {
+                          form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
+                        }
+                        if (file) {
+                          analyzeAndFillDocument(file);
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item name="resultImg" label="印刷成品效果图留样" style={{ marginBottom: 8 }}>
+                    <ImageUpload placeholder="上传留样或按Ctrl+V" />
+                  </Form.Item>
+                </Col>
+                <Col span={10}>
+                  <Form.Item name="remark" label="补充备注" style={{ marginBottom: 8 }}>
+                    <Input placeholder="装订要求（骑马钉/角钉）、考试时间等补充说明" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* 试卷与答案合并文件智能拆分设置（轻量紧凑折叠条目，未开启时只占一行 28px，开启时向下展开） */}
+              {!isEdit && (
+                <div
+                  style={{
+                    marginTop: 2,
+                    padding: '6px 10px',
+                    background: splitAnswer ? '#F6FFED' : '#FAFAFA',
+                    border: splitAnswer ? '1px solid #B7EB8F' : '1px dashed #D9D9D9',
+                    borderRadius: 6,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Checkbox
+                      checked={splitAnswer}
+                      onChange={(e) => handleSplitAnswerToggle(e.target.checked)}
+                      style={{ fontSize: 12 }}
+                    >
+                      <span style={{ color: splitAnswer ? '#237804' : '#595959', fontWeight: splitAnswer ? 600 : 400 }}>
+                        📑 包含试卷与答案合并文件（自动拆分为【试卷】与【答案】两条独立记录）
+                      </span>
+                    </Checkbox>
+                    <Space size={6}>
+                      <Button
+                        size="small"
+                        type="link"
+                        icon={<MessageOutlined />}
+                        onClick={() => {
+                          setRawText('');
+                          setOcrResult(null);
+                          setTextModalOpen(true);
+                        }}
+                        style={{ fontSize: 11, padding: 0 }}
+                      >
+                        微信群消息智能解析
+                      </Button>
+                    </Space>
+                  </div>
+
+                  {splitAnswer && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #B7EB8F' }}>
+                      <Row gutter={10}>
+                        <Col span={8}>
+                          <Form.Item
+                            name="answerPageCount"
+                            label="答案所占页数"
+                            rules={[{ required: true, message: '请输入答案页数' }]}
+                            style={{ marginBottom: 4 }}
+                            extra={
+                              <span style={{ fontSize: 11, color: '#389E0D' }}>
+                                试卷正文折合: <b>{Math.max(1, (form.getFieldValue('pageCount') || 1) - (form.getFieldValue('answerPageCount') || 1))}</b> 页
+                              </span>
+                            }
+                          >
+                            <InputNumber
+                              min={1}
+                              max={Math.max(1, (form.getFieldValue('pageCount') || 2) - 1)}
+                              style={{ width: '100%' }}
+                              addonAfter="页"
+                              onChange={(val) => {
+                                const newAnsPage = Number(val) || 1;
+                                setAnswerPageCount(newAnsPage);
+                                const current = form.getFieldsValue();
+                                const sheets = computePreviewSheets({ ...current, answerPageCount: newAnsPage }, true);
+                                setPreviewTotalSheets(sheets);
+                                triggerSaveRecordDraft({ ...current, answerPageCount: newAnsPage });
+                              }}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={9}>
+                          <Form.Item
+                            name="answerPrintCount"
+                            label="答案印制份数"
+                            rules={[{ required: true, message: '请输入答案份数' }]}
+                            style={{ marginBottom: 4 }}
+                            extra={
+                              <Space size={4} style={{ marginTop: 2 }}>
+                                <Tag
+                                  color="blue"
+                                  style={{ cursor: 'pointer', fontSize: 10, padding: '0 4px', margin: 0 }}
+                                  onClick={() => {
+                                    form.setFieldsValue({ answerPrintCount: 2 });
+                                    setAnswerPrintCount(2);
+                                    const current = form.getFieldsValue();
+                                    const sheets = computePreviewSheets({ ...current, answerPrintCount: 2 }, true);
+                                    setPreviewTotalSheets(sheets);
+                                    triggerSaveRecordDraft({ ...current, answerPrintCount: 2 });
+                                  }}
+                                >
+                                  教师备课 2份
+                                </Tag>
+                                <Tag
+                                  color="cyan"
+                                  style={{ cursor: 'pointer', fontSize: 10, padding: '0 4px', margin: 0 }}
+                                  onClick={() => {
+                                    const mainCount = form.getFieldValue('printCount') || 50;
+                                    form.setFieldsValue({ answerPrintCount: mainCount });
+                                    setAnswerPrintCount(mainCount);
+                                    const current = form.getFieldsValue();
+                                    const sheets = computePreviewSheets({ ...current, answerPrintCount: mainCount }, true);
+                                    setPreviewTotalSheets(sheets);
+                                    triggerSaveRecordDraft({ ...current, answerPrintCount: mainCount });
+                                  }}
+                                >
+                                  同试卷份数
+                                </Tag>
+                              </Space>
+                            }
+                          >
+                            <InputNumber
+                              min={1}
+                              max={50000}
+                              style={{ width: '100%' }}
+                              addonAfter="份"
+                              onChange={(val) => {
+                                const newCount = Number(val) || 1;
+                                setAnswerPrintCount(newCount);
+                                const current = form.getFieldsValue();
+                                const sheets = computePreviewSheets({ ...current, answerPrintCount: newCount }, true);
+                                setPreviewTotalSheets(sheets);
+                                triggerSaveRecordDraft({ ...current, answerPrintCount: newCount });
+                              }}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={7}>
+                          <Form.Item
+                            name="answerPrintSide"
+                            label="答案印刷方式"
+                            rules={[{ required: true }]}
+                            style={{ marginBottom: 4 }}
+                          >
+                            <Radio.Group
+                              buttonStyle="solid"
+                              style={{ width: '100%', display: 'flex' }}
+                              onChange={(e) => {
+                                setAnswerPrintSide(e.target.value);
+                                const current = form.getFieldsValue();
+                                const sheets = computePreviewSheets({ ...current, answerPrintSide: e.target.value }, true);
+                                setPreviewTotalSheets(sheets);
+                                triggerSaveRecordDraft({ ...current, answerPrintSide: e.target.value });
+                              }}
+                            >
+                              <Radio.Button value="1" style={{ flex: 1, textAlign: 'center' }}>单面印</Radio.Button>
+                              <Radio.Button value="2" style={{ flex: 1, textAlign: 'center' }}>双面印</Radio.Button>
+                            </Radio.Group>
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                    </div>
                   )}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="grade" label="年级">
-                <Select
-                  placeholder="选择年级"
-                  allowClear
-                  style={{ width: '100%', cursor: 'pointer' }}
-                  onChange={(v) => {
-                    setSelectedGrade(v);
-                    form.setFieldsValue({ classId: undefined });
-                  }}
-                  options={[
-                    { label: '高一年级', value: '高一' },
-                    { label: '高二年级', value: '高二' },
-                    { label: '高三年级', value: '高三' },
-                    { label: '高三复读部', value: '复读部' },
-                    { label: '初中部', value: '初中部' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="classId" label="关联班级">
-                <Select
-                  placeholder="选择班级"
-                  allowClear
-                  showSearch
-                  style={{ width: '100%', cursor: 'pointer' }}
-                  filterOption={(input, option) =>
-                    ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={filteredClassList.map((c) => ({
-                    label: c.className,
-                    value: c.classId,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="operator" label="文印经办人" rules={[{ required: true, message: '请选择经办人' }]}>
-                <Select
-                  placeholder="请选择文印经办人"
-                  showSearch
-                  allowClear
-                  style={{ width: '100%', cursor: 'pointer' }}
-                  filterOption={(input, option) =>
-                    ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={operatorOptions}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="printTime" label="印刷时间" rules={[{ required: true, message: '请选择印刷时间' }]}>
-                <DatePicker
-                  showTime
-                  format="YYYY-MM-DD HH:mm:ss"
-                  placeholder="请选择印刷时间"
-                  style={{ width: '100%', cursor: 'pointer' }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="attachment"
-                label="原稿电子文件 / 附件"
-                extra="支持直接上传Word/PDF/Excel等，或输入网盘链接"
-              >
-                <FileUpload
-                  placeholder="点击上传或拖拽原稿文件"
-                  onUploadSuccess={(_url, uploadedName, file) => {
-                    const currentPrintName = form.getFieldValue('printName');
-                    if (!currentPrintName && uploadedName) {
-                      const baseName = uploadedName.replace(/\.[^/.]+$/, '');
-                      form.setFieldsValue({ printName: baseName });
-                    }
-                    if (file) {
-                      analyzeAndFillDocument(file);
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="resultImg"
-                label="印刷效果图 / 拍照留样"
-                extra="支持本地图片上传、拖拽或 Ctrl+V 粘贴截图"
-              >
-                <ImageUpload placeholder="点击上传或拖拽留样图片" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="remark" label="补充备注">
-            <TextArea rows={1} placeholder="可填写装订要求（骑马钉/角钉）、考试时间等补充说明" />
-          </Form.Item>
-        </Form>
+                </div>
+              )}
+            </Form>
           </div>
         </div>
       </Modal>
@@ -2820,6 +2760,7 @@ const PrintRecordPage: React.FC = () => {
         onCancel={() => {
           setTextModalOpen(false);
         }}
+        styles={{ body: { padding: '14px 20px 10px' } }}
         footer={
           ocrResult?.taskList && ocrResult.taskList.length > 1 ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2861,7 +2802,7 @@ const PrintRecordPage: React.FC = () => {
             </div>
           ) : null
         }
-        width={720}
+        width={760}
       >
         <div onPaste={handleModalPaste}>
           {ocrResult?.taskList && ocrResult.taskList.length > 1 ? (
@@ -2869,15 +2810,15 @@ const PrintRecordPage: React.FC = () => {
               {/* 识别成功与任务统计横幅 */}
               <div
                 style={{
-                  padding: '12px 16px',
+                  padding: '8px 12px',
                   backgroundColor: '#F6FFED',
                   border: '1px solid #B7EB8F',
                   borderRadius: 6,
-                  marginBottom: 16,
+                  marginBottom: 10,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 'bold', color: '#52C41A', fontSize: 14 }}>
+                  <span style={{ fontWeight: 'bold', color: '#52C41A', fontSize: 13 }}>
                     <CheckCircleFilled style={{ marginRight: 6 }} />
                     识别提取成功！检测到包含多条印刷任务（共 {ocrResult.taskList.length} 条，已查库自动跳过重复项）：
                   </span>
@@ -2885,7 +2826,7 @@ const PrintRecordPage: React.FC = () => {
                     {ocrResult.teacherMatched ? '✓ 教师已精准匹配' : '⚠️ 教师需核对/自选'}
                   </Tag>
                 </div>
-                <div style={{ fontSize: 12, color: '#595959', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: '#595959', marginTop: 3 }}>
                   点击下方对应任务项可切换核对，未登记项将依次顺序连续处理。原对话时间已自动识别并标注。
                 </div>
               </div>
@@ -2896,11 +2837,11 @@ const PrintRecordPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  padding: '10px 14px',
+                  padding: '8px 12px',
                   backgroundColor: '#FFF7E6',
                   border: '1px solid #FFD591',
                   borderRadius: 6,
-                  marginBottom: 16,
+                  marginBottom: 10,
                 }}
               >
                 <span style={{ flexShrink: 0, fontWeight: 500, color: '#874D00', fontSize: 13 }}>
@@ -2943,11 +2884,11 @@ const PrintRecordPage: React.FC = () => {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
-                  maxHeight: 280,
+                  gap: 6,
+                  maxHeight: 250,
                   overflowY: 'auto',
-                  marginBottom: 16,
-                  padding: 2,
+                  marginBottom: 10,
+                  padding: '2px 4px',
                 }}
               >
                 {ocrResult.taskList.map((task: any, idx: number) => {
@@ -2960,7 +2901,7 @@ const PrintRecordPage: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px 14px',
+                        padding: '8px 12px',
                         borderRadius: 6,
                         cursor: 'pointer',
                         border: isCur ? '1.5px solid #1677FF' : '1px solid #d9d9d9',
@@ -3036,7 +2977,7 @@ const PrintRecordPage: React.FC = () => {
               </div>
 
               {allTasksRegistered && (
-                <div style={{ fontSize: 12, color: '#52C41A', marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: '#52C41A', marginBottom: 6 }}>
                   <CheckCircleFilled style={{ marginRight: 4 }} />
                   提示：文本内识别出的所有印刷任务在系统中均已登记，无需重复登记！
                 </div>
@@ -3044,8 +2985,19 @@ const PrintRecordPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <Card title="直接粘贴微信聊天文字或文档文件" size="small" style={{ marginBottom: 16 }}>
-                <Paragraph type="secondary" style={{ fontSize: 12 }}>
+              <div
+                style={{
+                  background: '#FAFAFA',
+                  border: '1px solid #E8E8E8',
+                  borderRadius: 6,
+                  padding: '12px 14px',
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#262626', marginBottom: 4 }}>
+                  直接粘贴微信聊天文字或文档文件
+                </div>
+                <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
                   支持直接复制老师在群里发的微信原话（包含跨天记录或多次连续发文），或直接 Ctrl+V 粘贴复制的原稿文档：
                 </Paragraph>
                 <TextArea
@@ -3054,7 +3006,7 @@ const PrintRecordPage: React.FC = () => {
                   onChange={(e) => setRawText(e.target.value)}
                   placeholder="在此处直接 Ctrl+V 粘贴微信群聊天文字（支持跨天多段记录）..."
                 />
-                <div style={{ marginTop: 10, textAlign: 'right' }}>
+                <div style={{ marginTop: 8, textAlign: 'right' }}>
                   <Button
                     type="primary"
                     icon={<MessageOutlined />}
@@ -3064,7 +3016,7 @@ const PrintRecordPage: React.FC = () => {
                     一键智能提取并排队
                   </Button>
                 </div>
-              </Card>
+              </div>
             </>
           )}
         </div>
@@ -3076,7 +3028,9 @@ const PrintRecordPage: React.FC = () => {
         open={completeModalOpen}
         onOk={handleSaveComplete}
         onCancel={() => setCompleteModalOpen(false)}
+        width={480}
         destroyOnHidden
+        styles={{ body: { padding: '14px 18px' } }}
       >
         {completeTarget && (
           <div
@@ -3084,17 +3038,17 @@ const PrintRecordPage: React.FC = () => {
               background: '#F0F5FF',
               border: '1px solid #D6E4FF',
               borderRadius: 6,
-              padding: '10px 14px',
-              marginBottom: 16,
+              padding: '8px 12px',
+              marginBottom: 12,
             }}
           >
-            <div style={{ fontWeight: 'bold', fontSize: 14, color: '#1D39C4', marginBottom: 4 }}>
+            <div style={{ fontWeight: 'bold', fontSize: 13, color: '#1D39C4', marginBottom: 2 }}>
               🖨️ {completeTarget.printName}
             </div>
-            <div style={{ fontSize: 12, color: '#595959', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <span>申请教师: <b>{completeTarget.teacherName || '-'}</b></span>
-              <span>印刷份数: <b style={{ color: '#1677FF' }}>{completeTarget.printCount} 份</b></span>
-              <span>纸张规格: <b>{completeTarget.paperGoodsName || completeTarget.paperType || 'A4'}</b></span>
+            <div style={{ fontSize: 11, color: '#595959', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <span>教师: <b>{completeTarget.teacherName || '-'}</b></span>
+              <span>份数: <b style={{ color: '#1677FF' }}>{completeTarget.printCount} 份</b></span>
+              <span>纸张: <b>{completeTarget.paperGoodsName || completeTarget.paperType || 'A4'}</b></span>
             </div>
           </div>
         )}
@@ -3102,9 +3056,9 @@ const PrintRecordPage: React.FC = () => {
           <Form.Item
             name="resultImg"
             label="印刷成品效果图 / 拍照留样"
-            extra="印完后拍照留样归档，支持本地选择、拖拽或按 Ctrl+V 粘贴截图"
+            style={{ marginBottom: 0 }}
           >
-            <ImageUpload placeholder="点击上传或拖拽成品留样图片" />
+            <ImageUpload placeholder="点击上传或按 Ctrl+V 粘贴成品留样图片" />
           </Form.Item>
         </Form>
       </Modal>
@@ -3116,8 +3070,9 @@ const PrintRecordPage: React.FC = () => {
         onOk={handleSaveEdit}
         onCancel={handleCloseEdit}
         confirmLoading={editSaving}
-        width={720}
+        width={780}
         destroyOnHidden
+        styles={{ body: { padding: '14px 18px' } }}
       >
         {editTarget && (
           <div
@@ -3125,34 +3080,70 @@ const PrintRecordPage: React.FC = () => {
               background: '#FFF7E6',
               border: '1px solid #FFD591',
               borderRadius: 6,
-              padding: '10px 14px',
-              marginBottom: 16,
+              padding: '6px 12px',
+              marginBottom: 12,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
-            <div style={{ fontWeight: 'bold', fontSize: 14, color: '#D46B08', marginBottom: 4 }}>
-              ✏️ 修改印刷登记：{editTarget.printName}
-            </div>
-            <div style={{ fontSize: 12, color: '#874D00' }}>
-              当前状态：待印刷。修改印刷份数/页数/单双面/纸张类型会自动作废旧出库单并按新耗纸量重新扣减库存。
-            </div>
+            <span style={{ fontWeight: 600, fontSize: 13, color: '#D46B08' }}>
+              ✏️ 正在修改：{editTarget.printName}
+            </span>
+            <span style={{ fontSize: 11, color: '#874D00' }}>
+              修改份数/页数/单双面将自动重算并联动更新库存出库
+            </span>
           </div>
         )}
         <Form form={editForm} layout="vertical" preserve={false}>
-          <Row gutter={16}>
-            <Col span={12}>
+          <Row gutter={10}>
+            <Col span={10}>
               <Form.Item
                 name="printName"
-                label="印刷名称"
+                label="印刷材料名称"
                 rules={[{ required: true, message: '请输入印刷名称' }]}
+                style={{ marginBottom: 10 }}
               >
                 <Input placeholder="如：高三月考数学试卷" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={4}>
+              <Form.Item
+                name="printCount"
+                label="印刷份数"
+                rules={[{ required: true, message: '请输入份数' }]}
+                style={{ marginBottom: 10 }}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} addonAfter="份" />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item
+                name="pageCount"
+                label="每份页数"
+                rules={[{ required: true, message: '请输入页数' }]}
+                style={{ marginBottom: 10 }}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} addonAfter="页" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="printSide" label="单/双面" style={{ marginBottom: 10 }}>
+                <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
+                  <Radio.Button value="1" style={{ flex: 1, textAlign: 'center' }}>单面印</Radio.Button>
+                  <Radio.Button value="2" style={{ flex: 1, textAlign: 'center' }}>双面印</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={10}>
+            <Col span={14}>
               <Form.Item
                 name="paperGoodsId"
-                label="用纸物品"
+                label="用纸物品（联动出库）"
                 rules={[{ required: true, message: '请选择用纸物品' }]}
+                style={{ marginBottom: 10 }}
               >
                 <Select
                   placeholder="选择用纸"
@@ -3165,63 +3156,8 @@ const PrintRecordPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="printCount"
-                label="印刷份数"
-                rules={[{ required: true, message: '请输入印刷份数' }]}
-              >
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="如 100" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="pageCount"
-                label="每份页数"
-                rules={[{ required: true, message: '请输入每份页数' }]}
-              >
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="如 2" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="printSide" label="单/双面">
-                <Select placeholder="选择单双面">
-                  <Select.Option value="1">单面印刷</Select.Option>
-                  <Select.Option value="2">双面印刷</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="grade" label="年级">
-                <Select placeholder="选择年级" allowClear>
-                  <Select.Option value="高一">高一</Select.Option>
-                  <Select.Option value="高二">高二</Select.Option>
-                  <Select.Option value="高三">高三</Select.Option>
-                  <Select.Option value="复读部">复读部</Select.Option>
-                  <Select.Option value="初中部">初中部</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="classId" label="班级">
-                <Select
-                  placeholder="选择班级"
-                  showSearch
-                  optionFilterProp="children"
-                  allowClear
-                  options={classList.map((c: any) => ({
-                    label: `${c.className}（${c.grade || ''}）`,
-                    value: c.classId,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="teacherId" label="申请教师">
+            <Col span={10}>
+              <Form.Item name="teacherId" label="申请教师" style={{ marginBottom: 10 }}>
                 <Select
                   placeholder="选择教师"
                   showSearch
@@ -3235,21 +3171,38 @@ const PrintRecordPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="printTime" label="印刷时间">
-                <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" style={{ width: '100%' }} placeholder="选择印刷时间" />
+
+          <Row gutter={10}>
+            <Col span={6}>
+              <Form.Item name="classId" label="班级" style={{ marginBottom: 8 }}>
+                <Select
+                  placeholder="选择班级"
+                  showSearch
+                  optionFilterProp="children"
+                  allowClear
+                  options={classList.map((c: any) => ({
+                    label: `${c.className}（${c.grade || ''}）`,
+                    value: c.classId,
+                  }))}
+                />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="operator" label="经办人">
+            <Col span={5}>
+              <Form.Item name="operator" label="经办人" style={{ marginBottom: 8 }}>
                 <Input placeholder="经办人姓名" />
               </Form.Item>
             </Col>
+            <Col span={6}>
+              <Form.Item name="printTime" label="印刷时间" style={{ marginBottom: 8 }}>
+                <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" style={{ width: '100%' }} placeholder="选择时间" />
+              </Form.Item>
+            </Col>
+            <Col span={7}>
+              <Form.Item name="remark" label="备注" style={{ marginBottom: 8 }}>
+                <Input placeholder="装订要求或补充说明" />
+              </Form.Item>
+            </Col>
           </Row>
-          <Form.Item name="remark" label="备注">
-            <TextArea placeholder="备注信息" rows={2} />
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -3263,8 +3216,9 @@ const PrintRecordPage: React.FC = () => {
           setPrintErrorTarget(null);
         }}
         confirmLoading={printErrorSaving}
-        width={480}
+        width={460}
         destroyOnHidden
+        styles={{ body: { padding: '14px 18px' } }}
       >
         {printErrorTarget && (
           <div
@@ -3272,14 +3226,14 @@ const PrintRecordPage: React.FC = () => {
               background: '#FFF1F0',
               border: '1px solid #FFA39E',
               borderRadius: 6,
-              padding: '10px 14px',
-              marginBottom: 16,
+              padding: '8px 12px',
+              marginBottom: 12,
             }}
           >
-            <div style={{ fontWeight: 'bold', fontSize: 14, color: '#CF1322', marginBottom: 4 }}>
-              ⚠️ 印刷错误损耗登记：{printErrorTarget.printName}
+            <div style={{ fontWeight: 'bold', fontSize: 13, color: '#CF1322', marginBottom: 2 }}>
+              ⚠️ {printErrorTarget.printName}
             </div>
-            <div style={{ fontSize: 12, color: '#5C0011', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 11, color: '#5C0011', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <span>原耗纸: <b>{printErrorTarget.totalPages || 0} 张</b></span>
               <span>用纸: <b>{printErrorTarget.paperGoodsName || printErrorTarget.paperType || 'A4'}</b></span>
               {printErrorTarget.errorCount ? (
@@ -3291,20 +3245,21 @@ const PrintRecordPage: React.FC = () => {
         <Form form={printErrorForm} layout="vertical" preserve={false}>
           <Form.Item
             name="errorCount"
-            label="印刷错误损耗张数"
+            label="印刷错误损耗张数（自动生成独立出库单）"
             rules={[{ required: true, message: '请输入损耗张数' }]}
-            extra="错误损耗张数会作为一张单独的出库单从库存中扣减"
+            style={{ marginBottom: 10 }}
           >
-            <InputNumber min={1} style={{ width: '100%' }} placeholder="如 50" autoFocus />
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="如 50" autoFocus addonAfter="张" />
           </Form.Item>
           <Form.Item
             name="errorRemark"
             label="错误原因说明"
             rules={[{ required: true, message: '请简要说明错误原因' }]}
+            style={{ marginBottom: 0 }}
           >
             <TextArea
               placeholder="如：油墨不均导致重印、纸张卡纸损耗、装订错误等"
-              rows={3}
+              rows={2}
               maxLength={200}
               showCount
             />
@@ -3403,55 +3358,75 @@ const PrintRecordPage: React.FC = () => {
         onOk={handleSaveNewTeacher}
         onCancel={() => setTeacherModalOpen(false)}
         confirmLoading={teacherSaving}
-        width={480}
+        width={500}
         destroyOnHidden
+        styles={{ body: { padding: '16px 20px 8px' } }}
       >
         <Form form={teacherForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="teacherType"
-            label="人员类型"
-            rules={[{ required: true, message: '请选择人员类型' }]}
-          >
-            <Radio.Group>
-              <Radio value="1">任课老师</Radio>
-              <Radio value="2">行政人员</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item
-            name="teacherName"
-            label="姓名"
-            rules={[{ required: true, message: '请输入姓名' }]}
-          >
-            <Input placeholder="如：汪思雅" autoFocus />
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, cur) => prev.teacherType !== cur.teacherType}
-          >
-            {({ getFieldValue }) =>
-              getFieldValue('teacherType') === '1' ? (
-                <Form.Item
-                  name="subject"
-                  label="任教学科"
-                  rules={[{ required: true, message: '请输入任教学科' }]}
-                >
-                  <Input placeholder="如：语文、数学、英语" />
-                </Form.Item>
-              ) : null
-            }
-          </Form.Item>
-          <Form.Item name="grade" label="任教年级">
-            <Select placeholder="请选择任教年级" allowClear>
-              <Select.Option value="高一">高一年级</Select.Option>
-              <Select.Option value="高二">高二年级</Select.Option>
-              <Select.Option value="高三">高三年级</Select.Option>
-              <Select.Option value="复读部">高三复读部</Select.Option>
-              <Select.Option value="初中部">初中部</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="phone" label="联系电话">
-            <Input placeholder="选填，手机或办公电话" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="teacherType"
+                label="人员类型"
+                rules={[{ required: true, message: '请选择人员类型' }]}
+                style={{ marginBottom: 12 }}
+              >
+                <Radio.Group>
+                  <Radio value="1">任课老师</Radio>
+                  <Radio value="2">行政人员</Radio>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="teacherName"
+                label="姓名"
+                rules={[{ required: true, message: '请输入姓名' }]}
+                style={{ marginBottom: 12 }}
+              >
+                <Input placeholder="如：汪思雅" autoFocus />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prev, cur) => prev.teacherType !== cur.teacherType}
+              >
+                {({ getFieldValue }) =>
+                  getFieldValue('teacherType') === '1' ? (
+                    <Form.Item
+                      name="subject"
+                      label="任教学科"
+                      rules={[{ required: true, message: '请输入任教学科' }]}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <Input placeholder="如：语文、数学、英语" />
+                    </Form.Item>
+                  ) : (
+                    <Form.Item label="任教学科" style={{ marginBottom: 12 }}>
+                      <Input disabled placeholder="行政人员无需填写" />
+                    </Form.Item>
+                  )
+                }
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="grade" label="任教年级" style={{ marginBottom: 12 }}>
+                <Select placeholder="请选择任教年级" allowClear>
+                  <Select.Option value="高一">高一年级</Select.Option>
+                  <Select.Option value="高二">高二年级</Select.Option>
+                  <Select.Option value="高三">高三年级</Select.Option>
+                  <Select.Option value="复读部">高三复读部</Select.Option>
+                  <Select.Option value="初中部">初中部</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="phone" label="联系电话" style={{ marginBottom: 8 }}>
+                <Input placeholder="选填，手机或办公电话" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </PageContainer>
