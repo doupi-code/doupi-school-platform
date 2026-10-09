@@ -17,10 +17,12 @@ import com.benjaminwan.ocrlibrary.OcrResult;
 import com.doupi.common.utils.StringUtils;
 import com.doupi.edu.domain.EduClass;
 import com.doupi.edu.domain.EduTeacher;
+import com.doupi.edu.domain.dto.DocumentAnalysisResult;
 import com.doupi.edu.domain.dto.EduPrintOcrResult;
 import com.doupi.edu.mapper.EduClassMapper;
 import com.doupi.edu.mapper.EduTeacherMapper;
 import com.doupi.edu.service.IEduOcrService;
+import com.doupi.edu.util.DocumentPageAnalyzer;
 import com.doupi.edu.service.impl.ocr.ChatLayoutSegmenter;
 import com.doupi.edu.service.impl.ocr.ChatTopologyParser;
 import com.doupi.edu.service.impl.ocr.EduPrintIntentExtractor;
@@ -63,6 +65,15 @@ public class EduOcrServiceImpl implements IEduOcrService
 
     @Autowired(required = false)
     private com.doupi.edu.mapper.EduPrintRecordMapper eduPrintRecordMapper;
+
+    /**
+     * 解析文档文件（PDF/Word/Excel）的页数与纸张规格，用于登记自动换算耗纸数
+     */
+    @Override
+    public DocumentAnalysisResult analyzeDocument(MultipartFile file)
+    {
+        return DocumentPageAnalyzer.analyze(file);
+    }
 
     @Override
     public EduPrintOcrResult parseScreenshot(MultipartFile file) 

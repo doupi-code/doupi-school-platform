@@ -2,6 +2,7 @@ package com.doupi.edu.service;
 
 import java.io.File;
 import org.springframework.web.multipart.MultipartFile;
+import com.doupi.edu.domain.dto.DocumentAnalysisResult;
 import com.doupi.edu.domain.dto.EduPrintOcrResult;
 
 /**
@@ -24,4 +25,12 @@ public interface IEduOcrService
      * @return 结构化提取结果
      */
     public EduPrintOcrResult extractInfoFromText(String text);
+
+    /**
+     * 解析文档文件（PDF/Word/Excel）的页数与纸张规格，用于登记自动换算耗纸数
+     * 
+     * @param file 上传的文档文件
+     * @return 解析结果
+     */
+    public DocumentAnalysisResult analyzeDocument(MultipartFile file);
 }

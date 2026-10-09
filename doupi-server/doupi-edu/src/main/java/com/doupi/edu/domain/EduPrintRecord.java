@@ -77,8 +77,8 @@ public class EduPrintRecord extends BaseEntity
     private String operator;
 
     /** 印刷时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "印刷时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "印刷时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date printTime;
 
     /** 状态 */

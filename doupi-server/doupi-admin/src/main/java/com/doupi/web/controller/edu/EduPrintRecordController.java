@@ -190,6 +190,16 @@ public class EduPrintRecordController extends BaseController
     }
 
     /**
+     * 解析文档文件页数与纸张规格（PDF/Word/Excel），用于登记自动换算耗纸数
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:add')")
+    @PostMapping("/analyze-document")
+    public AjaxResult analyzeDocument(@RequestParam("file") MultipartFile file)
+    {
+        return success(eduOcrService.analyzeDocument(file));
+    }
+
+    /**
      * 删除印刷登记
      */
     @PreAuthorize("@ss.hasPermi('edu:record:remove')")

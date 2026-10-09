@@ -121,6 +121,16 @@ export function textParse(data: { text: string }) {
   });
 }
 
+// 解析文档文件页数与纸张规格（PDF/Word/Excel），用于登记自动换算耗纸数
+export function analyzeDocument(formData: FormData) {
+  return request({
+    url: '/edu/record/analyze-document',
+    method: 'post',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: formData,
+  });
+}
+
 // 根据出库单ID查询关联文印登记详细
 export function getRecordByOutId(outId: number | string) {
   return request({

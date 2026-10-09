@@ -68,6 +68,7 @@ import {
   textParse,
   ocrParse,
   uploadFile,
+  analyzeDocument,
 } from '@/api/edu/record';
 import { listTeacher, addTeacher } from '@/api/edu/teacher';
 import { listClass } from '@/api/edu/class';
@@ -86,6 +87,36 @@ const getFileName = (url?: string): string => {
   } catch {
     return seg;
   }
+};
+
+// 纸张面积（mm²），用于源纸张规格 → 目标纸张规格的面积比换算页数
+const PAPER_AREA: Record<string, number> = {
+  A4: 210 * 297,
+  A3: 297 * 420,
+  '8K': 260 * 370,
+  '16K': 195 * 270,
+};
+
+// 根据源纸张规格与目标纸张规格，按面积比换算页数（一页多张打印）
+// 目标纸张更大（面积≥1.5倍）：一页多张 → 页数减半；目标纸张更小：拆分放大 → 页数加倍；
+// 面积接近或源纸张未知则保持不变
+const convertPageCount = (
+  sourcePages: number | null,
+  sourcePaper: string | null,
+  targetPaper: string
+): number | null => {
+  if (!sourcePages || sourcePages <= 0) return sourcePages;
+  if (!sourcePaper || sourcePaper === targetPaper) return sourcePages;
+  const srcArea = PAPER_AREA[sourcePaper];
+  const dstArea = PAPER_AREA[targetPaper];
+  if (!srcArea || !dstArea) return sourcePages;
+  if (dstArea >= srcArea * 1.5) {
+    return Math.ceil(sourcePages / 2);
+  }
+  if (srcArea >= dstArea * 1.5) {
+    return sourcePages * 2;
+  }
+  return sourcePages;
 };
 
 const PrintRecordPage: React.FC = () => {
@@ -134,6 +165,12 @@ const PrintRecordPage: React.FC = () => {
   // 粘贴微信聊天记录时，同步复制出来的实际文件（按原始文件名索引上传后的 URL）
   const pastedAttachmentsRef = useRef<Record<string, string>>({});
 
+  // 文档解析结果缓存（按原始文件名索引：{ pageCount, sourcePaperType, parseable, msg }）
+  const docAnalysisRef = useRef<Record<string, any>>({});
+
+  // 当前表单源文档解析信息（源页数 + 源纸张规格），用于纸张规格切换时面积比换算
+  const [sourcePageInfo, setSourcePageInfo] = useState<{ pageCount: number; sourcePaperType: string | null } | null>(null);
+
   // 当前选中的队列任务
   const currentQueueTask = React.useMemo(() => {
     if (ocrResult?.taskList && ocrResult.taskList.length > 0) {
@@ -173,6 +210,8 @@ const PrintRecordPage: React.FC = () => {
   const [teacherForm] = Form.useForm();
   const [teacherModalOpen, setTeacherModalOpen] = useState(false);
   const [teacherSaving, setTeacherSaving] = useState(false);
+  // 新建教师的触发来源：form（登记表单）或 queue（预填多任务队列）
+  const [teacherAddContext, setTeacherAddContext] = useState<'form' | 'queue' | null>(null);
 
   // 追踪当前选中的关联用纸物品，用于动态换算库存与耗纸量
   const watchedPaperGoodsId = Form.useWatch('paperGoodsId', form);
@@ -256,11 +295,70 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
-  // 监听纸张规格切换，联动自动选择匹配的用纸耗材
+  // 解析单个已上传文档（PDF/Word/Excel），自动填充页数并按当前纸张规格换算，缓存源纸张规格
+  const analyzeAndFillDocument = async (file: File) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res: any = await analyzeDocument(formData);
+      const analysis = res?.data;
+      if (!analysis) {
+        message.info('未获取到文档解析结果，请手动填写页数');
+        setSourcePageInfo(null);
+        return;
+      }
+      const pageCount = analysis.pageCount ? Number(analysis.pageCount) : 0;
+      const sourcePaper = analysis.sourcePaperType || null;
+      if (pageCount > 0) {
+        const currentPaperType = form.getFieldValue('paperType') || 'A4';
+        const converted = convertPageCount(pageCount, sourcePaper, currentPaperType);
+        const finalPages = converted && converted > 0 ? converted : 1;
+        form.setFieldsValue({ pageCount: finalPages });
+        setSourcePageInfo({ pageCount, sourcePaperType: sourcePaper });
+        if (sourcePaper) {
+          message.success(`已解析：共 ${pageCount} 页（${sourcePaper}），按 ${currentPaperType} 换算为 ${finalPages} 页`);
+        } else {
+          message.success(`已解析：共 ${pageCount} ${/^xls/.test(ext) ? '个工作表' : '页'}`);
+        }
+      } else if (analysis.msg) {
+        message.info(analysis.msg);
+        setSourcePageInfo(null);
+      }
+    } catch (err: any) {
+      setSourcePageInfo(null);
+    }
+  };
+
+  // 解析文档并缓存到 docAnalysisRef（供微信粘贴上传的文档在填充任务时换算页数）
+  const analyzeDocumentIntoCache = async (file: File) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res: any = await analyzeDocument(formData);
+      const analysis = res?.data;
+      if (analysis && analysis.parseable && analysis.pageCount) {
+        docAnalysisRef.current[file.name] = analysis;
+      }
+    } catch (e) {
+      // 忽略解析失败，页数回退手动填写
+    }
+  };
+
+  // 监听纸张规格切换，联动自动选择匹配的用纸耗材，并按源文档面积比换算页数
   const handlePaperTypeChange = (paperType: string) => {
     const matchedId = findGoodsByPaperType(paperType, paperGoodsList);
     if (matchedId) {
       form.setFieldsValue({ paperGoodsId: matchedId });
+    }
+    if (sourcePageInfo && sourcePageInfo.pageCount > 0) {
+      const converted = convertPageCount(sourcePageInfo.pageCount, sourcePageInfo.sourcePaperType, paperType);
+      if (converted && converted > 0) {
+        form.setFieldsValue({ pageCount: converted });
+      }
     }
   };
 
@@ -424,6 +522,7 @@ const PrintRecordPage: React.FC = () => {
 
   // 快捷新建教师：从当前表单预填识别到的教师信息，打开精简新建弹窗
   const handleQuickAddTeacher = () => {
+    setTeacherAddContext('form');
     const currentTeacherName = form.getFieldValue('teacherName');
     const currentGrade = form.getFieldValue('grade');
     const tempEntry = teacherList.find((t) => t.teacherId === -999);
@@ -462,22 +561,66 @@ const PrintRecordPage: React.FC = () => {
         (t: any) => t.teacherName === values.teacherName
       );
       if (newTeacher) {
-        form.setFieldsValue({
-          teacherId: newTeacher.teacherId,
-          teacherName: newTeacher.teacherName,
-          grade: newTeacher.grade || form.getFieldValue('grade'),
-        });
-        if (newTeacher.grade) {
-          setSelectedGrade(newTeacher.grade);
+        if (teacherAddContext === 'queue') {
+          // 预填多任务队列：将新建教师批量应用到全部待登记任务
+          applyTeacherToQueue(newTeacher);
+        } else {
+          form.setFieldsValue({
+            teacherId: newTeacher.teacherId,
+            teacherName: newTeacher.teacherName,
+            grade: newTeacher.grade || form.getFieldValue('grade'),
+          });
+          if (newTeacher.grade) {
+            setSelectedGrade(newTeacher.grade);
+          }
         }
       }
       setTeacherModalOpen(false);
-      triggerSaveRecordDraft(form.getFieldsValue());
+      if (teacherAddContext !== 'queue') {
+        triggerSaveRecordDraft(form.getFieldsValue());
+      }
+      setTeacherAddContext(null);
     } catch (e: any) {
       message.error(e.message || '教师创建失败');
     } finally {
       setTeacherSaving(false);
     }
+  };
+
+  // 批量指定申请教师：将所选教师应用到队列中所有待登记任务
+  const applyTeacherToQueue = (teacher: any) => {
+    if (!ocrResult?.taskList) return;
+    const updated = ocrResult.taskList.map((task: any) => {
+      if (task.alreadyRegistered) return task;
+      return {
+        ...task,
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        teacherMatched: true,
+        grade: task.grade || teacher.grade || undefined,
+      };
+    });
+    setOcrResult({ ...ocrResult, taskList: updated, teacherMatched: true });
+    message.success(`已批量指定申请教师：${teacher.teacherName}`);
+  };
+
+  const handleBatchAssignTeacher = (teacherId: any) => {
+    const t = teacherList.find((item) => String(item.teacherId) === String(teacherId));
+    if (t) applyTeacherToQueue(t);
+  };
+
+  // 预填多任务队列中的「批量新建教师」入口
+  const handleQuickAddTeacherForQueue = () => {
+    setTeacherAddContext('queue');
+    teacherForm.resetFields();
+    teacherForm.setFieldsValue({
+      teacherType: '1',
+      teacherName: '',
+      grade: '',
+      subject: '',
+      status: '0',
+    });
+    setTeacherModalOpen(true);
   };
 
   // 打开新增弹窗
@@ -489,6 +632,7 @@ const PrintRecordPage: React.FC = () => {
     setEditId(null);
     setCurrentEditRecord(null);
     setOcrResult(null);
+    setSourcePageInfo(null);
     setModalTitle('新增印刷登记（自动生成耗材出库单联动扣库存）');
 
     // 检查是否有未保存的新增草稿
@@ -515,7 +659,7 @@ const PrintRecordPage: React.FC = () => {
       const defaultPaperType = 'A4';
       const defaultGoodsId = findGoodsByPaperType(defaultPaperType, currentPaperList);
       form.setFieldsValue({
-        printSide: '1',
+        printSide: '2',
         paperType: defaultPaperType,
         paperGoodsId: defaultGoodsId,
         printCount: 50,
@@ -540,6 +684,7 @@ const PrintRecordPage: React.FC = () => {
     setEditId(record.printId);
     setCurrentEditRecord(record);
     setOcrResult(null);
+    setSourcePageInfo(null);
     setSplitAnswer(false);
     setModalTitle(`修改印刷登记信息 (ID: ${record.printId})`);
 
@@ -587,6 +732,7 @@ const PrintRecordPage: React.FC = () => {
 
       if (isEdit && currentEditRecord) {
         setSplitAnswer(false);
+        setSourcePageInfo(null);
         const defaultGoodsId = currentEditRecord.paperGoodsId || findGoodsByPaperType(currentEditRecord.paperType || 'A4', paperGoodsList);
         form.setFieldsValue({
           ...currentEditRecord,
@@ -600,6 +746,7 @@ const PrintRecordPage: React.FC = () => {
         );
       } else {
         setSplitAnswer(false);
+        setSourcePageInfo(null);
         setAnswerPageCount(1);
         setAnswerPrintCount(2);
         setAnswerPrintSide('1');
@@ -607,7 +754,7 @@ const PrintRecordPage: React.FC = () => {
         const defaultGoodsId = findGoodsByPaperType(defaultPaperType, paperGoodsList);
         form.resetFields();
         form.setFieldsValue({
-          printSide: '1',
+          printSide: '2',
           paperType: defaultPaperType,
           paperGoodsId: defaultGoodsId,
           printCount: 50,
@@ -775,8 +922,20 @@ const PrintRecordPage: React.FC = () => {
 
     // 5. 印刷份数、页数与单双面
     const printCount = task.printCount ? Number(task.printCount) : 50;
-    const pageCount = task.pageCount ? Number(task.pageCount) : 1;
+    let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
     const printSide = task.printSide ? String(task.printSide) : '1';
+
+    // 若粘贴上传的原稿已被解析出页数/纸张规格，则按面积比换算覆盖OCR识别的估算页数
+    const docAnalysis = docAnalysisRef.current[task.originalDocName] || null;
+    if (docAnalysis && docAnalysis.pageCount) {
+      const srcPages = Number(docAnalysis.pageCount);
+      const srcPaper = docAnalysis.sourcePaperType || null;
+      const converted = convertPageCount(srcPages, srcPaper, paperType);
+      if (converted && converted > 0) {
+        pageCount = converted;
+        setSourcePageInfo({ pageCount: srcPages, sourcePaperType: srcPaper });
+      }
+    }
 
     // 6. 耗纸量折算联动与试卷答案合并拆分智能检测
     const combinedText = `${task.printName || ''} ${task.originalDocName || ''} ${task.remark || ''} ${ocrResult?.rawText || ''}`;
@@ -867,6 +1026,13 @@ const PrintRecordPage: React.FC = () => {
   const handleSaveRecord = async () => {
     try {
       const values = await form.validateFields();
+
+      // 未匹配或未选择申请教师时，禁止提交并提示用户
+      const rawTeacherId = values.teacherId;
+      if (rawTeacherId === undefined || rawTeacherId === null || rawTeacherId === '' || Number(rawTeacherId) === -999) {
+        message.warning('请先选择「申请教师」：未匹配到教师时请在下拉框手动选择，或点击「新建教师」后再保存');
+        return;
+      }
 
       // 智能补齐 teacherName、className 与 paperGoodsId，确保数据库数据完整
       let teacherId = values.teacherId === -999 ? undefined : values.teacherId;
@@ -1384,7 +1550,7 @@ const PrintRecordPage: React.FC = () => {
   const uploadPastedDocs = async (files: File[]) => {
     const valid = files.filter((f) => {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
-      return ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'wps'].includes(ext);
+      return ['doc', 'docx', 'docm', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'wps'].includes(ext);
     });
     if (valid.length === 0) return;
     message.loading({ content: `检测到已复制 ${valid.length} 个文件，正在上传...`, key: 'paste-docs' });
@@ -1398,6 +1564,8 @@ const PrintRecordPage: React.FC = () => {
         if (url) {
           pastedAttachmentsRef.current[f.name] = url;
           uploaded++;
+          // 后台解析文档页数/纸张规格，缓存供页面换算
+          analyzeDocumentIntoCache(f);
         }
       } catch (err: any) {
         message.error({ content: `文件 ${f.name} 上传失败：${err.message}`, key: 'paste-docs' });
@@ -1499,7 +1667,7 @@ const PrintRecordPage: React.FC = () => {
     }
 
     const ext = pastedFile.name.split('.').pop()?.toLowerCase() || '';
-    const isDoc = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z'].includes(ext);
+    const isDoc = ['doc', 'docx', 'docm', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z'].includes(ext);
     const isImg = pastedFile.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext);
 
     if (isDoc) {
@@ -1516,6 +1684,7 @@ const PrintRecordPage: React.FC = () => {
         if (!curPrintName && uploadedName) {
           form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
         }
+        analyzeAndFillDocument(pastedFile);
         message.success({ content: `已自动根据后缀识别为【原稿文档】并上传成功！`, key: 'smart-paste' });
       } catch (err: any) {
         message.error({ content: err.message || '文档上传失败', key: 'smart-paste' });
@@ -2545,11 +2714,14 @@ const PrintRecordPage: React.FC = () => {
               >
                 <FileUpload
                   placeholder="点击上传或拖拽原稿文件"
-                  onUploadSuccess={(_url, uploadedName) => {
+                  onUploadSuccess={(_url, uploadedName, file) => {
                     const currentPrintName = form.getFieldValue('printName');
                     if (!currentPrintName && uploadedName) {
                       const baseName = uploadedName.replace(/\.[^/.]+$/, '');
                       form.setFieldsValue({ printName: baseName });
+                    }
+                    if (file) {
+                      analyzeAndFillDocument(file);
                     }
                   }}
                 />
@@ -2641,6 +2813,54 @@ const PrintRecordPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* 批量指定申请教师（微信昵称无法自动匹配时快速批量修正） */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  backgroundColor: '#FFF7E6',
+                  border: '1px solid #FFD591',
+                  borderRadius: 6,
+                  marginBottom: 16,
+                }}
+              >
+                <span style={{ flexShrink: 0, fontWeight: 500, color: '#874D00', fontSize: 13 }}>
+                  批量指定申请教师：
+                </span>
+                <Select
+                  showSearch
+                  allowClear
+                  style={{ flex: 1, minWidth: 180 }}
+                  placeholder="选择教师，应用于全部待登记任务（微信昵称匹配不到时手动指定）"
+                  filterOption={(input, option) =>
+                    ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
+                  }
+                  onChange={handleBatchAssignTeacher}
+                  options={teacherList.map((t) => ({
+                    label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
+                    value: t.teacherId,
+                  }))}
+                  dropdownRender={(menu) => (
+                    <>
+                      {menu}
+                      <Divider style={{ margin: '4px 0' }} />
+                      <div style={{ padding: '4px 8px' }}>
+                        <Button
+                          type="link"
+                          icon={<PlusOutlined />}
+                          onClick={() => handleQuickAddTeacherForQueue()}
+                          style={{ padding: 0 }}
+                        >
+                          批量新建教师
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                />
+              </div>
+
               {/* 任务卡片队列列表 */}
               <div
                 style={{
@@ -2719,6 +2939,11 @@ const PrintRecordPage: React.FC = () => {
                           flexShrink: 0,
                         }}
                       >
+                        <span style={{ fontWeight: 500, color: task.teacherMatched ? '#52C41A' : '#D46B08' }}>
+                          {task.teacherName
+                            ? `${task.teacherName}${task.teacherMatched ? '' : ' (待核对)'}`
+                            : '未识别教师 (待指定)'}
+                        </span>
                         {task.timeSnippet && (
                           <span style={{ color: '#8c8c8c' }}>
                             <ClockCircleOutlined /> {task.timeSnippet}
@@ -3077,7 +3302,7 @@ const PrintRecordPage: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="printTime" label="印刷时间">
-                <DatePicker style={{ width: '100%' }} placeholder="选择印刷时间" />
+                <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" style={{ width: '100%' }} placeholder="选择印刷时间" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -3190,7 +3415,9 @@ const PrintRecordPage: React.FC = () => {
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="经办人">{currentRecord.operator}</Descriptions.Item>
-            <Descriptions.Item label="印刷时间">{currentRecord.printTime}</Descriptions.Item>
+            <Descriptions.Item label="印刷时间">
+              {currentRecord.printTime ? dayjs(currentRecord.printTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="关联出库单号" span={2}>
               {currentRecord.outNo ? (
                 <Tag
