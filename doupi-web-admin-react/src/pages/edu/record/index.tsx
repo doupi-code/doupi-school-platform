@@ -2205,9 +2205,8 @@ const PrintRecordPage: React.FC = () => {
         open={modalOpen}
         onOk={handleSaveRecord}
         onCancel={() => setModalOpen(false)}
-        width={1080}
+        width={1120}
         destroyOnHidden={false}
-        styles={{ body: { padding: 16, height: '72vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' } }}
       >
         <DraftNoticeAlert
           visible={!!draftNotice?.visible}
@@ -2216,7 +2215,7 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'stretch', flex: 1, minHeight: 0 }}>
+        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           {/* 左栏：批量登记任务队列（仅多任务时显示，点击直接切换载入） */}
           {ocrResult?.taskList && ocrResult.taskList.length > 1 && (
             <div
@@ -2227,18 +2226,14 @@ const PrintRecordPage: React.FC = () => {
                 border: '1px solid #F0F0F0',
                 borderRadius: 8,
                 padding: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
               }}
             >
-              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4, flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4 }}>
                 <UnorderedListOutlined /> 批量登记队列（{currentTaskIndex + 1}/{ocrResult.taskList.length}）
               </div>
-              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10, flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10 }}>
                 点击任务可直接切换载入，已在库任务自动跳过
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: 2 }}>
               {ocrResult.taskList.map((task: any, idx: number) => {
                 const isCur = currentTaskIndex === idx;
                 return (
@@ -2282,19 +2277,16 @@ const PrintRecordPage: React.FC = () => {
                   </div>
                 );
               })}
-              </div>
-              <div style={{ flexShrink: 0, marginTop: 8 }}>
-                {hasNextUnregisteredTask ? (
-                  <div style={{ fontSize: 11, color: '#D46B08' }}>提交后自动进入下一条 ➔</div>
-                ) : (
-                  <div style={{ fontSize: 11, color: '#52C41A' }}>✓ 本条为队列最后一条</div>
-                )}
-              </div>
+              {hasNextUnregisteredTask ? (
+                <div style={{ fontSize: 11, color: '#D46B08', marginTop: 8 }}>提交后自动进入下一条 ➔</div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#52C41A', marginTop: 8 }}>✓ 本条为队列最后一条</div>
+              )}
             </div>
           )}
 
           {/* 右栏：登记表单 */}
-          <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {/* 兼容单纯多附件但未分任务的场景 */}
           {ocrResult?.documentList &&
             ocrResult.documentList.length > 1 &&
@@ -2368,66 +2360,26 @@ const PrintRecordPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Row gutter={16}>
-            <Col span={14}>
+            <Col span={7}>
               <Form.Item
                 name="printName"
                 label="印刷材料名称"
                 rules={[{ required: true, message: '请输入印刷名称' }]}
               >
-                <Input placeholder="例：高三年级期中冲刺数学模拟测试卷" />
+                <Input placeholder="例：高三期中冲刺数学卷" />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col span={5}>
               <Form.Item name="paperType" label="纸张规格" rules={[{ required: true, message: '请选择纸张规格' }]}>
-                <Select placeholder="请选择纸张规格" onChange={handlePaperTypeChange}>
-                  <Select.Option value="A4">A4 经典规格</Select.Option>
-                  <Select.Option value="A3">A3 大试卷纸</Select.Option>
-                  <Select.Option value="8K">8K 统考用纸</Select.Option>
-                  <Select.Option value="16K">16K 作业本用纸</Select.Option>
+                <Select placeholder="纸张规格" onChange={handlePaperTypeChange}>
+                  <Select.Option value="A4">A4</Select.Option>
+                  <Select.Option value="A3">A3</Select.Option>
+                  <Select.Option value="8K">8K</Select.Option>
+                  <Select.Option value="16K">16K</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="paperGoodsId"
-                label={
-                  <Space>
-                    <span>关联扣减用纸物品</span>
-                    <span style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 'normal' }}>
-                      (随纸张规格自动智能匹配，系统联动出库扣减库存)
-                    </span>
-                  </Space>
-                }
-                rules={[{ required: true, message: '请选择用纸物品！' }]}
-              >
-                <Select
-                  placeholder="选择关联扣减用纸物品"
-                  showSearch
-                  optionFilterProp="children"
-                >
-                  {paperGoodsList.map((g) => {
-                    const rate = Number(g.conversionRate) > 0 ? Number(g.conversionRate) : 1;
-                    const stock = Number(g.stockNum ?? 0);
-                    const remain = Number(g.remainSheets ?? 0);
-                    const totalSheets = stock * rate + remain;
-                    return (
-                      <Select.Option key={g.goodsId} value={g.goodsId}>
-                        {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 当前库存: {stock} {g.unit || '包'}
-                        {remain > 0 ? `又${remain}${g.baseUnit || '张'}` : ''}
-                        {rate > 1 ? ` (折合 ${totalSheets.toLocaleString()} ${g.baseUnit || '张'})` : ''}
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
+            <Col span={4}>
               <Form.Item
                 name="printCount"
                 label="印刷份数"
@@ -2436,7 +2388,7 @@ const PrintRecordPage: React.FC = () => {
                 <InputNumber min={1} max={50000} style={{ width: '100%' }} addonAfter="份" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={3}>
               <Form.Item
                 name="pageCount"
                 label="每份页数"
@@ -2464,12 +2416,42 @@ const PrintRecordPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={5}>
               <Form.Item name="printSide" label="印刷方式" rules={[{ required: true }]}>
                 <Radio.Group buttonStyle="solid">
-                  <Radio.Button value="1">单面印</Radio.Button>
-                  <Radio.Button value="2">双面印</Radio.Button>
+                  <Radio.Button value="1">单面</Radio.Button>
+                  <Radio.Button value="2">双面</Radio.Button>
                 </Radio.Group>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="paperGoodsId"
+                label="关联扣减用纸物品（随纸张规格自动匹配，联动出库扣库存）"
+                rules={[{ required: true, message: '请选择用纸物品！' }]}
+              >
+                <Select
+                  placeholder="选择关联扣减用纸物品"
+                  showSearch
+                  optionFilterProp="children"
+                >
+                  {paperGoodsList.map((g) => {
+                    const rate = Number(g.conversionRate) > 0 ? Number(g.conversionRate) : 1;
+                    const stock = Number(g.stockNum ?? 0);
+                    const remain = Number(g.remainSheets ?? 0);
+                    const totalSheets = stock * rate + remain;
+                    return (
+                      <Select.Option key={g.goodsId} value={g.goodsId}>
+                        {g.goodsName} {g.spec ? `[${g.spec}]` : ''} —— 当前库存: {stock} {g.unit || '包'}
+                        {remain > 0 ? `又${remain}${g.baseUnit || '张'}` : ''}
+                        {rate > 1 ? ` (折合 ${totalSheets.toLocaleString()} ${g.baseUnit || '张'})` : ''}
+                      </Select.Option>
+                    );
+                  })}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -2824,7 +2806,7 @@ const PrintRecordPage: React.FC = () => {
           </Row>
 
           <Form.Item name="remark" label="补充备注">
-            <TextArea rows={2} placeholder="可填写装订要求（骑马钉/角钉）、考试时间等补充说明" />
+            <TextArea rows={1} placeholder="可填写装订要求（骑马钉/角钉）、考试时间等补充说明" />
           </Form.Item>
         </Form>
           </div>
