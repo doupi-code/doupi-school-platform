@@ -115,6 +115,20 @@ const convertPageCount = (
   return sourcePages;
 };
 
+// 常用纸张为 8K；仅当原稿为 A4 且仅 1 页时改用 16K（8K 印单张 A4 会浪费半张纸）
+const inferPaperType = (sourcePaper: string | null, sourcePages: number | null | undefined): string => {
+  if (sourcePaper === 'A4' && sourcePages !== null && sourcePages !== undefined && sourcePages <= 1) {
+    return '16K';
+  }
+  return '8K';
+};
+
+// 单页默认单面印刷（1 页双面与单面耗纸一致，且单页双面无意义）
+const inferPrintSide = (pageCount: number | null | undefined): string => {
+  const p = Number(pageCount) || 1;
+  return p <= 1 ? '1' : '2';
+};
+
 const PrintRecordPage: React.FC = () => {
   const actionRef = useRef<ActionType>(undefined);
   const navigate = useNavigate();
@@ -155,7 +169,6 @@ const PrintRecordPage: React.FC = () => {
   // 微信智能识别解析与跨天多任务队列
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
-  const [queueModalOpen, setQueueModalOpen] = useState<boolean>(false);
 
   // 粘贴微信聊天记录时，同步复制出来的实际文件（按原始文件名索引上传后的 URL）
   const pastedAttachmentsRef = useRef<Record<string, string>>({});
@@ -308,13 +321,19 @@ const PrintRecordPage: React.FC = () => {
       const pageCount = analysis.pageCount ? Number(analysis.pageCount) : 0;
       const sourcePaper = analysis.sourcePaperType || null;
       if (pageCount > 0) {
-        const currentPaperType = form.getFieldValue('paperType') || 'A4';
-        const converted = convertPageCount(pageCount, sourcePaper, currentPaperType);
+        // 自动推断纸张规格（默认 8K，单页 A4 → 16K）并按面积比换算页数、同步单双面
+        const inferredPaperType = inferPaperType(sourcePaper, pageCount);
+        const converted = convertPageCount(pageCount, sourcePaper, inferredPaperType);
         const finalPages = converted && converted > 0 ? converted : 1;
-        form.setFieldsValue({ pageCount: finalPages });
+        form.setFieldsValue({
+          paperType: inferredPaperType,
+          paperGoodsId: findGoodsByPaperType(inferredPaperType, paperGoodsList),
+          pageCount: finalPages,
+          printSide: inferPrintSide(finalPages),
+        });
         sourcePageInfoRef.current = { pageCount, sourcePaperType: sourcePaper };
         if (sourcePaper) {
-          message.success(`已解析：共 ${pageCount} 页（${sourcePaper}），按 ${currentPaperType} 换算为 ${finalPages} 页`);
+          message.success(`已解析：共 ${pageCount} 页（${sourcePaper}），自动选用 ${inferredPaperType}，按规格换算为 ${finalPages} 页`);
         } else {
           message.success(`已解析：共 ${pageCount} ${/^xls/.test(ext) ? '个工作表' : '页'}`);
         }
@@ -355,7 +374,7 @@ const PrintRecordPage: React.FC = () => {
     if (sourcePageInfoRef.current && sourcePageInfoRef.current.pageCount > 0) {
       const converted = convertPageCount(sourcePageInfoRef.current.pageCount, sourcePageInfoRef.current.sourcePaperType, paperType);
       if (converted && converted > 0) {
-        form.setFieldsValue({ pageCount: converted });
+        form.setFieldsValue({ pageCount: converted, printSide: inferPrintSide(converted) });
       }
     }
   };
@@ -679,10 +698,10 @@ const PrintRecordPage: React.FC = () => {
       setAnswerPageCount(1);
       setAnswerPrintCount(2);
       setAnswerPrintSide('1');
-      const defaultPaperType = 'A4';
+      const defaultPaperType = '8K';
       const defaultGoodsId = findGoodsByPaperType(defaultPaperType, currentPaperList);
       form.setFieldsValue({
-        printSide: '2',
+        printSide: '1',
         paperType: defaultPaperType,
         paperGoodsId: defaultGoodsId,
         printCount: 50,
@@ -773,11 +792,11 @@ const PrintRecordPage: React.FC = () => {
         setAnswerPageCount(1);
         setAnswerPrintCount(2);
         setAnswerPrintSide('1');
-        const defaultPaperType = 'A4';
+        const defaultPaperType = '8K';
         const defaultGoodsId = findGoodsByPaperType(defaultPaperType, paperGoodsList);
         form.resetFields();
         form.setFieldsValue({
-          printSide: '2',
+          printSide: '1',
           paperType: defaultPaperType,
           paperGoodsId: defaultGoodsId,
           printCount: 50,
@@ -952,28 +971,31 @@ const PrintRecordPage: React.FC = () => {
     const finalClassId = matchedClass?.classId || (task.classId ? Number(task.classId) : undefined);
     const finalClassName = matchedClass?.className || task.className || undefined;
 
-    // 4. 纸张规格与耗材匹配
-    const paperType = task.paperType || 'A4';
+    // 4. 纸张规格与耗材匹配（默认 8K，单页 A4 → 16K）
+    const docAnalysis = docAnalysisRef.current[task.originalDocName] || null;
+    const srcPages = docAnalysis?.pageCount ? Number(docAnalysis.pageCount) : (task.pageCount ? Number(task.pageCount) : null);
+    const srcPaper = docAnalysis?.sourcePaperType || null;
+    const paperType = inferPaperType(srcPaper, srcPages);
     let paperGoodsId = task.paperGoodsId;
     if (!paperGoodsId) {
       paperGoodsId = findGoodsByPaperType(paperType, paperGoodsList);
     }
 
-    // 5. 印刷份数、页数与单双面
+    // 5. 印刷份数、页数与单双面（单页默认单面）
     const printCount = task.printCount ? Number(task.printCount) : 50;
     let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
-    const printSide = task.printSide ? String(task.printSide) : '2';
+    let printSide = task.printSide ? String(task.printSide) : inferPrintSide(pageCount);
 
     // 若粘贴上传的原稿已被解析出页数/纸张规格，则按面积比换算覆盖智能识别的估算页数
-    const docAnalysis = docAnalysisRef.current[task.originalDocName] || null;
     if (docAnalysis && docAnalysis.pageCount) {
-      const srcPages = Number(docAnalysis.pageCount);
-      const srcPaper = docAnalysis.sourcePaperType || null;
       const converted = convertPageCount(srcPages, srcPaper, paperType);
       if (converted && converted > 0) {
         pageCount = converted;
+        if (converted <= 1) printSide = '1';
         sourcePageInfoRef.current = { pageCount: srcPages, sourcePaperType: srcPaper };
       }
+    } else if (pageCount <= 1) {
+      printSide = '1';
     }
 
     // 6. 耗纸量折算联动与试卷答案合并拆分智能检测
@@ -1024,7 +1046,6 @@ const PrintRecordPage: React.FC = () => {
 
     // 9. 关闭解析与队列弹窗，开启主登记弹窗
     setTextModalOpen(false);
-    setQueueModalOpen(false);
     setModalOpen(true);
     if (isSplit) {
       message.info('💡 检测到试卷与答案合并说明，已自动为您开启并配置拆分录入！');
@@ -1607,15 +1628,16 @@ const PrintRecordPage: React.FC = () => {
         // 后台解析文档页数/纸张规格，缓存供页面换算，并在生成任务时回填页数
         const analysis = await analyzeDocumentIntoCache(f);
         const pageCount = analysis?.pageCount ? Number(analysis.pageCount) : 1;
+        const sourcePaper = analysis?.sourcePaperType || null;
 
         tasks.push({
           printName: f.name.replace(/\.[^/.]+$/, ''),
           originalDocName: f.name,
           attachment: url,
           pageCount,
-          paperType: 'A4',
+          paperType: inferPaperType(sourcePaper, pageCount),
           printCount: 50,
-          printSide: '2',
+          printSide: inferPrintSide(pageCount),
           teacherName: undefined,
           teacherMatched: false,
           alreadyRegistered: false,
@@ -2183,7 +2205,7 @@ const PrintRecordPage: React.FC = () => {
         open={modalOpen}
         onOk={handleSaveRecord}
         onCancel={() => setModalOpen(false)}
-        width={760}
+        width={1080}
         destroyOnHidden={false}
       >
         <DraftNoticeAlert
@@ -2193,61 +2215,81 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        <div onPaste={handleSmartRegisterModalPaste}>
-          {/* 多任务/多天连续登记排队提示横幅 */}
+        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* 左栏：批量登记任务队列（仅多任务时显示，点击直接切换载入） */}
           {ocrResult?.taskList && ocrResult.taskList.length > 1 && (
             <div
               style={{
-                marginBottom: 16,
-                padding: '10px 14px',
-                backgroundColor: '#E6F4FF',
-                border: '1px solid #91CAFF',
-                borderLeft: '4px solid #1677FF',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                width: 272,
+                flexShrink: 0,
+                backgroundColor: '#FAFAFA',
+                border: '1px solid #F0F0F0',
+                borderRadius: 8,
+                padding: 12,
+                maxHeight: 560,
+                overflowY: 'auto',
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 'bold', color: '#1677FF', fontSize: 13 }}>
-                    <UnorderedListOutlined /> 批量识别连续登记队列
-                  </span>
-                  <span style={{ fontSize: 12, color: '#595959' }}>
-                    当前登记第 <b>{currentTaskIndex + 1}</b> / {ocrResult.taskList.length} 条：
-                    <b style={{ color: '#1677FF', marginLeft: 4 }}>
-                      {form.getFieldValue('printName') || currentQueueTask?.printName}
-                    </b>
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 3 }}>
-                  系统已查库自动跳过已登记项；本条提交成功后将自动载入下一条未登记材料
-                </div>
+              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4 }}>
+                <UnorderedListOutlined /> 批量登记队列（{currentTaskIndex + 1}/{ocrResult.taskList.length}）
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Button
-                  size="small"
-                  type="link"
-                  icon={<UnorderedListOutlined />}
-                  onClick={() => setQueueModalOpen(true)}
-                >
-                  查看/切换任务
-                </Button>
-                {hasNextUnregisteredTask ? (
-                  <Tag color="warning" style={{ margin: 0 }}>
-                    提交后自动进入下一条 ➔
-                  </Tag>
-                ) : (
-                  <Tag color="success" style={{ margin: 0 }}>
-                    ✓ 本条为队列最后一条
-                  </Tag>
-                )}
+              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10 }}>
+                点击任务可直接切换载入，已在库任务自动跳过
               </div>
+              {ocrResult.taskList.map((task: any, idx: number) => {
+                const isCur = currentTaskIndex === idx;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => applyTaskToForm(task, idx, ocrResult.taskList.length, ocrResult.taskList)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      marginBottom: 6,
+                      border: isCur ? '1.5px solid #1677FF' : '1px solid #d9d9d9',
+                      backgroundColor: isCur ? '#E6F4FF' : task.alreadyRegistered ? '#F5F5F5' : '#FFFFFF',
+                      opacity: task.alreadyRegistered ? 0.75 : 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 'bold', fontSize: 12, color: '#595959', flexShrink: 0 }}>#{idx + 1}</span>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: 12,
+                          color: '#262626',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {task.printName}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#595959' }}>
+                      <span style={{ color: task.teacherName ? '#52C41A' : '#D46B08' }}>
+                        {task.teacherName || '未识别教师'}
+                      </span>
+                      <span style={{ color: '#1677FF', fontWeight: 500 }}>{task.printCount} 份</span>
+                    </div>
+                    {task.alreadyRegistered && (
+                      <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>✓ 已在库登记（可强制重载）</div>
+                    )}
+                  </div>
+                );
+              })}
+              {hasNextUnregisteredTask ? (
+                <div style={{ fontSize: 11, color: '#D46B08', marginTop: 8 }}>提交后自动进入下一条 ➔</div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#52C41A', marginTop: 8 }}>✓ 本条为队列最后一条</div>
+              )}
             </div>
           )}
 
-          {/* 兼容单纯多附件但未分任务的场景 */}
+          {/* 右栏：登记表单 */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* 兼容单纯多附件但未分任务的场景 */}
           {ocrResult?.documentList &&
             ocrResult.documentList.length > 1 &&
             (!ocrResult.taskList || ocrResult.taskList.length <= 1) && (
@@ -2401,6 +2443,9 @@ const PrintRecordPage: React.FC = () => {
                   addonAfter="页"
                   onChange={(val) => {
                     const newPage = Number(val) || 1;
+                    if (newPage <= 1) {
+                      form.setFieldsValue({ printSide: '1' });
+                    }
                     if (splitAnswer && newPage > 1) {
                       const curAnsPage = form.getFieldValue('answerPageCount') || 1;
                       if (curAnsPage >= newPage) {
@@ -2776,6 +2821,7 @@ const PrintRecordPage: React.FC = () => {
             <TextArea rows={2} placeholder="可填写装订要求（骑马钉/角钉）、考试时间等补充说明" />
           </Form.Item>
         </Form>
+          </div>
         </div>
       </Modal>
 
@@ -3033,122 +3079,6 @@ const PrintRecordPage: React.FC = () => {
               </Card>
             </>
           )}
-        </div>
-      </Modal>
-
-      {/* 独立队列清单弹窗（在表单登记中随时查看/切换） */}
-      <Modal
-        title="📋 批量识别连续登记队列任务清单"
-        open={queueModalOpen}
-        onCancel={() => setQueueModalOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setQueueModalOpen(false)}>
-            关 闭
-          </Button>,
-          <Button
-            key="apply"
-            type="primary"
-            onClick={() => {
-              applyTaskToForm(
-                currentQueueTask,
-                currentTaskIndex,
-                ocrResult?.taskList?.length || 1,
-                ocrResult?.taskList
-              );
-            }}
-          >
-            载入选中的第 {currentTaskIndex + 1} 条材料
-          </Button>,
-        ]}
-        width={650}
-      >
-        <div style={{ marginBottom: 12, fontSize: 12, color: '#8c8c8c' }}>
-          点击下方任意任务可切换当前正在填写的材料；已登记任务自动跳过，也可强制重新载入。
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            maxHeight: 360,
-            overflowY: 'auto',
-          }}
-        >
-          {ocrResult?.taskList?.map((task: any, idx: number) => {
-            const isCur = currentTaskIndex === idx;
-            return (
-              <div
-                key={idx}
-                onClick={() => setCurrentTaskIndex(idx)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  border: isCur ? '1.5px solid #1677FF' : '1px solid #d9d9d9',
-                  backgroundColor: isCur
-                    ? '#E6F4FF'
-                    : task.alreadyRegistered
-                    ? '#F5F5F5'
-                    : '#FAFAFA',
-                  opacity: task.alreadyRegistered ? 0.8 : 1,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <span style={{ fontWeight: 'bold', fontSize: 13, color: '#595959' }}>
-                    #{idx + 1}
-                  </span>
-                  {task.alreadyRegistered ? (
-                    <Tag color="default">
-                      <CheckOutlined /> 已在库登记 (跳过)
-                    </Tag>
-                  ) : isCur ? (
-                    <Tag color="processing">
-                      <EditOutlined /> 当前登记中
-                    </Tag>
-                  ) : (
-                    <Tag color="warning">待登记 (排队中)</Tag>
-                  )}
-                  <span
-                    style={{
-                      fontWeight: 'bold',
-                      fontSize: 13,
-                      color: '#262626',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {task.printName}
-                  </span>
-                  {task.originalDocName && task.originalDocName !== task.printName && (
-                    <span style={{ fontSize: 11, color: '#8c8c8c' }}>
-                      ({task.originalDocName})
-                    </span>
-                  )}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    fontSize: 12,
-                    color: '#595959',
-                    flexShrink: 0,
-                  }}
-                >
-                  {task.timeSnippet && (
-                    <span style={{ color: '#8c8c8c' }}>
-                      <ClockCircleOutlined /> {task.timeSnippet}
-                    </span>
-                  )}
-                  <span style={{ fontWeight: 500, color: '#1677FF' }}>{task.printCount} 份</span>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </Modal>
 
