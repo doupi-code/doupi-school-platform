@@ -21,11 +21,9 @@ import {
   Row,
   Select,
   Space,
-  Spin,
   Tag,
   Tooltip,
   Typography,
-  Upload,
 } from 'antd';
 import {
   PlusOutlined,
@@ -36,7 +34,6 @@ import {
   UploadOutlined,
   FileTextOutlined,
   PaperClipOutlined,
-  CameraOutlined,
   MessageOutlined,
   DownloadOutlined,
   UnorderedListOutlined,
@@ -66,7 +63,6 @@ import {
   cancelRecords,
   recordPrintError,
   textParse,
-  ocrParse,
   uploadFile,
   analyzeDocument,
 } from '@/api/edu/record';
@@ -151,13 +147,12 @@ const PrintRecordPage: React.FC = () => {
   const [printErrorSaving, setPrintErrorSaving] = useState(false);
   const [printErrorForm] = Form.useForm();
 
-  // 微信文本解析与OCR弹窗
+  // 微信文本解析弹窗
   const [textModalOpen, setTextModalOpen] = useState(false);
   const [rawText, setRawText] = useState('');
   const [parsingText, setParsingText] = useState(false);
-  const [ocrLoading, setOcrLoading] = useState(false);
 
-  // 微信智能识别 / OCR 解析与跨天多任务队列
+  // 微信智能识别解析与跨天多任务队列
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
   const [queueModalOpen, setQueueModalOpen] = useState<boolean>(false);
@@ -334,7 +329,7 @@ const PrintRecordPage: React.FC = () => {
   // 解析文档并缓存到 docAnalysisRef（供微信粘贴上传的文档在填充任务时换算页数）
   const analyzeDocumentIntoCache = async (file: File) => {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
-    if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return;
+    if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return null;
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -343,8 +338,10 @@ const PrintRecordPage: React.FC = () => {
       if (analysis && analysis.parseable && analysis.pageCount) {
         docAnalysisRef.current[file.name] = analysis;
       }
+      return analysis || null;
     } catch (e) {
       // 忽略解析失败，页数回退手动填写
+      return null;
     }
   };
 
@@ -782,33 +779,49 @@ const PrintRecordPage: React.FC = () => {
   };
 
   // 解析微信聊天中的原对话时间片段，尽可能还原为具体印刷时间
-  // 支持：绝对时间「2026年08月12日 17:01」「2026-08-12 17:01」、相对时间「昨天/前天 HH:mm」
+  // 支持：绝对时间「2026年08月12日 17:01」「2026-08-12 17:01」「2026年8月12日 下午4:01」、相对时间「昨天/前天 HH:mm」
   const parseChatTime = (snippet?: string) => {
     if (!snippet) return null;
     const s = String(snippet).trim();
     if (!s) return null;
 
-    // 1. 绝对时间：2026年08月12日 17:01 / 2026-08-12 17:01 / 2026/8/12 17:01
-    const absMatch = s.match(/(\d{4})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})[日]?(?:[ ]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-    if (absMatch) {
-      const year = Number(absMatch[1]);
-      const month = Number(absMatch[2]);
-      const day = Number(absMatch[3]);
-      const hour = absMatch[4] ? Number(absMatch[4]) : 0;
-      const minute = absMatch[5] ? Number(absMatch[5]) : 0;
-      const second = absMatch[6] ? Number(absMatch[6]) : 0;
+    // 12 小时制时段标记（上午/下午/中午/凌晨/晚上/傍晚）转 24 小时制小时数
+    const applyPeriod = (hour: number, marker?: string) => {
+      if (!marker) return hour;
+      if (marker === '下午' || marker === '晚上' || marker === '傍晚' || marker === '中午') {
+        return hour < 12 ? hour + 12 : hour;
+      }
+      // 凌晨/上午 12 点 = 0 点，其余保持不变
+      return hour === 12 ? 0 : hour;
+    };
+
+    // 1. 绝对时间：2026年08月12日 17:01 / 2026-08-12 17:01 / 2026/8/12 17:01 / 2026年8月12日 下午4:01
+    const absDate = s.match(/(\d{4})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})[日]?/);
+    if (absDate) {
+      const year = Number(absDate[1]);
+      const month = Number(absDate[2]);
+      const day = Number(absDate[3]);
+      const timeMatch = s.match(/(上午|下午|中午|凌晨|晚上|傍晚)?[\s]*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+      let hour = 0;
+      let minute = 0;
+      let second = 0;
+      if (timeMatch && timeMatch[2]) {
+        hour = applyPeriod(Number(timeMatch[2]), timeMatch[1]);
+        minute = Number(timeMatch[3]) || 0;
+        second = timeMatch[4] ? Number(timeMatch[4]) : 0;
+      }
       const parsed = dayjs(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`);
       if (parsed.isValid()) return parsed;
     }
 
-    // 2. 相对时间：昨天/前天 HH:mm
-    const relMatch = s.match(/(昨天|前天|今天)[\s]*(\d{1,2}):(\d{1,2})/);
+    // 2. 相对时间：昨天/前天/今天 HH:mm（支持 12 小时制时段标记）
+    const relMatch = s.match(/(昨天|前天|今天)[\s]*(上午|下午|中午|凌晨|晚上|傍晚)?[\s]*(\d{1,2}):(\d{1,2})/);
     if (relMatch) {
       let base = dayjs();
       if (relMatch[1] === '昨天') base = dayjs().subtract(1, 'day');
       else if (relMatch[1] === '前天') base = dayjs().subtract(2, 'day');
-      const hour = Number(relMatch[2]);
-      const minute = Number(relMatch[3]);
+      const hour = applyPeriod(Number(relMatch[3]), relMatch[2]);
+      const minute = Number(relMatch[4]);
       return base.hour(hour).minute(minute).second(0);
     }
 
@@ -878,7 +891,7 @@ const PrintRecordPage: React.FC = () => {
         return [
           {
             teacherId: -999,
-            teacherName: `${task.teacherName} (截图识别)`,
+            teacherName: `${task.teacherName} (自动识别)`,
             rawName: task.teacherName,
             grade: targetGrade || '高三',
             subject: task.subject || '语文',
@@ -925,7 +938,7 @@ const PrintRecordPage: React.FC = () => {
     let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
     const printSide = task.printSide ? String(task.printSide) : '1';
 
-    // 若粘贴上传的原稿已被解析出页数/纸张规格，则按面积比换算覆盖OCR识别的估算页数
+    // 若粘贴上传的原稿已被解析出页数/纸张规格，则按面积比换算覆盖智能识别的估算页数
     const docAnalysis = docAnalysisRef.current[task.originalDocName] || null;
     if (docAnalysis && docAnalysis.pageCount) {
       const srcPages = Number(docAnalysis.pageCount);
@@ -1039,7 +1052,7 @@ const PrintRecordPage: React.FC = () => {
       let teacherName = values.teacherName;
       if (values.teacherId === -999) {
         const found = teacherList.find((t) => t.teacherId === -999);
-        teacherName = found?.rawName || found?.teacherName?.replace(/\s*\(截图识别\)/, '') || teacherName;
+        teacherName = found?.rawName || found?.teacherName?.replace(/\s*\(自动识别\)/, '') || teacherName;
       } else if (!teacherName && values.teacherId) {
         const t = teacherList.find((item) => String(item.teacherId) === String(values.teacherId));
         if (t) teacherName = t.teacherName;
@@ -1483,7 +1496,7 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
-  // 智能解析数据统一入口（处理 OCR 与纯文本解析，支持跨天与多次任务队列）
+  // 智能解析数据统一入口（处理纯文本解析，支持跨天与多次任务队列）
   const handleParsedResult = (data: any) => {
     if (!data) return;
     setOcrResult(data);
@@ -1499,7 +1512,7 @@ const PrintRecordPage: React.FC = () => {
       // 检查是否全部已在库登记
       const allDone = data.taskList.every((t: any) => t.alreadyRegistered);
       if (allDone) {
-        message.warning('检测到截图/文本内识别出的所有印刷任务在系统中均已登记！无需重复登记。');
+        message.warning('检测到文本内识别出的所有印刷任务在系统中均已登记！无需重复登记。');
       } else {
         const unregCount = data.taskList.filter((t: any) => !t.alreadyRegistered).length;
         message.success(
@@ -1546,7 +1559,7 @@ const PrintRecordPage: React.FC = () => {
     await parseAndHandleText(rawText);
   };
 
-  // 批量上传粘贴复制出来的文档文件，并按原始文件名缓存 URL 供后续关联
+  // 批量上传粘贴复制出来的文档文件，并进入登记队列（按文件名生成登记任务、自动关联附件与页数）
   const uploadPastedDocs = async (files: File[]) => {
     const valid = files.filter((f) => {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
@@ -1554,54 +1567,49 @@ const PrintRecordPage: React.FC = () => {
     });
     if (valid.length === 0) return;
     message.loading({ content: `检测到已复制 ${valid.length} 个文件，正在上传...`, key: 'paste-docs' });
-    let uploaded = 0;
+
+    const tasks: any[] = [];
     for (const f of valid) {
       try {
         const formData = new FormData();
         formData.append('file', f);
         const res: any = await uploadFile(formData);
         const url = res.url || res.fileName || '';
-        if (url) {
-          pastedAttachmentsRef.current[f.name] = url;
-          uploaded++;
-          // 后台解析文档页数/纸张规格，缓存供页面换算
-          analyzeDocumentIntoCache(f);
-        }
+        if (!url) continue;
+        pastedAttachmentsRef.current[f.name] = url;
+
+        // 后台解析文档页数/纸张规格，缓存供页面换算，并在生成任务时回填页数
+        const analysis = await analyzeDocumentIntoCache(f);
+        const pageCount = analysis?.pageCount ? Number(analysis.pageCount) : 1;
+
+        tasks.push({
+          printName: f.name.replace(/\.[^/.]+$/, ''),
+          originalDocName: f.name,
+          attachment: url,
+          pageCount,
+          paperType: 'A4',
+          printCount: 50,
+          teacherName: undefined,
+          teacherMatched: false,
+          alreadyRegistered: false,
+        });
       } catch (err: any) {
         message.error({ content: `文件 ${f.name} 上传失败：${err.message}`, key: 'paste-docs' });
       }
     }
-    if (uploaded > 0) {
-      message.success({ content: `已上传 ${uploaded} 个原稿文件，将按文件名自动关联到对应登记任务`, key: 'paste-docs' });
+
+    if (tasks.length > 0) {
+      message.success({ content: `已上传 ${tasks.length} 个原稿文件，正在进入登记流程...`, key: 'paste-docs' });
+      handleParsedResult({ taskList: tasks, teacherMatched: false, rawText: '' });
     }
   };
 
-  // 本地离线 OCR 截图上传识别
-  const handleOcrUpload = async (file: File) => {
-    setOcrLoading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res: any = await ocrParse(formData);
-      if (res && res.data) {
-        handleParsedResult(res.data);
-      } else {
-        message.warning(res?.msg || '未识别到有效印刷信息，请手动录入');
-      }
-    } catch (e: any) {
-      message.error(e.message || 'OCR 识别失败');
-    } finally {
-      setOcrLoading(false);
-    }
-    return false;
-  };
-
-  // 文本解析弹窗粘贴：支持同时粘贴文本（聊天记录）与微信复制出来的实际文件
+  // 文本解析弹窗粘贴：支持粘贴文本（聊天记录）与微信复制出来的实际文档文件
   const handleModalPaste = async (e: React.ClipboardEvent) => {
     const cd = e.clipboardData;
     if (!cd) return;
 
-    // 收集剪贴板中的文件（文档 / 图片）
+    // 收集剪贴板中的文档文件
     const files: File[] = [];
     if (cd.files && cd.files.length > 0) {
       for (let i = 0; i < cd.files.length; i++) files.push(cd.files[i]);
@@ -1615,20 +1623,12 @@ const PrintRecordPage: React.FC = () => {
       }
     }
 
-    // 图片 → 离线 OCR
-    const imgFile = files.find((f) => f.type.startsWith('image/'));
-    if (imgFile) {
-      e.preventDefault();
-      message.info('检测到剪贴板截图，正在进行离线 OCR 识别...');
-      handleOcrUpload(imgFile);
-      return;
-    }
-
-    // 文档文件 → 上传并缓存为附件
+    // 文档文件 → 上传并进入登记队列
     const docFiles = files.filter((f) => !f.type.startsWith('image/'));
     if (docFiles.length > 0) {
       e.preventDefault();
       await uploadPastedDocs(docFiles);
+      return;
     }
 
     // 纯文本（微信复制的聊天记录）→ 填入并自动解析
@@ -2261,7 +2261,7 @@ const PrintRecordPage: React.FC = () => {
           }}
         >
           <span style={{ fontSize: 13, color: '#389E0D' }}>
-            💡 支持直接粘贴微信群消息或上传微信聊天截图快速识别预填！
+            💡 支持直接粘贴微信群消息或上传微信聊天原文快速识别预填！
           </span>
           <Button
             size="small"
@@ -2745,9 +2745,9 @@ const PrintRecordPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* 微信记录文本智能提取与OCR截图识别弹窗 */}
+      {/* 微信记录文本智能提取解析预填弹窗 */}
       <Modal
-        title="💬 微信群消息与截图智能解析预填"
+        title="💬 微信群消息智能解析预填"
         open={textModalOpen}
         onCancel={() => {
           setTextModalOpen(false);
@@ -2961,15 +2961,15 @@ const PrintRecordPage: React.FC = () => {
               {allTasksRegistered && (
                 <div style={{ fontSize: 12, color: '#52C41A', marginBottom: 12 }}>
                   <CheckCircleFilled style={{ marginRight: 4 }} />
-                  提示：截图/文本内识别出的所有印刷任务在系统中均已登记，无需重复登记！
+                  提示：文本内识别出的所有印刷任务在系统中均已登记，无需重复登记！
                 </div>
               )}
             </div>
           ) : (
             <>
-              <Card title="方式一：直接粘贴微信聊天文字" size="small" style={{ marginBottom: 16 }}>
+              <Card title="直接粘贴微信聊天文字或文档文件" size="small" style={{ marginBottom: 16 }}>
                 <Paragraph type="secondary" style={{ fontSize: 12 }}>
-                  支持直接复制老师在群里发的微信原话（包含跨天记录或多次连续发文）：
+                  支持直接复制老师在群里发的微信原话（包含跨天记录或多次连续发文），或直接 Ctrl+V 粘贴复制的原稿文档：
                 </Paragraph>
                 <TextArea
                   rows={4}
@@ -2987,31 +2987,6 @@ const PrintRecordPage: React.FC = () => {
                     一键智能提取并排队
                   </Button>
                 </div>
-              </Card>
-
-              <Card title="方式二：本地离线 OCR 微信截图识别" size="small">
-                <Paragraph type="secondary" style={{ fontSize: 12 }}>
-                  无需手工复制，直接把微信聊天截图拖拽上传、点击上传，或在此弹窗中直接 <strong>Ctrl+V</strong> 粘贴图片：
-                </Paragraph>
-                <Spin spinning={ocrLoading} tip="正在进行离线 OCR 智能识别与拓扑建模中...">
-                  <Upload.Dragger
-                    name="file"
-                    multiple={false}
-                    beforeUpload={handleOcrUpload}
-                    showUploadList={false}
-                    accept="image/*"
-                    style={{ padding: '16px 0' }}
-                    disabled={ocrLoading}
-                  >
-                    <p className="ant-upload-drag-icon">
-                      <CameraOutlined style={{ fontSize: 32, color: '#1677FF' }} />
-                    </p>
-                    <p className="ant-upload-text">点击上传、拖拽截图，或直接按 Ctrl+V 粘贴</p>
-                    <p className="ant-upload-hint">
-                      支持跨天长截图、多任务多文件自动识别分流并排队连续登记
-                    </p>
-                  </Upload.Dragger>
-                </Spin>
               </Card>
             </>
           )}

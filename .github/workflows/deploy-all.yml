@@ -1,0 +1,43 @@
+name: Deploy All Ends (Full Release)
+
+on:
+  workflow_dispatch:
+
+# 每个 workflow 独立锁：全量发布与各端独立 workflow 互不取消
+concurrency:
+  group: doupi-deploy-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 顺序执行：后端(30) + 管理端(20) + 用户端(20) + 作品集(5)，增量构建通常远快于此
+    timeout-minutes: 90
+    steps:
+      - name: 校验部署密钥
+        run: |
+          if [ -z "${{ secrets.SERVER_HOST }}" ] || [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
+            echo "::error::未检测到 GitHub Secrets (SERVER_HOST / SERVER_SSH_KEY)，请在仓库 Settings -> Secrets and variables -> Actions 中配置。"
+            exit 1
+          fi
+
+      # 全程只建立一次 SSH 连接，顺序触发服务器本地各端部署脚本，
+      # 代码拉取、构建、原子替换、重启、健康检查全部由服务器本地脚本完成
+      - name: SSH 触发服务器本地全量部署
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 22 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "${{ secrets.SERVER_USER || 'cicd' }}@${{ secrets.SERVER_HOST }}" \
+            'set -e
+             WS=/data/deploy-workspace/doupi-school-platform
+             if [ ! -d "$WS/.git" ]; then
+               git clone -b main --depth 1 git@github.com:doupi-code/doupi-school-platform.git "$WS"
+             fi
+             bash "$WS/deploy-server.sh"
+             bash "$WS/deploy-admin.sh"
+             bash "$WS/deploy-client.sh"
+             bash "$WS/deploy-portfolio.sh"'
