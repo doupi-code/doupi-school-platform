@@ -9,7 +9,7 @@ import {
   UploadOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { uploadFile } from '@/api/edu/record';
+import { uploadFile, uploadFileSmart } from '@/api/edu/record';
 
 const { Text } = Typography;
 
@@ -57,14 +57,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res: any = await uploadFile(formData);
+      const res: any = await uploadFileSmart(file);
       const url = res.url || res.fileName || '';
       if (!url) {
         throw new Error('未获取到返回的图片链接');
       }
-      message.success('图片上传成功！');
+      if (res.deduplicated) {
+        message.success('⚡ 检测到相同图片，已直接复用（秒传成功）！');
+      } else {
+        message.success('图片上传成功！');
+      }
       onChange?.(url);
       onUploadSuccess?.(url, file);
     } catch (e: any) {

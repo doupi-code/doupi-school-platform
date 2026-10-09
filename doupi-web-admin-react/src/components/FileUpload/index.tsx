@@ -16,7 +16,7 @@ import {
   FileTextOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { uploadFile } from '@/api/edu/record';
+import { uploadFile, uploadFileSmart } from '@/api/edu/record';
 
 const { Text } = Typography;
 
@@ -77,17 +77,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [tempUrl, setTempUrl] = useState('');
 
-  // 使用 Web Crypto 计算文件内容 SHA-256（用于后端同文件秒传去重）
-  const computeFileHash = async (file: File): Promise<string> => {
-    try {
-      const buf = await file.arrayBuffer();
-      const digest = await crypto.subtle.digest('SHA-256', buf);
-      const bytes = Array.from(new Uint8Array(digest));
-      return bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) {
-      return '';
-    }
-  };
 
   // 处理上传文件
   const handleUpload = async (file: File) => {
@@ -104,21 +93,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
     message.loading({ content: `正在自动解析并上传 ${typeInfo.label}（${file.name}）...`, key: 'uploading-file' });
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      // 计算内容哈希，交由后端做同文件秒传去重
-      const fileHash = await computeFileHash(file);
-      if (fileHash) {
-        formData.append('fileHash', fileHash);
-      }
-      const res: any = await uploadFile(formData);
+      const res: any = await uploadFileSmart(file);
       const url = res.url || res.fileName || '';
       const uploadedName = res.originalFilename || file.name;
       if (!url) {
         throw new Error('未获取到返回的文件链接');
       }
       if (res.deduplicated) {
-        message.success({ content: `检测到相同文件，已直接复用原文件，无需重复上传！`, key: 'uploading-file' });
+        message.success({ content: `⚡ 检测到相同文件，已直接复用原文件（秒传成功）！`, key: 'uploading-file' });
       } else {
         message.success({ content: `已自动识别为【${typeInfo.label}】并上传成功！`, key: 'uploading-file' });
       }

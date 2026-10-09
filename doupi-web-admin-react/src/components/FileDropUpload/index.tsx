@@ -7,7 +7,7 @@ import {
   ReloadOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
-import { uploadFile, ocrParse } from '@/api/edu/record';
+import { uploadFile, uploadFileSmart, ocrParse } from '@/api/edu/record';
 
 const { Text } = Typography;
 
@@ -48,13 +48,14 @@ const FileDropUpload: React.FC<FileDropUploadProps> = ({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // 上传到通用文件服务
-      const uploadRes: any = await uploadFile(formData);
+      // 智能秒传上传
+      const uploadRes: any = await uploadFileSmart(file);
       const url = uploadRes.url || uploadRes.fileName || '';
-      message.success('文件上传成功！');
+      if (uploadRes.deduplicated) {
+        message.success('⚡ 检测到相同文件，已直接复用（秒传成功）！');
+      } else {
+        message.success('文件上传成功！');
+      }
       onChange?.(url, file.name);
 
       // 如果启用了智能 OCR，同时触发后端离线 OCR 解析

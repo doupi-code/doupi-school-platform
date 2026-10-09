@@ -12,6 +12,7 @@ import com.doupi.edu.mapper.EduTeacherMapper;
 import com.doupi.edu.service.impl.EduOcrServiceImpl;
 import com.doupi.stock.domain.StockGoods;
 import com.doupi.stock.mapper.StockGoodsMapper;
+import com.doupi.edu.service.impl.ocr.*;
 
 public class OcrParseTest 
 {
@@ -52,6 +53,13 @@ public class OcrParseTest
                     t4.setGrade("高二");
                     t4.setSubject("物理");
                     list.add(t4);
+
+                    EduTeacher t5 = new EduTeacher();
+                    t5.setTeacherId(10L);
+                    t5.setTeacherName("谭伟生");
+                    t5.setGrade("高三");
+                    t5.setSubject("历史");
+                    list.add(t5);
                     return list;
                 }
                 return null;
@@ -950,6 +958,47 @@ public class OcrParseTest
 
         Assertions.assertEquals(200L, task0.getPrintCount(), "试卷应为前置声明的200份");
         Assertions.assertEquals(20L, task1.getPrintCount(), "答案应为前置声明的20份");
+    }
+
+    @Test
+    public void testUserOct07Issue() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText = 
+            "谭伟生\n" +
+            "2026年10月07日 14:26\n" +
+            "[文件] 历史周测题.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年10月07日 14:26\n" +
+            "[文件] 参考答案.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年10月07日 14:26\n" +
+            "[文件] 历史答题卡 (2).docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年10月07日 14:48\n" +
+            "单面打印，25 份\n";
+
+        // 完整提取
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        System.out.println("----- [诊断: 最终 taskList] -----");
+        for (int i = 0; i < result.getTaskList().size(); i++) {
+            EduPrintOcrResult.PrintTaskItem task = result.getTaskList().get(i);
+            System.out.println(String.format("task[%d]: name=%s, orig=%s, count=%s, time=%s, side=%s, remark=%s",
+                i, task.getPrintName(), task.getOriginalDocName(), task.getPrintCount(), task.getTimeSnippet(), task.getPrintSide(), task.getRemark()));
+        }
+
+        Assertions.assertEquals(3, result.getTaskList().size());
+        Assertions.assertEquals(25L, result.getTaskList().get(0).getPrintCount());
+        Assertions.assertEquals(25L, result.getTaskList().get(1).getPrintCount());
+        Assertions.assertEquals(25L, result.getTaskList().get(2).getPrintCount());
+        Assertions.assertEquals("1", result.getTaskList().get(0).getPrintSide());
+        Assertions.assertEquals("2026年10月07日 14:26", result.getTaskList().get(0).getTimeSnippet());
     }
 }
 

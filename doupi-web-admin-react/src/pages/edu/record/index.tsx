@@ -64,6 +64,7 @@ import {
   recordPrintError,
   textParse,
   uploadFile,
+  uploadFileSmart,
   analyzeDocument,
 } from '@/api/edu/record';
 import { listTeacher, addTeacher } from '@/api/edu/teacher';
@@ -839,7 +840,7 @@ const PrintRecordPage: React.FC = () => {
 
   // 解析微信聊天中的原对话时间片段，尽可能还原为具体印刷时间
   // 支持：绝对时间「2026年09月15日 16:08」「9月21日  9:28」「2026-08-12 17:01」「16:08」、相对时间「昨天/前天 HH:mm」
-  const parseChatTime = (snippet?: string) => {
+  const parseChatTime = (snippet?: string, contextText?: string) => {
     if (!snippet) return null;
     const s = String(snippet).trim();
     if (!s || s === '近期记录' || s === '当前对话') return null;
@@ -851,6 +852,21 @@ const PrintRecordPage: React.FC = () => {
         return hour < 12 ? hour + 12 : hour;
       }
       return hour === 12 ? 0 : hour;
+    };
+
+    // 从上下文文本中提取参考基准日期（例如 2026年10月07日）
+    const extractContextDate = () => {
+      const target = contextText || ocrResult?.timeSnippet || ocrResult?.rawText || rawText || '';
+      if (target) {
+        const m = target.match(/(?:(\d{4})[年\/\-\.]\s*)?(\d{1,2})[月\/\-\.]\s*(\d{1,2})[日号]?/);
+        if (m) {
+          const y = m[1] ? Number(m[1]) : dayjs().year();
+          const mo = Number(m[2]);
+          const d = Number(m[3]);
+          return dayjs().year(y).month(mo - 1).date(d);
+        }
+      }
+      return dayjs();
     };
 
     // 1. 绝对日期匹配：支持带年份（2026年09月15日）或不带年份（09月15日 / 9月21日 / 09-21）
@@ -875,12 +891,13 @@ const PrintRecordPage: React.FC = () => {
       if (parsed.isValid()) return parsed;
     }
 
-    // 2. 只有时间无日期（如 "16:08" / "下午 4:08"）
+    // 2. 只有时间无日期（如 "16:08" / "下午 4:08" / "星期三 14:26"）：优先借用上下文中的具体日期！
     if (timeMatch && timeMatch[2]) {
+      const baseDate = extractContextDate();
       const hour = applyPeriod(Number(timeMatch[2]), timeMatch[1]);
       const minute = Number(timeMatch[3]) || 0;
       const second = timeMatch[4] ? Number(timeMatch[4]) : 0;
-      return dayjs().hour(hour).minute(minute).second(second);
+      return baseDate.hour(hour).minute(minute).second(second);
     }
 
     // 3. 相对时间：昨天/前天/今天 HH:mm
@@ -1107,7 +1124,12 @@ const PrintRecordPage: React.FC = () => {
       classId: finalClassId,
       className: finalClassName,
       operator: currentNickName || currentUserName || 'admin',
-      printTime: parseChatTime(task.timeSnippet) || parseChatTime(task.time) || parseChatTime(ocrResult?.timeSnippet) || parseChatTime(ocrResult?.rawText) || dayjs(),
+      printTime: parseChatTime(task.timeSnippet, ocrResult?.rawText || rawText) 
+        || parseChatTime(task.time, ocrResult?.rawText || rawText) 
+        || parseChatTime(ocrResult?.timeSnippet, ocrResult?.rawText || rawText) 
+        || parseChatTime(ocrResult?.rawText, ocrResult?.rawText || rawText) 
+        || parseChatTime(rawText, rawText) 
+        || dayjs(),
       status: '0',
       remark: remarkText,
       attachment: task.attachment || findPastedAttachment(task.originalDocName),
@@ -1657,9 +1679,7 @@ const PrintRecordPage: React.FC = () => {
     const tasks: any[] = [];
     for (const f of valid) {
       try {
-        const formData = new FormData();
-        formData.append('file', f);
-        const res: any = await uploadFile(formData);
+        const res: any = await uploadFileSmart(f);
         const url = res.url || res.fileName || '';
         if (!url) continue;
         pastedAttachmentsRef.current[f.name] = url;
@@ -1780,9 +1800,7 @@ const PrintRecordPage: React.FC = () => {
       e.preventDefault();
       message.loading({ content: `智能识别：检测到粘贴【.${ext}】原稿文档（${pastedFile.name}），正在上传...`, key: 'smart-paste' });
       try {
-        const formData = new FormData();
-        formData.append('file', pastedFile);
-        const res: any = await uploadFile(formData);
+        const res: any = await uploadFileSmart(pastedFile);
         const url = res.url || res.fileName || '';
         const uploadedName = res.originalFilename || pastedFile.name;
         form.setFieldsValue({ attachment: url });
@@ -1791,7 +1809,11 @@ const PrintRecordPage: React.FC = () => {
           form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
         }
         analyzeAndFillDocument(pastedFile);
-        message.success({ content: `已自动根据后缀识别为【原稿文档】并上传成功！`, key: 'smart-paste' });
+        if (res.deduplicated) {
+          message.success({ content: `⚡ 检测到相同原稿文档，已直接复用（秒传成功）！`, key: 'smart-paste' });
+        } else {
+          message.success({ content: `已自动根据后缀识别为【原稿文档】并上传成功！`, key: 'smart-paste' });
+        }
       } catch (err: any) {
         message.error({ content: err.message || '文档上传失败', key: 'smart-paste' });
       }
@@ -1804,12 +1826,14 @@ const PrintRecordPage: React.FC = () => {
 
       message.loading({ content: `智能识别：检测到粘贴图片（.${ext}），正在上传至【${targetDesc}】...`, key: 'smart-paste' });
       try {
-        const formData = new FormData();
-        formData.append('file', pastedFile);
-        const res: any = await uploadFile(formData);
+        const res: any = await uploadFileSmart(pastedFile);
         const url = res.url || res.fileName || '';
         form.setFieldsValue({ [targetField]: url });
-        message.success({ content: `图片已自动上传至【${targetDesc}】！`, key: 'smart-paste' });
+        if (res.deduplicated) {
+          message.success({ content: `⚡ 检测到相同图片，已直接复用至【${targetDesc}】（秒传成功）！`, key: 'smart-paste' });
+        } else {
+          message.success({ content: `图片已自动上传至【${targetDesc}】！`, key: 'smart-paste' });
+        }
       } catch (err: any) {
         message.error({ content: err.message || '图片上传失败', key: 'smart-paste' });
       }
@@ -3005,9 +3029,9 @@ const PrintRecordPage: React.FC = () => {
                             ? `${task.teacherName}${task.teacherMatched ? '' : ' (待核对)'}`
                             : '未识别教师 (待指定)'}
                         </span>
-                        {task.timeSnippet && (
+                        {(task.timeSnippet || ocrResult?.timeSnippet) && (
                           <span style={{ color: '#8c8c8c' }}>
-                            <ClockCircleOutlined /> {task.timeSnippet}
+                            <ClockCircleOutlined /> {task.timeSnippet || ocrResult?.timeSnippet}
                           </span>
                         )}
                         <span style={{ fontWeight: 500, color: '#1677FF' }}>

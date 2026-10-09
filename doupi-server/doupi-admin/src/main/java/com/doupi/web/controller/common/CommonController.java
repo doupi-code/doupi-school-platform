@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,6 +66,56 @@ public class CommonController
         catch (Exception e)
         {
             log.error("下载文件失败", e);
+        }
+    }
+
+    /**
+     * 相同文件秒传预检接口（0流量秒传）
+     * 前端计算文件SHA-256哈希后先发此请求进行轻量预检。
+     * 若文件在服务端已存在，直接返回已有文件URL，前端无需传输文件体，瞬间完成秒传；未命中则返回 found=false。
+     */
+    @GetMapping("/check-hash")
+    public AjaxResult checkFileHash(String fileHash, String extension, String originalFilename) throws Exception
+    {
+        try
+        {
+            if (StringUtils.isEmpty(fileHash))
+            {
+                return AjaxResult.error("文件哈希不能为空");
+            }
+            String ext = extension;
+            if (StringUtils.isEmpty(ext) && StringUtils.isNotEmpty(originalFilename))
+            {
+                ext = FilenameUtils.getExtension(originalFilename);
+            }
+            if (StringUtils.isEmpty(ext))
+            {
+                return AjaxResult.error("无法识别文件扩展名");
+            }
+
+            String filePath = DoupiConfig.getUploadPath();
+            String existingFileName = FileUploadUtils.findByHash(filePath, fileHash, ext);
+            if (StringUtils.isNotEmpty(existingFileName))
+            {
+                String url = serverConfig.getUrl() + existingFileName;
+                AjaxResult ajax = AjaxResult.success();
+                ajax.put("found", true);
+                ajax.put("deduplicated", true);
+                ajax.put("url", url);
+                ajax.put("fileName", existingFileName);
+                ajax.put("newFileName", FileUtils.getName(existingFileName));
+                ajax.put("originalFilename", originalFilename);
+                return ajax;
+            }
+
+            AjaxResult ajax = AjaxResult.success();
+            ajax.put("found", false);
+            ajax.put("deduplicated", false);
+            return ajax;
+        }
+        catch (Exception e)
+        {
+            return AjaxResult.error(e.getMessage());
         }
     }
 

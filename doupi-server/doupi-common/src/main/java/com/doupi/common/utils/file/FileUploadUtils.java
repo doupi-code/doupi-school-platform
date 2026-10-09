@@ -111,11 +111,14 @@ public class FileUploadUtils
             }
             assertAllowed(file, MimeTypeUtils.DEFAULT_ALLOWED_EXTENSION);
 
-            // 使用内容哈希 + 原扩展名命名，存放于 hash/ 子目录，实现天然去重
+            // 统一存放在 hash/ 根子目录，实现跨天永久去重与秒传
             String extension = getExtension(file);
-            String fileName = StringUtils.format("{}/{}.{}", DateUtils.datePath(), fileHash, extension);
-            String absPath = getAbsoluteFile(baseDir, fileName).getAbsolutePath();
-            file.transferTo(Paths.get(absPath));
+            String fileName = StringUtils.format("hash/{}.{}", fileHash, extension);
+            File desc = getAbsoluteFile(baseDir, fileName);
+            if (!desc.exists())
+            {
+                file.transferTo(desc.toPath());
+            }
             return getPathFileName(baseDir, fileName);
         }
         catch (Exception e)
@@ -125,7 +128,7 @@ public class FileUploadUtils
     }
 
     /**
-     * 按内容哈希查找已上传文件，命中则返回其相对文件名（实现秒传）
+     * 按内容哈希查找已上传文件，命中则返回其相对文件名（实现永久跨天秒传）
      *
      * @param baseDir 相对应用的基目录
      * @param fileHash 文件内容哈希
@@ -138,12 +141,20 @@ public class FileUploadUtils
         {
             return null;
         }
-        // 按当天日期目录查找（同一天内重复上传命中概率最高）
-        String relativeName = StringUtils.format("{}/{}.{}", DateUtils.datePath(), fileHash, extension);
-        File target = new File(baseDir + File.separator + relativeName);
-        if (target.exists())
+        // 1. 优先在全局哈希目录查找（跨天永久秒传命中）
+        String globalRelativeName = StringUtils.format("hash/{}.{}", fileHash, extension);
+        File globalTarget = new File(baseDir + File.separator + globalRelativeName);
+        if (globalTarget.exists() && globalTarget.length() > 0)
         {
-            return getPathFileName(baseDir, relativeName);
+            return getPathFileName(baseDir, globalRelativeName);
+        }
+
+        // 2. 兼容历史按当天日期目录查找（如 2026/10/09/{hash}.{ext}）
+        String dateRelativeName = StringUtils.format("{}/{}.{}", DateUtils.datePath(), fileHash, extension);
+        File dateTarget = new File(baseDir + File.separator + dateRelativeName);
+        if (dateTarget.exists() && dateTarget.length() > 0)
+        {
+            return getPathFileName(baseDir, dateRelativeName);
         }
         return null;
     }
@@ -231,9 +242,14 @@ public class FileUploadUtils
 
     public static final String getPathFileName(String uploadDir, String fileName) throws IOException
     {
-        int dirLastIndex = DoupiConfig.getProfile().length() + 1;
-        String currentDir = StringUtils.substring(uploadDir, dirLastIndex);
-        return Constants.RESOURCE_PREFIX + "/" + currentDir + "/" + fileName;
+        String profile = DoupiConfig.getProfile();
+        if (StringUtils.isNotEmpty(profile) && uploadDir != null && uploadDir.startsWith(profile))
+        {
+            int dirLastIndex = profile.length() + 1;
+            String currentDir = StringUtils.substring(uploadDir, dirLastIndex);
+            return Constants.RESOURCE_PREFIX + "/" + currentDir + "/" + fileName;
+        }
+        return Constants.RESOURCE_PREFIX + "/upload/" + fileName;
     }
 
     /**

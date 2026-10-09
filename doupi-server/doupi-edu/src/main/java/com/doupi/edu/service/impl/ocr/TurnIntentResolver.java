@@ -256,14 +256,21 @@ public class TurnIntentResolver
         if (StringUtils.isEmpty(text)) return "";
         String t = text.trim();
 
+        // 若整行纯粹由单双面、打印动作、份数及标点组成（例如“单面打印，25 份”、“请双面印50份”、“打25份”），不属于特殊排版装订备注
+        String testPure = t.replaceAll("(?i)[请麻烦烦请帮忙帮我打印单面双面正反面两面单页双页份分张本套各、，,。!！\\s\\d一二两三四五六七八九十百]+", "").trim();
+        if (testPure.isEmpty()) 
+        {
+            return "";
+        }
+
         // 剥离常见的份数开头（例如 "45份，不要把答案..." -> 提取 "不要把答案解析与题目印在一页，第5页为单面"）
-        String stripped = t.replaceAll("(?i)^\\s*(?:请|麻烦|烦请)?\\s*(?:单面|双面)?\\s*(?:打|印|打印)?\\s*\\d{1,5}\\s*(?:份|分|张|本|套)?\\s*[,，。、\\s]*", "").trim();
+        String stripped = t.replaceAll("(?i)^\\s*(?:请|麻烦|烦请|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:打|印|打印)?\\s*[,，、\\s]*\\d{1,5}\\s*(?:份|分|张|本|套)?\\s*[,，。、\\s]*", "").trim();
 
         if (stripped.length() >= 3 && !isConversationalNoise(stripped)) 
         {
             if (stripped.contains("不要") || stripped.contains("装订") || stripped.contains("钉") 
-                || stripped.contains("答案") || stripped.contains("页") || stripped.contains("封面")
-                || stripped.contains("胶装") || stripped.contains("单面") || stripped.contains("双面")) 
+                || stripped.contains("答案") || stripped.contains("封面")
+                || stripped.contains("胶装") || stripped.contains("彩印") || stripped.contains("横向")) 
             {
                 return stripped;
             }

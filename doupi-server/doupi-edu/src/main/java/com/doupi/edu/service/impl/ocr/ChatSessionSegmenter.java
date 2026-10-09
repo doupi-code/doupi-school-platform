@@ -61,18 +61,33 @@ public class ChatSessionSegmenter
                 isDateBoundary = true;
             }
 
-            // 2. 静默时间差检测（相隔超过 8 分钟）
+            // 2. 静默时间差检测（相隔超过 20 分钟）
             if (msgTime != null && lastMsgTime != null) 
             {
                 long diffMinutes = Math.abs(ChronoUnit.MINUTES.between(lastMsgTime, msgTime));
-                if (diffMinutes > SESSION_SILENCE_THRESHOLD_MINUTES) 
+                if (diffMinutes > 20) 
                 {
                     isTimeGapBoundary = true;
                 }
             }
 
-            // 若触发边界条件且当前轮次中已有文件材料，切出新轮次
-            if ((isDateBoundary || isTimeGapBoundary) && !currentTurn.getFiles().isEmpty()) 
+            boolean isFileMsg = m.isFile || (ctx.fileList != null && ctx.fileList.contains(text));
+
+            // 切分新轮次规则：
+            // A. 明确跨天分界（日期变动、昨天/前天/不同年月日）且当前轮次已有文件或消息，必须切分；
+            // B. 时间静默超期：仅当【当前消息是新文件】时才切分新轮次！
+            //    同日内的纯文字发言（没有新文件材料到达）绝不能切断前面的文件轮次，它是对前面文件的意图补充（如“单面打印，25 份”）！
+            boolean shouldSplit = false;
+            if (isDateBoundary && !currentTurn.getFiles().isEmpty()) 
+            {
+                shouldSplit = true;
+            } 
+            else if (isTimeGapBoundary && isFileMsg && !currentTurn.getFiles().isEmpty()) 
+            {
+                shouldSplit = true;
+            }
+
+            if (shouldSplit) 
             {
                 turnList.add(currentTurn);
                 currentTurn = new PrintingTurn(turnList.size());
@@ -94,7 +109,6 @@ public class ChatSessionSegmenter
 
             // 记录消息与文件
             currentTurn.getMessages().add(m);
-            boolean isFileMsg = m.isFile || (ctx.fileList != null && ctx.fileList.contains(text));
             if (isFileMsg) 
             {
                 currentTurn.getFiles().add(text);
@@ -105,6 +119,43 @@ public class ChatSessionSegmenter
         if (!currentTurn.getFiles().isEmpty() || !currentTurn.getMessages().isEmpty()) 
         {
             turnList.add(currentTurn);
+        }
+
+        // 3. 孤立指令回填处理（Backfill）：
+        // 若存在只有指令而无文件材料的轮次，自动将指令回填合并到前一个缺少指令的文件轮次中
+        for (int i = 0; i < turnList.size(); i++) 
+        {
+            PrintingTurn t = turnList.get(i);
+            if (t.getFiles().isEmpty() && !t.getMessages().isEmpty()) 
+            {
+                // 检查该轮次中是否包含打印份数或单双面指令
+                TurnIntentResolver.resolve(t);
+                if (t.getUnifiedCount() != null || t.getUnifiedSide() != null || t.getTurnRemark() != null) 
+                {
+                    // 向前寻找紧邻的有文件但缺少指令的轮次
+                    for (int j = i - 1; j >= 0; j--) 
+                    {
+                        PrintingTurn prevTurn = turnList.get(j);
+                        if (!prevTurn.getFiles().isEmpty()) 
+                        {
+                            if (prevTurn.getUnifiedCount() == null && t.getUnifiedCount() != null) 
+                            {
+                                prevTurn.setUnifiedCount(t.getUnifiedCount());
+                            }
+                            if (prevTurn.getUnifiedSide() == null && t.getUnifiedSide() != null) 
+                            {
+                                prevTurn.setUnifiedSide(t.getUnifiedSide());
+                            }
+                            if (prevTurn.getTurnRemark() == null && t.getTurnRemark() != null) 
+                            {
+                                prevTurn.setTurnRemark(t.getTurnRemark());
+                            }
+                            prevTurn.getMessages().addAll(t.getMessages());
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         // 兜底保障：确保 ctx.fileList 中的每一个文件均被纳入至少一个轮次
