@@ -2207,6 +2207,7 @@ const PrintRecordPage: React.FC = () => {
         onCancel={() => setModalOpen(false)}
         width={1080}
         destroyOnHidden={false}
+        styles={{ body: { padding: 16, height: '72vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' } }}
       >
         <DraftNoticeAlert
           visible={!!draftNotice?.visible}
@@ -2215,7 +2216,7 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div onPaste={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 16, alignItems: 'stretch', flex: 1, minHeight: 0 }}>
           {/* 左栏：批量登记任务队列（仅多任务时显示，点击直接切换载入） */}
           {ocrResult?.taskList && ocrResult.taskList.length > 1 && (
             <div
@@ -2226,16 +2227,18 @@ const PrintRecordPage: React.FC = () => {
                 border: '1px solid #F0F0F0',
                 borderRadius: 8,
                 padding: 12,
-                maxHeight: 560,
-                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
               }}
             >
-              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4 }}>
+              <div style={{ fontWeight: 600, color: '#1677FF', fontSize: 13, marginBottom: 4, flexShrink: 0 }}>
                 <UnorderedListOutlined /> 批量登记队列（{currentTaskIndex + 1}/{ocrResult.taskList.length}）
               </div>
-              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10, flexShrink: 0 }}>
                 点击任务可直接切换载入，已在库任务自动跳过
               </div>
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: 2 }}>
               {ocrResult.taskList.map((task: any, idx: number) => {
                 const isCur = currentTaskIndex === idx;
                 return (
@@ -2279,16 +2282,19 @@ const PrintRecordPage: React.FC = () => {
                   </div>
                 );
               })}
-              {hasNextUnregisteredTask ? (
-                <div style={{ fontSize: 11, color: '#D46B08', marginTop: 8 }}>提交后自动进入下一条 ➔</div>
-              ) : (
-                <div style={{ fontSize: 11, color: '#52C41A', marginTop: 8 }}>✓ 本条为队列最后一条</div>
-              )}
+              </div>
+              <div style={{ flexShrink: 0, marginTop: 8 }}>
+                {hasNextUnregisteredTask ? (
+                  <div style={{ fontSize: 11, color: '#D46B08' }}>提交后自动进入下一条 ➔</div>
+                ) : (
+                  <div style={{ fontSize: 11, color: '#52C41A' }}>✓ 本条为队列最后一条</div>
+                )}
+              </div>
             </div>
           )}
 
           {/* 右栏：登记表单 */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingRight: 4 }}>
             {/* 兼容单纯多附件但未分任务的场景 */}
           {ocrResult?.documentList &&
             ocrResult.documentList.length > 1 &&
