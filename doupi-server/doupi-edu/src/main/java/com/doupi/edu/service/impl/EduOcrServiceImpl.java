@@ -254,7 +254,8 @@ public class EduOcrServiceImpl implements IEduOcrService
                     ChatTopologyParser.ChatMessage prevMsg = ctx.allMessages.get(ctx.allMessages.size() - 1);
                     if (!prevMsg.isFile && !prevMsg.text.contains("好") && !prevMsg.text.contains("：") && !prevMsg.text.contains(":")
                         && !prevMsg.text.matches("^(?:星期[一二三四五六日天]|\\d{1,2}:\\d{2}|\\d{4}年|昨天|前天).*")
-                        && !prevMsg.text.matches("(?i).*(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分).*")) 
+                        && !prevMsg.text.matches("(?i).*(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|份|张|本|套).*")
+                        && EduPrintIntentExtractor.parseCountFromSingleText(prevMsg.text) == null) 
                     {
                         String prefix = cleanDoc.replaceAll("(?i)[.,，。、]?(?:docx?|pdf|wps|xlsx?|pptx?)$", "").trim();
                         if ("次".equals(prefix)) 

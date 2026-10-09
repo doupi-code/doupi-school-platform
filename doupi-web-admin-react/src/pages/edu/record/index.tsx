@@ -213,7 +213,7 @@ const PrintRecordPage: React.FC = () => {
 
   // 动态联动状态
   const [selectedGrade, setSelectedGrade] = useState<string>('');
-  const [previewTotalSheets, setPreviewTotalSheets] = useState(50);
+  const [previewTotalSheets, setPreviewTotalSheets] = useState(1);
 
   // 快捷新建教师弹窗
   const [teacherForm] = Form.useForm();
@@ -651,6 +651,20 @@ const PrintRecordPage: React.FC = () => {
     if (t) applyTeacherToQueue(t);
   };
 
+  // 批量指定印刷份数：将设置份数统一应用到多任务队列中所有待登记任务
+  const handleBatchAssignCount = (count: number) => {
+    if (!ocrResult?.taskList || !count || count <= 0) return;
+    const updated = ocrResult.taskList.map((task: any) => {
+      if (task.alreadyRegistered) return task;
+      return {
+        ...task,
+        printCount: count,
+      };
+    });
+    setOcrResult({ ...ocrResult, taskList: updated });
+    message.success(`已批量将待登记任务印刷份数修改为：${count} 份`);
+  };
+
   // 预填多任务队列中的「批量新建教师」入口
   const handleQuickAddTeacherForQueue = () => {
     setTeacherAddContext('queue');
@@ -704,7 +718,7 @@ const PrintRecordPage: React.FC = () => {
         printSide: '1',
         paperType: defaultPaperType,
         paperGoodsId: defaultGoodsId,
-        printCount: 50,
+        printCount: 1,
         pageCount: 1,
         splitAnswer: false,
         answerPageCount: 1,
@@ -714,7 +728,7 @@ const PrintRecordPage: React.FC = () => {
         printTime: dayjs(),
         status: '0',
       });
-      setPreviewTotalSheets(50);
+      setPreviewTotalSheets(1);
       setDraftNotice(null);
     }
     setModalOpen(true);
@@ -799,7 +813,7 @@ const PrintRecordPage: React.FC = () => {
           printSide: '1',
           paperType: defaultPaperType,
           paperGoodsId: defaultGoodsId,
-          printCount: 50,
+          printCount: 1,
           pageCount: 1,
           splitAnswer: false,
           answerPageCount: 1,
@@ -809,7 +823,7 @@ const PrintRecordPage: React.FC = () => {
           printTime: dayjs(),
           status: '0',
         });
-        setPreviewTotalSheets(50);
+        setPreviewTotalSheets(1);
       }
       if (isEdit) {
         message.success('已丢弃本地草稿，已恢复为数据库数据！');
@@ -996,7 +1010,7 @@ const PrintRecordPage: React.FC = () => {
     let printCount = task.printCount ? Number(task.printCount) : 0;
     if (!printCount || printCount <= 0) {
       const fromName = parseCountFromFilename(task.originalDocName || task.printName || '');
-      printCount = fromName > 0 ? fromName : 50;
+      printCount = fromName > 0 ? fromName : 1;
     }
     let pageCount: number = task.pageCount ? Number(task.pageCount) : 1;
     let printSide = task.printSide ? String(task.printSide) : inferPrintSide(pageCount);
@@ -1652,7 +1666,7 @@ const PrintRecordPage: React.FC = () => {
           attachment: url,
           pageCount,
           paperType: inferPaperType(sourcePaper, pageCount),
-          printCount: countFromFileName > 0 ? countFromFileName : 50,
+          printCount: countFromFileName > 0 ? countFromFileName : 1,
           printSide: inferPrintSide(pageCount),
           teacherName: undefined,
           teacherMatched: false,
@@ -2831,12 +2845,13 @@ const PrintRecordPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 批量指定申请教师（微信昵称无法自动匹配时快速批量修正） */}
+              {/* 批量指定申请教师 与 批量统一印刷份数 */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  justifyContent: 'space-between',
+                  gap: 12,
                   padding: '8px 12px',
                   backgroundColor: '#FFF7E6',
                   border: '1px solid #FFD591',
@@ -2844,39 +2859,57 @@ const PrintRecordPage: React.FC = () => {
                   marginBottom: 10,
                 }}
               >
-                <span style={{ flexShrink: 0, fontWeight: 500, color: '#874D00', fontSize: 13 }}>
-                  批量指定申请教师：
-                </span>
-                <Select
-                  showSearch
-                  allowClear
-                  style={{ flex: 1, minWidth: 180 }}
-                  placeholder="选择教师，应用于全部待登记任务（微信昵称匹配不到时手动指定）"
-                  filterOption={(input, option) =>
-                    ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
-                  }
-                  onChange={handleBatchAssignTeacher}
-                  options={teacherList.map((t) => ({
-                    label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
-                    value: t.teacherId,
-                  }))}
-                  dropdownRender={(menu) => (
-                    <>
-                      {menu}
-                      <Divider style={{ margin: '4px 0' }} />
-                      <div style={{ padding: '4px 8px' }}>
-                        <Button
-                          type="link"
-                          icon={<PlusOutlined />}
-                          onClick={() => handleQuickAddTeacherForQueue()}
-                          style={{ padding: 0 }}
-                        >
-                          批量新建教师
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                  <span style={{ flexShrink: 0, fontWeight: 500, color: '#874D00', fontSize: 13 }}>
+                    批量指定教师：
+                  </span>
+                  <Select
+                    showSearch
+                    allowClear
+                    style={{ flex: 1, minWidth: 160 }}
+                    placeholder="选择教师，应用于全部待登记任务"
+                    filterOption={(input, option) =>
+                      ((option?.label ?? '') as string).toLowerCase().includes(input.toLowerCase())
+                    }
+                    onChange={handleBatchAssignTeacher}
+                    options={teacherList.map((t) => ({
+                      label: `${t.teacherName} ${t.subject ? `(${t.subject})` : ''}`,
+                      value: t.teacherId,
+                    }))}
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '4px 0' }} />
+                        <div style={{ padding: '4px 8px' }}>
+                          <Button
+                            type="link"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleQuickAddTeacherForQueue()}
+                            style={{ padding: 0 }}
+                          >
+                            批量新建教师
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontWeight: 500, color: '#874D00', fontSize: 13 }}>
+                    统一份数：
+                  </span>
+                  <InputNumber
+                    min={1}
+                    max={50000}
+                    placeholder="如 1 或 45"
+                    style={{ width: 100 }}
+                    addonAfter="份"
+                    onChange={(val) => {
+                      if (val && val > 0) handleBatchAssignCount(val);
+                    }}
+                  />
+                </div>
               </div>
 
               {/* 任务卡片队列列表 */}

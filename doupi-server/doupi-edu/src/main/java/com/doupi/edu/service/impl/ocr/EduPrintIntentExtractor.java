@@ -401,8 +401,8 @@ public class EduPrintIntentExtractor
         List<ChatTopologyParser.ChatMessage> searchList = new ArrayList<>(ctx.teacherMessages);
         Collections.reverse(searchList); // 从最新消息开始找
 
-        // 模式 1：口语复合句（如 "三个文档各印55份"、"麻烦帮我印55份"、"各印55份"、"这个打印一份"、"打1份"、"40分。谢谢！"、"4O。谢谢！"）
-        Pattern p1 = Pattern.compile("(?i)(?:这个|这些)?(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)");
+        // 模式 1：口语复合句（兼容："请单面打印25 份"、"请帮我打印9份"、"麻烦帮我印55份"、"各印55份"、"40分。谢谢！"、"4O。谢谢！"）
+        Pattern p1 = Pattern.compile("(?i)(?:请|麻烦|烦请|帮我|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:这个|这些)?(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)");
         for (ChatTopologyParser.ChatMessage msg : searchList) 
         {
             if (msg.isFile) continue;
@@ -414,8 +414,8 @@ public class EduPrintIntentExtractor
             }
         }
 
-        // 模式 2：简短句式（如 "打6份"、"印6份"、"打25"、"打印1"）
-        Pattern p2 = Pattern.compile("(?i)(?:打印|各(?:印|打)?|打|印)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分)?");
+        // 模式 2：简短句式（如 "请单面打25"、"打6份"、"印6份"、"打25"、"打印1"）
+        Pattern p2 = Pattern.compile("(?i)(?:请|麻烦|帮我)?\\s*(?:单面|双面)?\\s*(?:打印|各(?:印|打)?|打|印)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)?");
         for (ChatTopologyParser.ChatMessage msg : searchList) 
         {
             if (msg.isFile) continue;
@@ -427,12 +427,12 @@ public class EduPrintIntentExtractor
             }
         }
 
-        // 模式 3：单独一行的数字（如 "40"、"4O。谢谢！"、"40 谢谢"、"一份 谢谢"）
-        Pattern p3 = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:[。！!，,\\s]|谢谢)*$");
+        // 模式 3：直接带份数的短语（如 "25 份"、"9份"、"40份"）
+        Pattern p3 = Pattern.compile("(?i)(?:^|[^0-9])([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分)(?:$|[^0-9])");
         for (ChatTopologyParser.ChatMessage msg : searchList) 
         {
             if (msg.isFile) continue;
-            Matcher m = p3.matcher(msg.text.trim());
+            Matcher m = p3.matcher(msg.text);
             if (m.find()) 
             {
                 Long val = parseNumberString(m.group(1));
@@ -440,7 +440,20 @@ public class EduPrintIntentExtractor
             }
         }
 
-        // 模式 4：若前几轮未命中，在全文本中检索
+        // 模式 4：单独一行的数字（如 "40"、"4O。谢谢！"、"40 谢谢"、"一份 谢谢"）
+        Pattern p4 = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:[。！!，,\\s]|谢谢)*$");
+        for (ChatTopologyParser.ChatMessage msg : searchList) 
+        {
+            if (msg.isFile) continue;
+            Matcher m = p4.matcher(msg.text.trim());
+            if (m.find()) 
+            {
+                Long val = parseNumberString(m.group(1));
+                if (val != null && val > 0) return val;
+            }
+        }
+
+        // 模式 5：若前几轮未命中，在全文本中检索
         Matcher mAll = p1.matcher(ctx.cleanChatText);
         while (mAll.find()) 
         {
@@ -651,11 +664,17 @@ public class EduPrintIntentExtractor
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        // 遇到跨天分界（SYSTEM 消息 / 星期、纯时间等时间戳），停止向前追溯并清除前序跨天继承
-                        if (isCountScanBoundary(m)) 
+                        // 遇到跨天分界（SYSTEM 消息 或 星期切换/昨天/前天），必须停止向前追溯并清除跨天继承！
+                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
+                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天).*"))) 
                         {
                             lastEachCount = null;
                             break;
+                        }
+                        // 仅同日的具体时间（如 16:08 或 2026年09月15日 16:08）跳过继续查找
+                        if (m.text != null && m.text.matches("^(?:\\d{4}年|\\d{1,2}:\\d{2}).*")) 
+                        {
+                            continue;
                         }
                         Long cnt = parseCountFromSingleText(m.text);
                         if (cnt != null && cnt > 0) 
@@ -674,23 +693,29 @@ public class EduPrintIntentExtractor
                     }
                 }
 
-                // 规则 B：若当前文件前未明确说明份数，但处于“各打XX份”的批量发送队列中，继承该各份数值
-                if (resolvedCount == null && lastEachCount != null) 
+                // 若与上一个文件之间存在跨天分界，清空上一个时间段的各份数继承
+                if (k > 0 && hasDateBoundaryBetweenFiles(ctx, fileIndices, k - 1, k)) 
                 {
-                    resolvedCount = lastEachCount;
+                    lastEachCount = null;
                 }
 
-                // 规则 C：后置发言（发送文件后紧接着说“打40份”或“各55份”）
+                // 规则 C：后置发言（发送文件后紧接着说“请单面打印25 份”或“请帮我打印9份”）——优先级高于前序继承
                 if (resolvedCount == null && currentFilePos >= 0) 
                 {
                     for (int j = currentFilePos + 1; j <= nextFilePos; j++) 
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        // 后置检索同样不能跨越跨天分界
-                        if (isCountScanBoundary(m)) 
+                        // 遇到跨天分界（SYSTEM 消息 或 星期切换/昨天/前天），必须停止向后检索！
+                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
+                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天).*"))) 
                         {
                             break;
+                        }
+                        // 仅同日的具体时间（如 16:08 或 2026年09月15日 16:08）跳过继续查找
+                        if (m.text != null && m.text.matches("^(?:\\d{4}年|\\d{1,2}:\\d{2}).*")) 
+                        {
+                            continue;
                         }
                         Long cnt = parseCountFromSingleText(m.text);
                         if (cnt != null && cnt > 0) 
@@ -705,6 +730,12 @@ public class EduPrintIntentExtractor
                     }
                 }
 
+                // 规则 B：若当前文件未明确说明份数，但同日处于“各打XX份”的批量发送队列中，继承该各份数值
+                if (resolvedCount == null && lastEachCount != null) 
+                {
+                    resolvedCount = lastEachCount;
+                }
+
                 // 规则 C2：从文件名本身提取份数（如 "英语练习(40份).docx"、"单元测试_35份.pdf"）
                 String targetFile = matchedFiles.get(k);
                 if (resolvedCount == null && StringUtils.isNotEmpty(targetFile)) 
@@ -715,26 +746,27 @@ public class EduPrintIntentExtractor
                 explicitCounts[k] = resolvedCount;
             }
 
-            // ---- 阶段二：同批连续文件共享份数 ----
-            // 中间无跨天分界的相邻文件视为同一批；批内只要有一个文件拿到明确份数，其余未明确者共享。
+            // ---- 阶段二：同批连续紧密文件共享份数 ----
+            // 仅在紧挨着且无时间戳/跨天分界的同批连续发送文件中共享；严禁无节制跨多条发言扩散
             for (int k = 0; k < fileCount; k++) 
             {
                 if (explicitCounts[k] != null) continue;
 
                 Long inherited = null;
-                // 向后借同批文件的明确份数
-                for (int j = k + 1; j < fileCount; j++) 
+                // 向后借紧邻同批文件的明确份数（仅限紧邻的下一个文件）
+                if (k + 1 < fileCount && !hasDateBoundaryBetweenFiles(ctx, fileIndices, k, k + 1)) 
                 {
-                    if (hasDateBoundaryBetweenFiles(ctx, fileIndices, j - 1, j)) break;
-                    if (explicitCounts[j] != null) { inherited = explicitCounts[j]; break; }
-                }
-                // 向前借
-                if (inherited == null) 
-                {
-                    for (int j = k - 1; j >= 0; j--) 
+                    if (explicitCounts[k + 1] != null) 
                     {
-                        if (hasDateBoundaryBetweenFiles(ctx, fileIndices, j, j + 1)) break;
-                        if (explicitCounts[j] != null) { inherited = explicitCounts[j]; break; }
+                        inherited = explicitCounts[k + 1];
+                    }
+                }
+                // 向前借紧邻同批文件的明确份数（仅限紧邻的上一个文件）
+                if (inherited == null && k - 1 >= 0 && !hasDateBoundaryBetweenFiles(ctx, fileIndices, k - 1, k)) 
+                {
+                    if (explicitCounts[k - 1] != null) 
+                    {
+                        inherited = explicitCounts[k - 1];
                     }
                 }
                 if (inherited != null) explicitCounts[k] = inherited;
@@ -747,9 +779,9 @@ public class EduPrintIntentExtractor
                 int prevFilePos = (k == 0) ? 0 : (fileIndices.get(k - 1) + 1);
                 int nextFilePos = (k == matchedFiles.size() - 1) ? (ctx.allMessages.size() - 1) : (fileIndices.get(k + 1) - 1);
 
-                // 规则 D：兜底使用全局提取到的份数或默认1份
+                // 规则 D：多文件时未指定份数精准默认 1 份；单文件时才允许继承全局唯一提取份数
                 Long resolvedCount = (explicitCounts[k] != null) ? explicitCounts[k] 
-                    : ((baseResult.getPrintCount() != null && baseResult.getPrintCount() > 0) ? baseResult.getPrintCount() : 1L);
+                    : ((fileCount == 1 && baseResult.getPrintCount() != null && baseResult.getPrintCount() > 0) ? baseResult.getPrintCount() : 1L);
 
                 // 检查当前文件附近的发言是否单独指定了单面/双面
                 String resolvedSide = null;
@@ -759,10 +791,10 @@ public class EduPrintIntentExtractor
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
-                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天|\\d{1,2}:\\d{2}|\\d{4}年).*"))) 
+                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM) break;
+                        if (m.text != null && m.text.matches("^(?:\\d{4}年|\\d{1,2}:\\d{2}|昨天|前天|星期[一二三四五六日天]).*")) 
                         {
-                            break;
+                            continue;
                         }
                         if (StringUtils.isNotEmpty(m.text)) 
                         {
@@ -785,10 +817,10 @@ public class EduPrintIntentExtractor
                     {
                         ChatTopologyParser.ChatMessage m = ctx.allMessages.get(j);
                         if (m.isFile) break;
-                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
-                            (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天|\\d{1,2}:\\d{2}|\\d{4}年).*"))) 
+                        if (m.role == ChatTopologyParser.MessageRole.SYSTEM) break;
+                        if (m.text != null && m.text.matches("^(?:\\d{4}年|\\d{1,2}:\\d{2}|昨天|前天|星期[一二三四五六日天]).*")) 
                         {
-                            break;
+                            continue;
                         }
                         if (StringUtils.isNotEmpty(m.text)) 
                         {
@@ -895,7 +927,9 @@ public class EduPrintIntentExtractor
         for (int i = from; i <= to; i++) 
         {
             ChatTopologyParser.ChatMessage m = ctx.allMessages.get(i);
-            if (m.role == ChatTopologyParser.MessageRole.SYSTEM) return true;
+            if (m.role == ChatTopologyParser.MessageRole.SYSTEM || 
+                (m.text != null && m.text.matches("^(?:星期[一二三四五六日天]|昨天|前天).*"))) 
+                return true;
         }
         return false;
     }
@@ -950,8 +984,8 @@ public class EduPrintIntentExtractor
     {
         if (StringUtils.isEmpty(text)) return null;
         text = text.trim();
-        // 模式 1：口语复合句（如 "各打25份"、"这个各打25份"、"龙老师，帮忙打13份，谢谢"、"这个打印一份"、"打1份"）
-        Pattern p1 = Pattern.compile("(?i)(?:这个|这些)?(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)");
+        // 模式 1：口语复合句（如 "请单面打印25 份"、"请帮我打印9份"、"各打25份"、"这个各打25份"、"龙老师，帮忙打13份，谢谢"、"这个打印一份"、"打1份"）
+        Pattern p1 = Pattern.compile("(?i)(?:请|麻烦|烦请|帮我|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:这个|这些)?(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)");
         Matcher m1 = p1.matcher(text);
         if (m1.find()) 
         {
@@ -959,8 +993,8 @@ public class EduPrintIntentExtractor
             if (val != null && val > 0) return val;
         }
 
-        // 模式 2：简短句式（如 "打25"、"印6"、"打印1"）
-        Pattern p2 = Pattern.compile("(?i)(?:打印|各(?:印|打)?|打|印)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分)?");
+        // 模式 2：简短句式（如 "请单面打25"、"打25"、"印6"、"打印1"）
+        Pattern p2 = Pattern.compile("(?i)(?:请|麻烦|帮我)?\\s*(?:单面|双面)?\\s*(?:打印|各(?:印|打)?|打|印)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)?");
         Matcher m2 = p2.matcher(text);
         if (m2.find()) 
         {
@@ -968,12 +1002,21 @@ public class EduPrintIntentExtractor
             if (val != null && val > 0) return val;
         }
 
-        // 模式 3：单独一行的数字（如 "40"、"4O。谢谢！"、"40 谢谢"、"一份 谢谢"）
-        Pattern p3 = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:[。！!，,\\s]|谢谢)*$");
+        // 模式 3：直接带份数的短语（如 "25 份"、"9份"、"40份"）
+        Pattern p3 = Pattern.compile("(?i)(?:^|[^0-9])([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分)(?:$|[^0-9])");
         Matcher m3 = p3.matcher(text);
         if (m3.find()) 
         {
             Long val = parseNumberString(m3.group(1));
+            if (val != null && val > 0) return val;
+        }
+
+        // 模式 4：单独一行的数字（如 "40"、"4O。谢谢！"、"40 谢谢"、"一份 谢谢"）
+        Pattern p4 = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:[。！!，,\\s]|谢谢)*$");
+        Matcher m4 = p4.matcher(text);
+        if (m4.find()) 
+        {
+            Long val = parseNumberString(m4.group(1));
             if (val != null && val > 0) return val;
         }
         return null;

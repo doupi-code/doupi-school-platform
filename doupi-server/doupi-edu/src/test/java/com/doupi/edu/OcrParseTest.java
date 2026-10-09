@@ -742,6 +742,110 @@ public class OcrParseTest
         Assertions.assertEquals(40L, result.getTaskList().get(1).getPrintCount(), "默写训练（必修上古诗词）应为40份");
         Assertions.assertEquals(10L, result.getTaskList().get(2).getPrintCount(), "高三(7)班登分表应为10份");
     }
+
+    @Test
+    public void testTanWeisheng() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText =
+            "谭伟生\n" +
+            "2026年09月30日 10:00\n" +
+            "[文件] 第二十一课 五四运动和中国共产党的诞生(1).docx\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月30日 10:01\n" +
+            "[文件] 班主任津贴发放实施方案.docx\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月30日 10:02\n" +
+            "[文件] 班主任月度考核实施方案.docx\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月30日 10:03\n" +
+            "[文件] 第二十一课 五四运动和中国共产党的诞生(2).docx\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月30日 10:04\n" +
+            "[文件] 历史答题1.docx\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        Assertions.assertEquals(5, result.getTaskList().size());
+        for (int i = 0; i < result.getTaskList().size(); i++) {
+            EduPrintOcrResult.PrintTaskItem t = result.getTaskList().get(i);
+            Assertions.assertEquals(1L, t.getPrintCount(), "未指定份数的文件应精准默认为1份，严禁盲目兜底50份");
+        }
+    }
+
+    @Test
+    public void testTanWeishengRealExample() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText =
+            "谭伟生\n" +
+            "2026年09月15日 16:08\n" +
+            "[文件] 历史训练三 (2).docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月15日 16:08\n" +
+            "请单面打印25 份\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月21日  9:28\n" +
+            "[文件] 8班数学个性化辅导表.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月21日  9:29\n" +
+            "[文件] 个性化辅导表.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月21日 15:58\n" +
+            "[文件] 副本本208_学生成绩(方向名次).xlsx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月21日 16:35\n" +
+            "[文件] 古代史选择题的核心是抓.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月22日  9:25\n" +
+            "[文件] 高三8 班质量分析报告.docx\n" +
+            "\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月22日  9:26\n" +
+            "请帮我打印9份\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        System.out.println("========== [用户真实示例测试结果] ==========");
+        System.out.println("成功: " + result.getSuccess());
+        System.out.println("任务总数: " + (result.getTaskList() != null ? result.getTaskList().size() : 0));
+        if (result.getTaskList() != null) {
+            for (int i = 0; i < result.getTaskList().size(); i++) {
+                EduPrintOcrResult.PrintTaskItem t = result.getTaskList().get(i);
+                System.out.println(String.format("任务#%d 文件=[%s], 名称=[%s], 份数=[%s], 单双面=[%s], 时间=[%s]",
+                    i, t.getOriginalDocName(), t.getPrintName(), t.getPrintCount(), t.getPrintSide(), t.getTimeSnippet()));
+            }
+        }
+        System.out.println("============================================");
+
+        Assertions.assertEquals(6, result.getTaskList().size());
+        // 验证任务 #0: 历史训练三 (2).docx -> 明确要求 25份 单面
+        Assertions.assertEquals(25L, result.getTaskList().get(0).getPrintCount(), "历史训练三应为25份");
+        Assertions.assertEquals("1", result.getTaskList().get(0).getPrintSide(), "历史训练三应为单面印刷");
+
+        // 验证中间未说明份数的文件精准默认 1 份
+        Assertions.assertEquals(1L, result.getTaskList().get(1).getPrintCount(), "8班数学个性化辅导表应默认1份");
+        Assertions.assertEquals(1L, result.getTaskList().get(2).getPrintCount(), "个性化辅导表应默认1份");
+        Assertions.assertEquals(1L, result.getTaskList().get(3).getPrintCount(), "学生成绩表应默认1份");
+        Assertions.assertEquals(1L, result.getTaskList().get(4).getPrintCount(), "古代史选择题应默认1份");
+
+        // 验证任务 #5: 高三8 班质量分析报告.docx -> 明确要求 9份
+        Assertions.assertEquals(9L, result.getTaskList().get(5).getPrintCount(), "高三8班质量分析报告应为9份");
+    }
 }
 
 
