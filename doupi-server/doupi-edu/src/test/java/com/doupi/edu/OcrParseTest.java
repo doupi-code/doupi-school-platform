@@ -846,6 +846,112 @@ public class OcrParseTest
         // 验证任务 #5: 高三8 班质量分析报告.docx -> 明确要求 9份
         Assertions.assertEquals(9L, result.getTaskList().get(5).getPrintCount(), "高三8班质量分析报告应为9份");
     }
+
+    /**
+     * 场景 1（石松老师）：
+     * 单个文件 + 后置发言包含明确份数与特殊排版装订要求
+     * 45份，不要把答案解析与题目印在一页，第5页为单面
+     */
+    @Test
+    public void testScenario1ShiSong() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText = 
+            "石松\n" +
+            "2026年09月18日 14:20\n" +
+            "[文件] 高三历史限时训练（一）.docx\n" +
+            "45份，不要把答案解析与题目印在一页，第5页为单面\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        Assertions.assertEquals(1, result.getTaskList().size());
+        EduPrintOcrResult.PrintTaskItem task = result.getTaskList().get(0);
+        Assertions.assertEquals("高三历史限时训练（一）", task.getPrintName());
+        Assertions.assertEquals(45L, task.getPrintCount(), "石松老师应精准识别为45份");
+        Assertions.assertNotNull(task.getRemark(), "装订备注不能为空");
+        Assertions.assertTrue(task.getRemark().contains("不要把答案解析与题目印在一页"), "应提取出装订排版备注");
+    }
+
+    /**
+     * 场景 2（谭伟生老师 14:40 同分钟）：
+     * 同一业务轮次中连续发送 2 个文件，随后统一说明“请单面打印25 份”
+     * 业务规则：整轮统一继承，两个文件均精准识别为 25 份，单面印刷！
+     */
+    @Test
+    public void testScenario2TanWeishengMultiFileUnified() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText = 
+            "谭伟生\n" +
+            "2026年09月21日 14:40\n" +
+            "[文件] 8班数学个性化辅导表.docx\n" +
+            "[文件] 个性化辅导表.docx\n" +
+            "请单面打印25 份\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        Assertions.assertEquals(2, result.getTaskList().size());
+        EduPrintOcrResult.PrintTaskItem task0 = result.getTaskList().get(0);
+        EduPrintOcrResult.PrintTaskItem task1 = result.getTaskList().get(1);
+
+        Assertions.assertEquals(25L, task0.getPrintCount(), "文件1应统一获得25份");
+        Assertions.assertEquals("1", task0.getPrintSide(), "文件1应为单面印刷");
+        Assertions.assertEquals(25L, task1.getPrintCount(), "文件2应统一获得25份");
+        Assertions.assertEquals("1", task1.getPrintSide(), "文件2应为单面印刷");
+    }
+
+    /**
+     * 场景 3（谭伟生老师 10:14 vs 10:30）：
+     * 两个文件相隔 16 分钟（> 8 分钟静默窗口），分为两个独立轮次
+     * 10:14 文件孤立无说明 -> 精准默认 1 份
+     * 10:30 文件后接“这又要印一份” -> 精准识别为 1 份
+     */
+    @Test
+    public void testScenario3TanWeishengTimeGap() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText = 
+            "谭伟生\n" +
+            "2026年09月21日 10:14\n" +
+            "[文件] 副本本208_学生成绩(方向名次).xlsx\n" +
+            "\n" +
+            "谭伟生\n" +
+            "2026年09月21日 10:30\n" +
+            "[文件] 古代史选择题的核心是抓.docx\n" +
+            "这又要印一份\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        Assertions.assertEquals(2, result.getTaskList().size());
+        EduPrintOcrResult.PrintTaskItem task0 = result.getTaskList().get(0);
+        EduPrintOcrResult.PrintTaskItem task1 = result.getTaskList().get(1);
+
+        Assertions.assertEquals(1L, task0.getPrintCount(), "10:14孤立文件应默认1份");
+        Assertions.assertEquals(1L, task1.getPrintCount(), "10:30文件应明确识别为1份");
+    }
+
+    /**
+     * 场景 4（局部子配对与闲聊疑问过滤）：
+     * 先说“这个印200份哈”发文件A，接着说“再印20份”发文件B，后跟“上面那个20份印了吗？”
+     * 业务规则：文件A绑定200份，文件B绑定20份，“印了吗”疑问句自动过滤！
+     */
+    @Test
+    public void testScenario4PreStatementsAndInquiryFilter() throws Exception
+    {
+        EduOcrServiceImpl service = getMockedService();
+        String chatText = 
+            "这个印200份哈\n" +
+            "[文件] 高三年级一模试卷.docx\n" +
+            "再印20份\n" +
+            "[文件] 参考答案及评分标准.docx\n" +
+            "上面那个20份印了吗？\n";
+
+        EduPrintOcrResult result = service.extractInfoFromText(chatText);
+        Assertions.assertEquals(2, result.getTaskList().size());
+        EduPrintOcrResult.PrintTaskItem task0 = result.getTaskList().get(0);
+        EduPrintOcrResult.PrintTaskItem task1 = result.getTaskList().get(1);
+
+        Assertions.assertEquals(200L, task0.getPrintCount(), "试卷应为前置声明的200份");
+        Assertions.assertEquals(20L, task1.getPrintCount(), "答案应为前置声明的20份");
+    }
 }
+
 
 

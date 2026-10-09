@@ -838,11 +838,11 @@ const PrintRecordPage: React.FC = () => {
   };
 
   // 解析微信聊天中的原对话时间片段，尽可能还原为具体印刷时间
-  // 支持：绝对时间「2026年08月12日 17:01」「2026-08-12 17:01」「2026年8月12日 下午4:01」、相对时间「昨天/前天 HH:mm」
+  // 支持：绝对时间「2026年09月15日 16:08」「9月21日  9:28」「2026-08-12 17:01」「16:08」、相对时间「昨天/前天 HH:mm」
   const parseChatTime = (snippet?: string) => {
     if (!snippet) return null;
     const s = String(snippet).trim();
-    if (!s) return null;
+    if (!s || s === '近期记录' || s === '当前对话') return null;
 
     // 12 小时制时段标记（上午/下午/中午/凌晨/晚上/傍晚）转 24 小时制小时数
     const applyPeriod = (hour: number, marker?: string) => {
@@ -850,18 +850,18 @@ const PrintRecordPage: React.FC = () => {
       if (marker === '下午' || marker === '晚上' || marker === '傍晚' || marker === '中午') {
         return hour < 12 ? hour + 12 : hour;
       }
-      // 凌晨/上午 12 点 = 0 点，其余保持不变
       return hour === 12 ? 0 : hour;
     };
 
-    // 1. 绝对时间：2026年08月12日 17:01 / 2026-08-12 17:01 / 2026/8/12 17:01 / 2026年8月12日 下午4:01
-    const absDate = s.match(/(\d{4})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})[日]?/);
-    if (absDate) {
-      const year = Number(absDate[1]);
-      const month = Number(absDate[2]);
-      const day = Number(absDate[3]);
-      const timeMatch = s.match(/(上午|下午|中午|凌晨|晚上|傍晚)?[\s]*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-      let hour = 0;
+    // 1. 绝对日期匹配：支持带年份（2026年09月15日）或不带年份（09月15日 / 9月21日 / 09-21）
+    const dateMatch = s.match(/(?:(\d{4})[年\/\-\.]\s*)?(\d{1,2})[月\/\-\.]\s*(\d{1,2})[日号]?/);
+    const timeMatch = s.match(/(上午|下午|中午|凌晨|晚上|傍晚)?[\s]*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+
+    if (dateMatch) {
+      const year = dateMatch[1] ? Number(dateMatch[1]) : dayjs().year();
+      const month = Number(dateMatch[2]);
+      const day = Number(dateMatch[3]);
+      let hour = 9;
       let minute = 0;
       let second = 0;
       if (timeMatch && timeMatch[2]) {
@@ -869,18 +869,28 @@ const PrintRecordPage: React.FC = () => {
         minute = Number(timeMatch[3]) || 0;
         second = timeMatch[4] ? Number(timeMatch[4]) : 0;
       }
-      const parsed = dayjs(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`);
+      const parsed = dayjs(
+        `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+      );
       if (parsed.isValid()) return parsed;
     }
 
-    // 2. 相对时间：昨天/前天/今天 HH:mm（支持 12 小时制时段标记）
+    // 2. 只有时间无日期（如 "16:08" / "下午 4:08"）
+    if (timeMatch && timeMatch[2]) {
+      const hour = applyPeriod(Number(timeMatch[2]), timeMatch[1]);
+      const minute = Number(timeMatch[3]) || 0;
+      const second = timeMatch[4] ? Number(timeMatch[4]) : 0;
+      return dayjs().hour(hour).minute(minute).second(second);
+    }
+
+    // 3. 相对时间：昨天/前天/今天 HH:mm
     const relMatch = s.match(/(昨天|前天|今天)[\s]*(上午|下午|中午|凌晨|晚上|傍晚)?[\s]*(\d{1,2}):(\d{1,2})/);
     if (relMatch) {
       let base = dayjs();
       if (relMatch[1] === '昨天') base = dayjs().subtract(1, 'day');
       else if (relMatch[1] === '前天') base = dayjs().subtract(2, 'day');
       const hour = applyPeriod(Number(relMatch[3]), relMatch[2]);
-      const minute = Number(relMatch[4]);
+      const minute = Number(relMatch[4]) || 0;
       return base.hour(hour).minute(minute).second(0);
     }
 
@@ -1097,7 +1107,7 @@ const PrintRecordPage: React.FC = () => {
       classId: finalClassId,
       className: finalClassName,
       operator: currentNickName || currentUserName || 'admin',
-      printTime: parseChatTime(task.timeSnippet) || dayjs(),
+      printTime: parseChatTime(task.timeSnippet) || parseChatTime(task.time) || parseChatTime(ocrResult?.timeSnippet) || parseChatTime(ocrResult?.rawText) || dayjs(),
       status: '0',
       remark: remarkText,
       attachment: task.attachment || findPastedAttachment(task.originalDocName),
@@ -2245,7 +2255,7 @@ const PrintRecordPage: React.FC = () => {
         open={modalOpen}
         onOk={handleSaveRecord}
         onCancel={() => setModalOpen(false)}
-        width={ocrResult?.taskList && ocrResult.taskList.length > 1 ? 1060 : 860}
+        width={ocrResult?.taskList && ocrResult.taskList.length > 1 ? 1120 : 880}
         destroyOnHidden={false}
         styles={{ body: { padding: '14px 18px', maxHeight: 'calc(88vh - 80px)', overflowY: 'auto' } }}
       >
@@ -2578,9 +2588,9 @@ const PrintRecordPage: React.FC = () => {
                 </Col>
               </Row>
 
-              {/* 第 4 行：原稿电子附件 (8) + 成品留样 (6) + 补充备注 (10) */}
+              {/* 第 4 行：原稿电子附件 (9) + 成品留样 (7) + 补充备注 (8) */}
               <Row gutter={10}>
-                <Col span={8}>
+                <Col span={9}>
                   <Form.Item name="attachment" label="原稿电子文件 / 附件" style={{ marginBottom: 8 }}>
                     <FileUpload
                       placeholder="上传原稿或粘贴文件"
@@ -2596,12 +2606,12 @@ const PrintRecordPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={6}>
+                <Col span={7}>
                   <Form.Item name="resultImg" label="印刷成品效果图留样" style={{ marginBottom: 8 }}>
                     <ImageUpload placeholder="上传留样或按Ctrl+V" />
                   </Form.Item>
                 </Col>
-                <Col span={10}>
+                <Col span={8}>
                   <Form.Item name="remark" label="补充备注" style={{ marginBottom: 8 }}>
                     <Input placeholder="装订要求（骑马钉/角钉）、考试时间等补充说明" />
                   </Form.Item>

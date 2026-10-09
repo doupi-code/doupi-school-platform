@@ -202,38 +202,41 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </Space>
         </div>
       ) : value ? (
-        /* 已上传状态展示卡片 */
+        /* 已上传状态展示卡片（紧凑自适应，防溢出） */
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '8px 12px',
+            padding: '6px 8px',
             border: '1px solid #d9d9d9',
             borderRadius: 6,
             backgroundColor: '#FAFAFA',
+            boxSizing: 'border-box',
+            width: '100%',
+            overflow: 'hidden',
           }}
         >
-          <Space>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, overflow: 'hidden' }}>
             <Image
               src={value}
-              width={54}
-              height={54}
-              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #e8e8e8' }}
-              fallback="https://via.placeholder.com/54?text=Image"
+              width={38}
+              height={38}
+              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #e8e8e8', flexShrink: 0 }}
+              fallback="https://via.placeholder.com/38?text=Img"
             />
-            <div>
+            <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 13 }} />
-                <Text strong style={{ fontSize: 13 }}>留样图片已上传</Text>
+                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 12, flexShrink: 0 }} />
+                <Text strong style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>留样已上传</Text>
               </div>
-              <Text type="secondary" style={{ fontSize: 11, display: 'block', maxWidth: 160 }} ellipsis>
+              <Text type="secondary" style={{ fontSize: 10, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {value.split('/').pop() || '留样照片'}
               </Text>
             </div>
-          </Space>
+          </div>
 
-          <Space size="small">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
             {!disabled && (
               <>
                 <Tooltip title="重新选择或替换图片">
@@ -242,6 +245,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     size="small"
                     icon={<ReloadOutlined />}
                     onClick={() => fileInputRef.current?.click()}
+                    style={{ padding: '0 4px', fontSize: 11 }}
                   >
                     替换
                   </Button>
@@ -253,16 +257,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     danger
                     icon={<DeleteOutlined />}
                     onClick={handleRemove}
+                    style={{ padding: '0 4px', fontSize: 11 }}
                   >
                     删除
                   </Button>
                 </Tooltip>
               </>
             )}
-          </Space>
+          </div>
         </div>
       ) : (
-        /* 未上传状态：拖拽、点击上传、Ctrl+V 粘贴区域 */
+        /* 未上传状态：拖拽、点击上传、Ctrl+V 粘贴区域（紧凑排版，绝不溢出） */
         <div
           ref={containerRef}
           tabIndex={0}
@@ -275,44 +280,49 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             border: isDragOver ? '2px dashed #1677FF' : '1px dashed #d9d9d9',
             borderRadius: 6,
             backgroundColor: isDragOver ? '#F0F5FF' : '#FAFAFA',
-            padding: '12px 14px',
+            padding: '8px 10px',
             textAlign: 'center',
             cursor: disabled ? 'not-allowed' : 'pointer',
             transition: 'all 0.25s',
             outline: 'none',
+            boxSizing: 'border-box',
+            width: '100%',
+            overflow: 'hidden',
           }}
         >
           {uploading ? (
-            <div style={{ padding: '8px 0' }}>
-              <Spin tip="正在上传留样图片..." />
+            <div style={{ padding: '4px 0' }}>
+              <Spin tip="正在上传..." size="small" />
             </div>
           ) : (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
-                <CameraOutlined style={{ fontSize: 20, color: '#1677FF' }} />
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#262626' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 2 }}>
+                <CameraOutlined style={{ fontSize: 16, color: '#1677FF', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {placeholder}
                 </span>
               </div>
-              <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 6 }}>
-                支持本地选择、直接拖拽，或聚焦后按 <span style={{ color: '#1677FF', fontWeight: 600 }}>Ctrl+V 粘贴微信截图</span>
+              <div style={{ fontSize: 10, color: '#8c8c8c', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                支持拖拽或按 <span style={{ color: '#1677FF', fontWeight: 600 }}>Ctrl+V 粘贴</span>
               </div>
               <div
-                style={{ display: 'flex', justifyContent: 'center', gap: 8 }}
+                style={{ display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <Button
                   size="small"
                   icon={<UploadOutlined />}
                   onClick={() => fileInputRef.current?.click()}
+                  style={{ fontSize: 11, padding: '0 6px' }}
                 >
                   本地图片
                 </Button>
                 <Button
                   size="small"
                   onClick={handleClipboardButtonClick}
+                  style={{ fontSize: 11, padding: '0 6px' }}
                 >
-                  📋 粘贴截图
+                  📋 粘贴
                 </Button>
                 {allowUrlInput && (
                   <Button
@@ -320,8 +330,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     type="link"
                     icon={<LinkOutlined />}
                     onClick={() => setShowUrlInput(true)}
+                    style={{ fontSize: 11, padding: '0 4px' }}
                   >
-                    外链URL
+                    外链
                   </Button>
                 )}
               </div>

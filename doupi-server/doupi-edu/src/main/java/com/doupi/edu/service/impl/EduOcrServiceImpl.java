@@ -192,18 +192,22 @@ public class EduOcrServiceImpl implements IEduOcrService
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
 
-            // 前几行尝试作为联系人 Header（跳过时间/状态栏）
+            // 前几行尝试作为联系人 Header（跳过时间/状态栏、打印指令及文件行）
             if (ctx.header == null && i < 3) 
             {
                 if (line.matches("^(?:\\d{1,2}:\\d{2}|上午|下午|5G|4G|WiFi|wifi|\\d+%).*")) 
                 {
                     continue;
                 }
-                ChatTopologyParser.HeaderInfo h = ChatTopologyParser.parseHeaderTitle(line);
-                if (h != null && (h.teacherCandidate != null || h.subject != null)) 
+                if (!line.matches("(?i).*(?:[0-9]|份|分|打|印|单面|双面|请|麻烦|张|本|套).*") &&
+                    !line.matches("(?i).*[.,，。、]?(?:docx?|pdf|wps|xlsx?|pptx?).*"))
                 {
-                    ctx.header = h;
-                    continue;
+                    ChatTopologyParser.HeaderInfo h = ChatTopologyParser.parseHeaderTitle(line);
+                    if (h != null && (h.teacherCandidate != null || h.subject != null)) 
+                    {
+                        ctx.header = h;
+                        continue;
+                    }
                 }
             }
 
@@ -311,11 +315,39 @@ public class EduOcrServiceImpl implements IEduOcrService
     {
         if (StringUtils.isEmpty(line)) return null;
         String t = line.trim();
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d{4})年(\\d{1,2})月(\\d{1,2})日").matcher(t);
-        if (!m.find()) return null;
-        int month = Integer.parseInt(m.group(2));
-        int day = Integer.parseInt(m.group(3));
-        return m.group(1) + String.format("%02d%02d", month, day);
+        // 1. 带年份格式：2026年08月20日 / 2026-08-20 / 2026/8/20
+        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("^(\\d{4})[年/\\-\\.]\\s*(\\d{1,2})[月/\\-\\.]\\s*(\\d{1,2})[日号]?").matcher(t);
+        if (m1.find()) 
+        {
+            int month = Integer.parseInt(m1.group(2));
+            int day = Integer.parseInt(m1.group(3));
+            return m1.group(1) + String.format("%02d%02d", month, day);
+        }
+
+        // 2. 无年份格式：08月20日 / 8月20日 / 08-20
+        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("^(\\d{1,2})[月/\\-\\.]\\s*(\\d{1,2})[日号]?").matcher(t);
+        if (m2.find()) 
+        {
+            int month = Integer.parseInt(m2.group(1));
+            int day = Integer.parseInt(m2.group(2));
+            String year = java.time.LocalDate.now().getYear() + "";
+            return year + String.format("%02d%02d", month, day);
+        }
+
+        // 3. 星期格式：星期三 11:03 / 周三
+        java.util.regex.Matcher m3 = java.util.regex.Pattern.compile("^(?:星期[一二三四五六日天]|周[一二三四五六日天])").matcher(t);
+        if (m3.find()) 
+        {
+            return m3.group(0);
+        }
+
+        // 4. 相对日期格式：昨天 15:30 / 前天
+        if (t.startsWith("昨天") || t.startsWith("前天")) 
+        {
+            return t.substring(0, 2);
+        }
+
+        return null;
     }
 
     /**

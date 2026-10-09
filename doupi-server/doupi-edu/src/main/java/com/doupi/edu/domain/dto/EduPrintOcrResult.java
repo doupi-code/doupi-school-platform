@@ -12,6 +12,9 @@ public class EduPrintOcrResult implements Serializable
     /** 原始OCR识别文本 */
     private String rawText;
 
+    /** 识别出的时间戳片段（如 "2026年09月15日 16:08"） */
+    private String timeSnippet;
+
     /** 提取年级（如：高一、初二） */
     private String grade;
 
@@ -54,6 +57,9 @@ public class EduPrintOcrResult implements Serializable
     /** 自动拼接的印刷名称 */
     private String printName;
 
+    /** 特殊装订与排版备注说明 */
+    private String remark;
+
     /** 识别出的所有相关文档/材料文件列表（支持一次发送多个文档场景） */
     private java.util.List<String> documentList = new java.util.ArrayList<>();
 
@@ -72,6 +78,14 @@ public class EduPrintOcrResult implements Serializable
 
     public void setRawText(String rawText) {
         this.rawText = rawText;
+    }
+
+    public String getTimeSnippet() {
+        return timeSnippet;
+    }
+
+    public void setTimeSnippet(String timeSnippet) {
+        this.timeSnippet = timeSnippet;
     }
 
     public String getGrade() {
@@ -184,6 +198,14 @@ public class EduPrintOcrResult implements Serializable
 
     public void setPrintName(String printName) {
         this.printName = printName;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
     }
 
     public Boolean getSuccess() {
@@ -446,6 +468,17 @@ public class EduPrintOcrResult implements Serializable
 
         public void setExistingPrintId(Long existingPrintId) {
             this.existingPrintId = existingPrintId;
+        }
+
+        /** 特殊装订与排版备注说明 */
+        private String remark;
+
+        public String getRemark() {
+            return remark;
+        }
+
+        public void setRemark(String remark) {
+            this.remark = remark;
         }
 
         public String getExistingRecordDesc() {

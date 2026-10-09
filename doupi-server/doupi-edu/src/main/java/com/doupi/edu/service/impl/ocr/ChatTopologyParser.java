@@ -244,6 +244,8 @@ public class ChatTopologyParser
     private static boolean isDepartmentOrNoise(String s) 
     {
         if (StringUtils.isEmpty(s)) return true;
+        if (s.matches(".*(?:\\d|份|分|打|印|请|麻烦|张|本|套).*")) return true;
+        if (s.length() > 6 && !s.endsWith("老师")) return true;
         return s.endsWith("部") || s.endsWith("处") || s.endsWith("组") || s.endsWith("室") || 
                s.endsWith("校") || s.contains("教务") || s.contains("普高") || s.contains("年级") ||
                s.equals("微信") || s.equals("文件") || s.equals("群聊");
