@@ -16,7 +16,7 @@ TRUNCATE TABLE edu_class;
 INSERT INTO edu_class (class_id, grade, class_name, student_num, head_teacher, create_time) VALUES
 (1, '高三', '高三(1)班·卓越拔尖班', 45, '张建华', NOW()),
 (2, '高三', '高三(2)班·清北冲刺班', 48, '李秀英', NOW()),
-(3, '高三复读', '高三复读(1)班·提分班', 52, '陈德明', NOW()),
+(3, '复读部', '高三复读(1)班·提分班', 52, '陈德明', NOW()),
 (4, '高二', '高二(1)班·重点实验班', 46, '王强', NOW()),
 (5, '高二', '高二(2)班·理科特色班', 47, '赵红梅', NOW()),
 (6, '高一', '高一(1)班·名校火箭班', 50, '刘芳', NOW()),
@@ -30,7 +30,7 @@ INSERT INTO edu_print_record (print_id, print_name, paper_goods_id, paper_type, 
 (2, '高三英语高考核心词汇专项训练', 1, 'A4', 100, 8, '2', 800, 2, '高三', 2, '高三(2)班·清北冲刺班', 'admin', DATE_SUB(NOW(), INTERVAL 5 HOUR), '1', '高考阅读提分突破', DATE_SUB(NOW(), INTERVAL 5 HOUR)),
 (3, '高二物理电磁感应典型例题讲义', 1, 'A4', 93, 6, '2', 558, 3, '高二', 4, '高二(1)班·重点实验班', 'admin', DATE_SUB(NOW(), INTERVAL 1 DAY), '1', '培优拓展训练讲义', DATE_SUB(NOW(), INTERVAL 1 DAY)),
 (4, '高一语文古诗文群文阅读精编', 1, 'A4', 99, 5, '1', 495, 4, '高一', 6, '高一(1)班·名校火箭班', 'admin', DATE_SUB(NOW(), INTERVAL 1 DAY), '1', '必修一重点文言文导学', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(5, '高三复读部化学方程式配平专题卷', 3, '16K', 52, 3, '1', 156, 5, '高三复读', 3, '高三复读(1)班·提分班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '基础过关天天清', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(5, '高三复读部化学方程式配平专题卷', 3, '16K', 52, 3, '1', 156, 5, '复读部', 3, '高三复读(1)班·提分班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '基础过关天天清', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 (6, '高二生物遗传系谱图解密演练', 1, 'A4', 93, 4, '2', 372, 6, '高二', 5, '高二(2)班·理科特色班', 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), '1', '微专题突破集训', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 (7, '汉外华襄2026秋季招生说明会资料', 1, 'A4', 200, 2, '2', 400, 1, '高中部', NULL, '招生办', 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), '1', '家长开放日发放物料', DATE_SUB(NOW(), INTERVAL 3 DAY)),
 (8, '高一数学函数概念与单调性检测题', 2, '8K', 99, 2, '1', 198, 1, '高一', 7, '高一(2)班·综合实验班', 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), '1', '周考周周清过关检测', DATE_SUB(NOW(), INTERVAL 3 DAY));

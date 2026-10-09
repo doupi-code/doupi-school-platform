@@ -26,7 +26,7 @@ raw.trim().split('\n').forEach((line, idx) => {
   const classItem = {
     classId: idx + 101, // 预分配 classId
     grade: '复读部',
-    fullGrade: '高三复读',
+    fullGrade: '复读部',
     classType,
     classNo,
     className: `${classNo}·${classType}`,
