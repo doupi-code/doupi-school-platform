@@ -80,7 +80,7 @@ public class DoupiSchoolPublicController extends BaseController
         appt.setStudentGender("男");
         
         String scoreStr = scoreObj != null ? String.valueOf(scoreObj).trim() : "";
-        appt.setStudentGrade(StringUtils.isNotEmpty(scoreStr) ? "高考复读 (高考" + scoreStr + "分)" : "高三复读");
+        appt.setStudentGrade(StringUtils.isNotEmpty(scoreStr) ? "高考复读 (高考" + scoreStr + "分)" : "复读部");
         appt.setCurrentSchool("往届/应届高中");
         appt.setCampusId("default");
         appt.setCampusName("汉外华襄校区");

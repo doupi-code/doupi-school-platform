@@ -265,7 +265,7 @@ const ScreenPage: React.FC = () => {
   const getGradePieOption = () => {
     const rawData = recruit.gradeDistribution || [];
     const data = rawData.length > 0 ? rawData : [
-      { name: '高三复读', value: 3 },
+      { name: '复读部', value: 3 },
       { name: '高一卓越班', value: 3 },
       { name: '高二实验班', value: 1 },
     ];
@@ -385,7 +385,7 @@ const ScreenPage: React.FC = () => {
   // 4. 文印学科/年级耗纸对比柱状图
   const getPrintBarOption = () => {
     const rawStats = edu.gradePrintStats || [];
-    const names = rawStats.length > 0 ? rawStats.map((s: any) => s.grade || '未分年级') : ['高三', '高二', '高一', '高三复读', '高中部'];
+    const names = rawStats.length > 0 ? rawStats.map((s: any) => s.grade || '未分年级') : ['高三', '高二', '高一', '复读部', '高中部'];
     const values = rawStats.length > 0 ? rawStats.map((s: any) => Number(s.totalPages || 0)) : [1180, 930, 693, 156, 400];
 
     return {
@@ -1014,7 +1014,7 @@ const ScreenPage: React.FC = () => {
                       {[
                         { name: '高三(1)班·卓越拔尖班', grade: '高三', num: 45, feature: '拔尖创新人才贯通培养' },
                         { name: '高三(2)班·清北冲刺班', grade: '高三', num: 48, feature: '清华北大及C9名校定向培养' },
-                        { name: '高三复读(1)班·提分班', grade: '高三复读', num: 52, feature: '名师精准提分，强化专项辅导' },
+                        { name: '高三复读(1)班·提分班', grade: '复读部', num: 52, feature: '名师精准提分，强化专项辅导' },
                         { name: '高二(1)班·重点实验班', grade: '高二', num: 46, feature: '数理学科特长与奥赛集训' },
                         { name: '高二(2)班·理科特色班', grade: '高二', num: 47, feature: '新高考赋分突破实验班' },
                         { name: '高一(1)班·名校火箭班', grade: '高一', num: 50, feature: '高中知识体系构建与名校衔接' },

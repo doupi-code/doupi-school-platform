@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
       trendAppointments: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2],
       trendVerified: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2],
       gradeDistribution: [
-        { name: '高三复读', value: 2 },
+        { name: '复读部', value: 2 },
         { name: '高一', value: 3 },
         { name: '高二', value: 1 },
         { name: '初三', value: 1 },
@@ -139,7 +139,7 @@ const Dashboard: React.FC = () => {
       ],
       gradeClassStats: [
         { grade: '高三', classCount: 2, studentCount: 93 },
-        { grade: '高三复读', classCount: 1, studentCount: 52 },
+        { grade: '复读部', classCount: 1, studentCount: 52 },
         { grade: '高二', classCount: 2, studentCount: 93 },
         { grade: '高一', classCount: 2, studentCount: 99 },
         { grade: '初三', classCount: 1, studentCount: 42 },

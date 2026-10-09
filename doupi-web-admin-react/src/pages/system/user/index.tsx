@@ -657,7 +657,6 @@ const UserPage: React.FC = () => {
                     { label: '高二', value: '高二' },
                     { label: '高三', value: '高三' },
                     { label: '高三复读部', value: '复读部' },
-                    { label: '高三复读', value: '高三复读' },
                   ]}
                 />
               </Form.Item>
