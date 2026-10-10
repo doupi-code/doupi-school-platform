@@ -8,6 +8,31 @@ import java.io.Serializable;
 public class EduPrintOcrResult implements Serializable 
 {
     private static final long serialVersionUID = 1L;
+        private java.util.List<SourceMessage> messages;
+        public java.util.List<SourceMessage> getMessages() { return messages; }
+        public void setMessages(java.util.List<SourceMessage> value) { this.messages = value; }
+
+    public static class SourceMessage implements Serializable {
+        private String id;
+        public String getId() { return id; }
+        public void setId(String value) { this.id = value; }
+        private String sender;
+        public String getSender() { return sender; }
+        public void setSender(String value) { this.sender = value; }
+        private String time;
+        public String getTime() { return time; }
+        public void setTime(String value) { this.time = value; }
+        private String text;
+        public String getText() { return text; }
+        public void setText(String value) { this.text = value; }
+        private String type;
+        public String getType() { return type; }
+        public void setType(String value) { this.type = value; }
+        private int order;
+        public int getOrder() { return order; }
+        public void setOrder(int value) { this.order = value; }
+    }
+
 
     /** 原始OCR识别文本 */
     private String rawText;
@@ -269,6 +294,24 @@ public class EduPrintOcrResult implements Serializable
     {
         private static final long serialVersionUID = 1L;
 
+        private String taskId;
+        public String getTaskId() { return taskId; }
+        public void setTaskId(String value) { this.taskId = value; }
+        private String sender;
+        public String getSender() { return sender; }
+        public void setSender(String value) { this.sender = value; }
+        private java.util.List<String> sourceMessageIds;
+        public java.util.List<String> getSourceMessageIds() { return sourceMessageIds; }
+        public void setSourceMessageIds(java.util.List<String> value) { this.sourceMessageIds = value; }
+        private java.util.Map<String, java.util.List<String>> fieldEvidence;
+        public java.util.Map<String, java.util.List<String>> getFieldEvidence() { return fieldEvidence; }
+        public void setFieldEvidence(java.util.Map<String, java.util.List<String>> value) { this.fieldEvidence = value; }
+        private java.util.List<String> reviewReasons;
+        public java.util.List<String> getReviewReasons() { return reviewReasons; }
+        public void setReviewReasons(java.util.List<String> value) { this.reviewReasons = value; }
+        private String attachmentStatus;
+        public String getAttachmentStatus() { return attachmentStatus; }
+        public void setAttachmentStatus(String value) { this.attachmentStatus = value; }
         /** 纯净印刷材料名称（已剔除科目、年级） */
         private String printName;
 

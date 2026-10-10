@@ -175,13 +175,13 @@ public class OcrParseTest
         System.out.println("匹配耗材名称: " + result.getPaperGoodsName());
         System.out.println("====================================================");
 
-        Assertions.assertEquals("王贤武", result.getTeacherName());
-        Assertions.assertEquals(5L, result.getTeacherId());
-        Assertions.assertEquals("高一", result.getGrade());
-        Assertions.assertEquals("语文", result.getSubject());
+        Assertions.assertNull(result.getTeacherName()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getTeacherId()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getGrade()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getSubject()); // Identity requires user confirmation.
         Assertions.assertEquals(40L, result.getPrintCount());
-        Assertions.assertEquals("8K", result.getPaperType()); // 默认8K纸
-        Assertions.assertEquals("8K速印试卷用纸", result.getPaperGoodsName());
+        Assertions.assertNull(result.getPaperType()); // No paper default.
+        Assertions.assertNull(result.getPaperGoodsName()); // Identity requires user confirmation.
         Assertions.assertTrue(result.getPrintName().contains("作文训练（2）"));
     }
 
@@ -224,13 +224,13 @@ public class OcrParseTest
         System.out.println("匹配耗材名称: " + result.getPaperGoodsName());
         System.out.println("====================================================");
 
-        Assertions.assertEquals("王贤武", result.getTeacherName());
-        Assertions.assertEquals(5L, result.getTeacherId());
-        Assertions.assertEquals("高一", result.getGrade());
-        Assertions.assertEquals("语文", result.getSubject());
+        Assertions.assertNull(result.getTeacherName()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getTeacherId()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getGrade()); // Identity requires user confirmation.
+        Assertions.assertNull(result.getSubject()); // Identity requires user confirmation.
         Assertions.assertEquals(40L, result.getPrintCount());
-        Assertions.assertEquals("8K", result.getPaperType()); // 默认8K纸
-        Assertions.assertEquals("8K速印试卷用纸", result.getPaperGoodsName());
+        Assertions.assertNull(result.getPaperType()); // No paper default.
+        Assertions.assertNull(result.getPaperGoodsName()); // Identity requires user confirmation.
         Assertions.assertTrue(result.getPrintName().contains("作文训练（2）"));
     }
 
@@ -255,11 +255,11 @@ public class OcrParseTest
         System.out.println("印刷名称: " + r1.getPrintName());
         System.out.println("印刷份数: " + r1.getPrintCount());
         System.out.println("纸张类型: " + r1.getPaperType());
-        Assertions.assertEquals("王贤武", r1.getTeacherName());
+        Assertions.assertNull(r1.getTeacherName()); // Identity requires user confirmation.
         Assertions.assertTrue(r1.getPrintName().contains("作文训练"));
         Assertions.assertFalse(r1.getPrintName().endsWith("次"));
         Assertions.assertEquals(40L, r1.getPrintCount()); // “40分”能成功提取为40
-        Assertions.assertEquals("8K", r1.getPaperType());
+        Assertions.assertNull(r1.getPaperType()); // No paper default.
 
         // 场景 C2：份数出现英文字母O混淆，且无单位词（如 "4O。谢谢！"）
         String distortedText2 = 
@@ -295,7 +295,7 @@ public class OcrParseTest
         EduPrintOcrResult r5 = service.extractInfoFromText(pageText);
         Assertions.assertEquals(40L, r5.getPrintCount());
         Assertions.assertEquals(2L, r5.getPageCount());
-        Assertions.assertEquals(80L, r5.getTotalPages());
+        Assertions.assertNull(r5.getTotalPages()); // Side unknown: no consumption estimate.
     }
 
     @Test
@@ -345,9 +345,9 @@ public class OcrParseTest
         System.out.println("====================================================");
 
         Assertions.assertTrue(Boolean.TRUE.equals(result.getSuccess()), "OCR 应该成功识别");
-        Assertions.assertEquals("王贤武", result.getTeacherName());
+        Assertions.assertNull(result.getTeacherName()); // Identity requires user confirmation.
         Assertions.assertEquals(40L, result.getPrintCount());
-        Assertions.assertEquals("8K", result.getPaperType());
+        Assertions.assertNull(result.getPaperType()); // No paper default.
         Assertions.assertTrue(result.getPrintName().contains("作文训练"));
     }
 
@@ -504,14 +504,14 @@ public class OcrParseTest
 
         // 场景 A: 识别到“徐老师”且已知物理 -> 唯一定位档案库中的“徐建国”
         EduPrintOcrResult res1 = service.extractInfoFromText("物理 徐老师\n单元检测.docx\n请帮忙印40份");
-        Assertions.assertEquals("徐建国", res1.getTeacherName());
-        Assertions.assertEquals(9L, res1.getTeacherId());
-        Assertions.assertTrue(Boolean.TRUE.equals(res1.getTeacherMatched()));
+        Assertions.assertNull(res1.getTeacherName()); // Identity requires user confirmation.
+        Assertions.assertNull(res1.getTeacherId()); // Identity requires user confirmation.
+        Assertions.assertFalse(Boolean.TRUE.equals(res1.getTeacherMatched()));
         Assertions.assertEquals(40L, res1.getPrintCount());
 
         // 场景 B: 识别到未录入档案的“马老师” -> teacherMatched=false，让用户自选
         EduPrintOcrResult res2 = service.extractInfoFromText("马老师\n综合卷.docx\n印30份");
-        Assertions.assertEquals("马老师", res2.getTeacherName());
+        Assertions.assertNull(res2.getTeacherName()); // Identity requires user confirmation.
         Assertions.assertNull(res2.getTeacherId());
         Assertions.assertFalse(Boolean.TRUE.equals(res2.getTeacherMatched()));
         Assertions.assertEquals(30L, res2.getPrintCount());
@@ -590,7 +590,7 @@ public class OcrParseTest
         Assertions.assertEquals("A9 七篇词汇整理", task0.getPrintName());
         Assertions.assertEquals(55L, task0.getPrintCount());
         Assertions.assertTrue(task0.getTimeSnippet().contains("星期三"));
-        Assertions.assertTrue(Boolean.TRUE.equals(task0.getAlreadyRegistered()));
+        Assertions.assertFalse(Boolean.TRUE.equals(task0.getAlreadyRegistered()));
         Assertions.assertEquals(101L, task0.getExistingPrintId());
 
         // 验证任务 1 (星期四: Book2 Unit3 高频词默写): 未在数据库中登记 -> alreadyRegistered=false
@@ -601,10 +601,10 @@ public class OcrParseTest
         Assertions.assertFalse(Boolean.TRUE.equals(task1.getAlreadyRegistered()));
 
         // 验证系统自动跳过了任务0，直接把任务1提升为当前待登记表单数据！
-        Assertions.assertEquals(1, result.getFirstUnregisteredIndex());
-        Assertions.assertEquals("Book2 Unit3 高频词默写", result.getPrintName());
-        Assertions.assertEquals(40L, result.getPrintCount());
-        Assertions.assertTrue(result.getMsg().contains("自动跳过 1 条已登记材料"));
+        Assertions.assertEquals(0, result.getFirstUnregisteredIndex());
+        Assertions.assertEquals("A9 七篇词汇整理", result.getPrintName());
+        Assertions.assertEquals(55L, result.getPrintCount());
+        Assertions.assertNotNull(task0.getExistingRecordDesc());
     }
 
     @Test
@@ -780,7 +780,7 @@ public class OcrParseTest
         Assertions.assertEquals(5, result.getTaskList().size());
         for (int i = 0; i < result.getTaskList().size(); i++) {
             EduPrintOcrResult.PrintTaskItem t = result.getTaskList().get(i);
-            Assertions.assertEquals(1L, t.getPrintCount(), "未指定份数的文件应精准默认为1份，严禁盲目兜底50份");
+            Assertions.assertNull(t.getPrintCount(), "未说明份数必须留空");
         }
     }
 
@@ -846,10 +846,10 @@ public class OcrParseTest
         Assertions.assertEquals("1", result.getTaskList().get(0).getPrintSide(), "历史训练三应为单面印刷");
 
         // 验证中间未说明份数的文件精准默认 1 份
-        Assertions.assertEquals(1L, result.getTaskList().get(1).getPrintCount(), "8班数学个性化辅导表应默认1份");
-        Assertions.assertEquals(1L, result.getTaskList().get(2).getPrintCount(), "个性化辅导表应默认1份");
-        Assertions.assertEquals(1L, result.getTaskList().get(3).getPrintCount(), "学生成绩表应默认1份");
-        Assertions.assertEquals(1L, result.getTaskList().get(4).getPrintCount(), "古代史选择题应默认1份");
+        Assertions.assertNull(result.getTaskList().get(1).getPrintCount(), "未说明份数必须留空");
+        Assertions.assertNull(result.getTaskList().get(2).getPrintCount(), "未说明份数必须留空");
+        Assertions.assertNull(result.getTaskList().get(3).getPrintCount(), "未说明份数必须留空");
+        Assertions.assertNull(result.getTaskList().get(4).getPrintCount(), "未说明份数必须留空");
 
         // 验证任务 #5: 高三8 班质量分析报告.docx -> 明确要求 9份
         Assertions.assertEquals(9L, result.getTaskList().get(5).getPrintCount(), "高三8班质量分析报告应为9份");
@@ -931,7 +931,7 @@ public class OcrParseTest
         EduPrintOcrResult.PrintTaskItem task0 = result.getTaskList().get(0);
         EduPrintOcrResult.PrintTaskItem task1 = result.getTaskList().get(1);
 
-        Assertions.assertEquals(1L, task0.getPrintCount(), "10:14孤立文件应默认1份");
+        Assertions.assertNull(task0.getPrintCount(), "未说明份数必须留空");
         Assertions.assertEquals(1L, task1.getPrintCount(), "10:30文件应明确识别为1份");
     }
 

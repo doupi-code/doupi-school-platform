@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Image, Input, message, Space, Spin, Tooltip, Typography } from 'antd';
 import {
   CameraOutlined,
@@ -15,6 +15,7 @@ const { Text } = Typography;
 
 export interface ImageUploadProps {
   value?: string;
+  contextKey?: string;
   onChange?: (url: string) => void;
   disabled?: boolean;
   placeholder?: string;
@@ -26,6 +27,7 @@ export interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   value = '',
+  contextKey,
   onChange,
   disabled = false,
   placeholder = '点击上传或将图片拖拽至此',
@@ -34,6 +36,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   style,
   onUploadSuccess,
 }) => {
+  const mountedRef = useRef(true);
+  const contextRef = useRef(contextKey);
+  contextRef.current = contextKey;
+  useEffect(()=>{mountedRef.current=true; return ()=>{mountedRef.current=false;};},[]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -44,6 +50,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   // 处理上传图片
   const handleUpload = async (file: File) => {
     if (!file) return;
+    const uploadContext = contextKey;
 
     if (!file.type.startsWith('image/')) {
       message.error('请选择有效的图片文件（JPG、PNG、WEBP 等）');
@@ -58,6 +65,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setUploading(true);
     try {
       const res: any = await uploadFileSmart(file);
+      if (!mountedRef.current || contextRef.current !== uploadContext) return;
       const url = res.url || res.fileName || '';
       if (!url) {
         throw new Error('未获取到返回的图片链接');
@@ -272,6 +280,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         /* 未上传状态：拖拽、点击上传、Ctrl+V 粘贴区域（紧凑排版，绝不溢出） */
         <div
           ref={containerRef}
+          data-image-upload="true"
           tabIndex={0}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}

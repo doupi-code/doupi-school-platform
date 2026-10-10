@@ -16,6 +16,8 @@ import com.doupi.edu.service.impl.EduMaterialRecordServiceImpl;
 import com.doupi.edu.mapper.EduMaterialRecordMapper;
 
 public class ExportAuditVerifyTest {
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path outputDirectory;
 
     @Test
     public void testExcelGenerationAndMerging() throws Exception {
@@ -267,7 +269,7 @@ public class ExportAuditVerifyTest {
         buildS4.setAccessible(true);
         buildS4.invoke(service, wb, wb.createSheet("最细化穿透流水清单"), new HashMap<>(), styles);
 
-        String outputPath = "C:\\Users\\javal\\Desktop\\doupi-Vue-v3.9.2\\doupi-server\\test_report_output.xlsx";
+        String outputPath = outputDirectory.resolve("test_report_output.xlsx").toString();
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             wb.write(fos);
         }

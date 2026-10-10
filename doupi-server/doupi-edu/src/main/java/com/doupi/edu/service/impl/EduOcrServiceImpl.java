@@ -139,15 +139,14 @@ public class EduOcrServiceImpl implements IEduOcrService
 
                 log.info("拓扑解析完成：提取到文档 {} 个，纯净聊天文本:\n{}", ctx.fileList.size(), ctx.cleanChatText);
 
-                // 3. 查询教职工档案、班级列表与纸张库存
-                List<EduTeacher> teachers = getTeachers();
-                List<EduClass> classes = getClasses();
-                List<StockGoods> paperGoods = getPaperGoods();
-
                 // 4. 业务意图与槽位抽取
-                result = EduPrintIntentExtractor.extract(ctx, teachers, classes, paperGoods);
+                List<EduPrintOcrResult.SourceMessage> source = com.doupi.edu.service.impl.ocr.ChatMessageNormalizer.normalize(ctx.cleanChatText);
+                for (EduPrintOcrResult.SourceMessage m : source) {
+                    if (ctx.operatorMessages.stream().anyMatch(op -> op.text.equals(m.getText()))) m.setType("operator");
+                }
+                result = com.doupi.edu.service.impl.ocr.ChatPrefillParser.parse(ctx.cleanChatText, source);
 
-                // 5. 校验已有印刷登记记录，自动跳过已登记任务，排队未登记任务
+                // 5. 查询历史同名登记，仅提示用户核对
                 checkExistingRecordsAndArrangeQueue(result);
             } 
             finally 
@@ -174,301 +173,42 @@ public class EduOcrServiceImpl implements IEduOcrService
     @Override
     public EduPrintOcrResult extractInfoFromText(String text) 
     {
-        if (StringUtils.isEmpty(text)) 
-        {
-            EduPrintOcrResult res = new EduPrintOcrResult();
-            res.setMsg("文本为空，未提取到有效信息");
-            return res;
-        }
-
-        // 将纯文本转换为虚拟对话上下文
-        ChatTopologyParser.ChatDialogContext ctx = new ChatTopologyParser.ChatDialogContext();
-        ctx.cleanChatText = text;
-
-        String[] lines = text.split("\\r?\\n");
-        String prevDateCode = null; // 记录上一条时间戳的日期（yyyyMMdd），用于识别跨天分界
-        for (int i = 0; i < lines.length; i++) 
-        {
-            String line = lines[i].trim();
-            if (line.isEmpty()) continue;
-
-            // 前几行尝试作为联系人 Header（跳过时间/状态栏、打印指令及文件行）
-            if (ctx.header == null && i < 3) 
-            {
-                if (line.matches("^(?:\\d{1,2}:\\d{2}|上午|下午|5G|4G|WiFi|wifi|\\d+%).*")) 
-                {
-                    continue;
-                }
-                if (!line.matches("(?i).*(?:[0-9]|份|分|打|印|单面|双面|请|麻烦|张|本|套).*") &&
-                    !line.matches("(?i).*[.,，。、]?(?:docx?|pdf|wps|xlsx?|pptx?).*"))
-                {
-                    ChatTopologyParser.HeaderInfo h = ChatTopologyParser.parseHeaderTitle(line);
-                    if (h != null && (h.teacherCandidate != null || h.subject != null)) 
-                    {
-                        ctx.header = h;
-                        continue;
-                    }
-                }
-            }
-
-            // 微信"复制聊天记录"格式：发送人姓名行（纯中文姓名、与头部教师候选一致）直接跳过
-            if (isSenderNameLine(line, ctx)) 
-            {
-                continue;
-            }
-
-            // 时间戳行（如 "2026年08月20日  9:30"）：
-            // 同日保留为普通消息（供时间线展示，不阻断份数绑定）；跨天作为 SYSTEM 分界，避免份数跨天串绑
-            String dateCode = extractDateCode(line);
-            if (dateCode != null) 
-            {
-                boolean isCrossDay = (prevDateCode != null && !dateCode.equals(prevDateCode));
-                prevDateCode = dateCode;
-
-                ChatTopologyParser.ChatMessage ts = new ChatTopologyParser.ChatMessage();
-                ts.text = line;
-                ts.x = 0;
-                ts.y = i * 20;
-                if (isCrossDay) 
-                {
-                    ts.role = ChatTopologyParser.MessageRole.SYSTEM;
-                    ctx.allMessages.add(ts);
-                } 
-                else 
-                {
-                    ts.role = ChatTopologyParser.MessageRole.TEACHER;
-                    ctx.teacherMessages.add(ts);
-                    ctx.allMessages.add(ts);
-                }
-                continue;
-            }
-
-            ChatTopologyParser.ChatMessage msg = new ChatTopologyParser.ChatMessage();
-            msg.text = line;
-            msg.x = 0;
-            msg.y = i * 20;
-
-            if (line.matches("(?i).*[.,，。、]?(?:docx?|pdf|wps|xlsx?|pptx?).*")) 
-            {
-                msg.isFile = true;
-                String cleanDoc = line.replaceAll("(?i)^(?:【文件】|\\[文件\\]|文件[:：]|附件[:：]?)", "").trim();
-                // 检查上一行是否为文件名前半截（如上一行是“作文训练”，当前行是“次.doc”或“(2).doc”，或“9.30 8班辅导阅读理解（科” + “技发明类）.docx”）
-                if (!ctx.allMessages.isEmpty()) 
-                {
-                    ChatTopologyParser.ChatMessage prevMsg = ctx.allMessages.get(ctx.allMessages.size() - 1);
-                    if (!prevMsg.isFile && !prevMsg.text.contains("好") && !prevMsg.text.contains("：") && !prevMsg.text.contains(":")
-                        && !prevMsg.text.matches("^(?:星期[一二三四五六日天]|\\d{1,2}:\\d{2}|\\d{4}年|昨天|前天).*")
-                        && !prevMsg.text.matches("(?i).*(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|份|张|本|套).*")
-                        && EduPrintIntentExtractor.parseCountFromSingleText(prevMsg.text) == null) 
-                    {
-                        String prefix = cleanDoc.replaceAll("(?i)[.,，。、]?(?:docx?|pdf|wps|xlsx?|pptx?)$", "").trim();
-                        if ("次".equals(prefix)) 
-                        {
-                            prefix = "（2）";
-                        }
-                        int lastDot = cleanDoc.lastIndexOf('.');
-                        String ext = lastDot >= 0 ? cleanDoc.substring(lastDot + 1) : "docx";
-                        cleanDoc = (prevMsg.text.trim() + prefix).trim().replaceAll("\\s+\\.", ".") + "." + ext;
-                        ctx.allMessages.remove(ctx.allMessages.size() - 1);
-                        ctx.teacherMessages.remove(prevMsg);
-                    }
-                }
-                ctx.fileList.add(cleanDoc);
-                msg.text = cleanDoc;
-            }
-            msg.role = ChatTopologyParser.MessageRole.TEACHER;
-            ctx.teacherMessages.add(msg);
-            ctx.allMessages.add(msg);
-        }
-
-        List<EduTeacher> teachers = getTeachers();
-        List<EduClass> classes = getClasses();
-        List<StockGoods> paperGoods = getPaperGoods();
-
-        EduPrintOcrResult result = EduPrintIntentExtractor.extract(ctx, teachers, classes, paperGoods);
+        EduPrintOcrResult result = com.doupi.edu.service.impl.ocr.ChatPrefillParser.parse(text);
         checkExistingRecordsAndArrangeQueue(result);
         return result;
     }
 
-    /**
-     * 判断某行是否为微信"复制聊天记录"里的发送人姓名行（纯中文姓名、且与头部教师候选一致）
-     */
-    private static boolean isSenderNameLine(String line, ChatTopologyParser.ChatDialogContext ctx) 
+    /** Historical name matches are review hints, not evidence that this request was saved. */
+    private void checkExistingRecordsAndArrangeQueue(EduPrintOcrResult result)
     {
-        if (StringUtils.isEmpty(line) || ctx == null || ctx.header == null || StringUtils.isEmpty(ctx.header.teacherCandidate)) 
+        result.setFirstUnregisteredIndex(0);
+        if (eduPrintRecordMapper == null || result.getTaskList() == null) return;
+        for (EduPrintOcrResult.PrintTaskItem item : result.getTaskList())
         {
-            return false;
-        }
-        String t = line.trim();
-        if (!t.matches("^[\\u4e00-\\u9fa5]{2,4}$")) 
-        {
-            return false;
-        }
-        String cand = ctx.header.teacherCandidate.replaceAll("老师$", "").trim();
-        return t.equals(cand) || t.equals(ctx.header.teacherCandidate);
-    }
-
-    /**
-     * 从时间戳行提取日期编码（yyyyMMdd），如 "2026年08月20日  9:30" -> "20260820"；非时间戳返回 null
-     */
-    private static String extractDateCode(String line) 
-    {
-        if (StringUtils.isEmpty(line)) return null;
-        String t = line.trim();
-        // 1. 带年份格式：2026年08月20日 / 2026-08-20 / 2026/8/20
-        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("^(\\d{4})[年/\\-\\.]\\s*(\\d{1,2})[月/\\-\\.]\\s*(\\d{1,2})[日号]?").matcher(t);
-        if (m1.find()) 
-        {
-            int month = Integer.parseInt(m1.group(2));
-            int day = Integer.parseInt(m1.group(3));
-            return m1.group(1) + String.format("%02d%02d", month, day);
-        }
-
-        // 2. 无年份格式：08月20日 / 8月20日 / 08-20
-        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("^(\\d{1,2})[月/\\-\\.]\\s*(\\d{1,2})[日号]?").matcher(t);
-        if (m2.find()) 
-        {
-            int month = Integer.parseInt(m2.group(1));
-            int day = Integer.parseInt(m2.group(2));
-            String year = java.time.LocalDate.now().getYear() + "";
-            return year + String.format("%02d%02d", month, day);
-        }
-
-        // 3. 星期格式：星期三 11:03 / 周三
-        java.util.regex.Matcher m3 = java.util.regex.Pattern.compile("^(?:星期[一二三四五六日天]|周[一二三四五六日天])").matcher(t);
-        if (m3.find()) 
-        {
-            return m3.group(0);
-        }
-
-        // 4. 相对日期格式：昨天 15:30 / 前天
-        if (t.startsWith("昨天") || t.startsWith("前天")) 
-        {
-            return t.substring(0, 2);
-        }
-
-        return null;
-    }
-
-    /**
-     * 校验已有印刷登记记录：
-     * 遍历识别到的任务清单，在数据库已有数据中比对是否已经登记。
-     * 若已登记则标记 alreadyRegistered=true 并跳过；
-     * 自动将首个未登记的任务提升为主预填任务，供用户进入登记流程。
-     */
-    private void checkExistingRecordsAndArrangeQueue(EduPrintOcrResult result) 
-    {
-        if (result == null || result.getTaskList() == null || result.getTaskList().isEmpty()) 
-        {
-            return;
-        }
-
-        if (eduPrintRecordMapper == null) 
-        {
-            result.setFirstUnregisteredIndex(0);
-            return;
-        }
-
-        int registeredCount = 0;
-        int firstUnregisteredIdx = -1;
-
-        for (int i = 0; i < result.getTaskList().size(); i++) 
-        {
-            EduPrintOcrResult.PrintTaskItem item = result.getTaskList().get(i);
-            if (StringUtils.isEmpty(item.getPrintName())) 
-            {
-                continue;
-            }
-
+            if (StringUtils.isEmpty(item.getPrintName())) continue;
             com.doupi.edu.domain.EduPrintRecord query = new com.doupi.edu.domain.EduPrintRecord();
             query.setPrintName(item.getPrintName());
-            if (item.getTeacherId() != null) 
-            {
-                query.setTeacherId(item.getTeacherId());
-            }
-
-            try 
+            if (item.getTeacherId() != null) query.setTeacherId(item.getTeacherId());
+            try
             {
                 List<com.doupi.edu.domain.EduPrintRecord> records = eduPrintRecordMapper.selectEduPrintRecordList(query);
-                com.doupi.edu.domain.EduPrintRecord matched = null;
-                if (records != null) 
+                if (records == null) continue;
+                for (com.doupi.edu.domain.EduPrintRecord record : records)
                 {
-                    for (com.doupi.edu.domain.EduPrintRecord rec : records) 
-                    {
-                        // 过滤掉作废单据（status = '2'）和已逻辑删除单据
-                        if (!"2".equals(rec.getStatus()) && !"2".equals(rec.getDelFlag())) 
-                        {
-                            matched = rec;
-                            break;
-                        }
-                    }
+                    if (!item.getPrintName().equals(record.getPrintName()) || "2".equals(record.getStatus()) || "2".equals(record.getDelFlag())) continue;
+                    item.setExistingPrintId(record.getPrintId());
+                    String time = record.getPrintTime() == null ? "时间未知" :
+                        com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
+                    item.setExistingRecordDesc("疑似重复（材料名称匹配）：单据 #" + record.getPrintId() + "，" + time);
+                    item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
+                    break;
                 }
-
-                if (matched != null) 
-                {
-                    item.setAlreadyRegistered(true);
-                    item.setExistingPrintId(matched.getPrintId());
-                    String statusText = "1".equals(matched.getStatus()) ? "已完成" : "待印刷";
-                    String timeStr = matched.getPrintTime() != null ? 
-                        com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", matched.getPrintTime()) : "历史";
-                    item.setExistingRecordDesc("系统已有单据 #" + matched.getPrintId() + " (" + timeStr + ", " + statusText + ")");
-                    registeredCount++;
-                    log.info("印刷任务 [{}] 在已有数据中已登记，单号: #{}", item.getPrintName(), matched.getPrintId());
-                } 
-                else 
-                {
-                    item.setAlreadyRegistered(false);
-                    if (firstUnregisteredIdx == -1) 
-                    {
-                        firstUnregisteredIdx = i;
-                    }
-                }
-            } 
-            catch (Exception ex) 
+            }
+            catch (Exception ex)
             {
+                item.getReviewReasons().add("历史登记查询失败，请核对是否重复登记");
                 log.warn("查询已有印刷记录失败, printName: {}", item.getPrintName(), ex);
             }
-        }
-
-        result.setFirstUnregisteredIndex(firstUnregisteredIdx);
-
-        // 如果存在未登记的任务，且首个未登记的任务不是第 0 个，将首个未登记的任务信息覆写到顶层字段，
-        // 做到“先查已有数据看看是否有已登记的，如果有就跳过，开始处理下一条，如果下一条没登记，那么开始登记流程”
-        if (firstUnregisteredIdx >= 0 && firstUnregisteredIdx < result.getTaskList().size()) 
-        {
-            EduPrintOcrResult.PrintTaskItem activeTask = result.getTaskList().get(firstUnregisteredIdx);
-            applyTaskItemToRootResult(result, activeTask);
-            if (registeredCount > 0) 
-            {
-                result.setMsg("已自动跳过 " + registeredCount + " 条已登记材料，当前准备登记第 " + (firstUnregisteredIdx + 1) + " 条：" + activeTask.getPrintName());
-            }
-        } 
-        else if (registeredCount > 0 && registeredCount == result.getTaskList().size()) 
-        {
-            // 所有任务均已登记过
-            result.setMsg("检测到截图内包含的 " + registeredCount + " 条印刷记录在系统中均已登记，无需重复登记！");
-        }
-    }
-
-    private void applyTaskItemToRootResult(EduPrintOcrResult result, EduPrintOcrResult.PrintTaskItem task) 
-    {
-        if (task == null) return;
-        result.setPrintName(task.getPrintName());
-        if (task.getPrintCount() != null) result.setPrintCount(task.getPrintCount());
-        if (task.getPageCount() != null) result.setPageCount(task.getPageCount());
-        if (task.getPaperType() != null) result.setPaperType(task.getPaperType());
-        if (task.getPaperGoodsId() != null) result.setPaperGoodsId(task.getPaperGoodsId());
-        if (task.getPaperGoodsName() != null) result.setPaperGoodsName(task.getPaperGoodsName());
-        if (task.getTeacherId() != null) result.setTeacherId(task.getTeacherId());
-        if (task.getTeacherName() != null) result.setTeacherName(task.getTeacherName());
-        if (task.getTeacherMatched() != null) result.setTeacherMatched(task.getTeacherMatched());
-        if (task.getGrade() != null) result.setGrade(task.getGrade());
-        if (task.getSubject() != null) result.setSubject(task.getSubject());
-        if (task.getClassId() != null) result.setClassId(task.getClassId());
-        if (task.getClassName() != null) result.setClassName(task.getClassName());
-        if (result.getPrintCount() != null) 
-        {
-            result.setTotalPages(result.getPrintCount() * result.getPageCount());
         }
     }
 

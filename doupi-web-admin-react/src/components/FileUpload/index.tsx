@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Input, message, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import {
   PaperClipOutlined,
@@ -22,6 +22,7 @@ const { Text } = Typography;
 
 export interface FileUploadProps {
   value?: string;
+  contextKey?: string;
   fileName?: string;
   onChange?: (url: string, fileName?: string) => void;
   disabled?: boolean;
@@ -61,6 +62,7 @@ export const detectFileType = (filename: string = '', mimeType: string = '') => 
 
 const FileUpload: React.FC<FileUploadProps> = ({
   value = '',
+  contextKey,
   fileName = '',
   onChange,
   disabled = false,
@@ -70,6 +72,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
   style,
   onUploadSuccess,
 }) => {
+  const mountedRef = useRef(true);
+  const contextRef = useRef(contextKey);
+  contextRef.current = contextKey;
+  useEffect(()=>{ mountedRef.current=true; return ()=>{ mountedRef.current=false; }; },[]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -81,6 +87,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   // 处理上传文件
   const handleUpload = async (file: File) => {
     if (!file) return;
+    const uploadContext = contextKey;
 
     if (file.size > maxSizeMB * 1024 * 1024) {
       message.error(`文件大小不能超过 ${maxSizeMB}MB`);
@@ -94,6 +101,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     try {
       const res: any = await uploadFileSmart(file);
+      if (!mountedRef.current || contextRef.current !== uploadContext) return;
       const url = res.url || res.fileName || '';
       const uploadedName = res.originalFilename || file.name;
       if (!url) {
@@ -332,6 +340,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         /* 未上传状态：支持拖拽、点击选择、Ctrl+V 粘贴文件（紧凑自适应，绝不横向溢出） */
         <div
           ref={containerRef}
+          data-attachment-upload="true"
           tabIndex={0}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
