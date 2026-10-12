@@ -6,4 +6,4 @@ import zhCN from 'antd/locale/zh_CN';
 import PrintRecordPage from '../src/pages/edu/record';
 import { useUserStore } from '../src/store/useUserStore';
 useUserStore.setState({name:'test',nickName:'测试文印员',permissions:['*:*:*'],roles:['admin']});
-createRoot(document.getElementById('root')!).render(<ConfigProvider locale={zhCN}><MemoryRouter><PrintRecordPage /></MemoryRouter></ConfigProvider>);
+createRoot(document.getElementById('root')!).render(<ConfigProvider locale={zhCN} theme={{token:{motion:false}}}><MemoryRouter><PrintRecordPage /></MemoryRouter></ConfigProvider>);

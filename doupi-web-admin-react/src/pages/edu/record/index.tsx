@@ -1,4 +1,5 @@
 import ChatSourcePanel from './ChatSourcePanel';
+import {derivePrintFields} from './printRules';
 import ChatCandidateList from './ChatCandidateList';
 import ChatDebugPanel from './ChatDebugPanel';
 import type { ChatDebugEntry } from './ChatDebugPanel';
@@ -10,6 +11,7 @@ import { PageContainer, ProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
 import {
   Button,
+  Alert,
   Card,
   Checkbox,
   Col,
@@ -190,6 +192,7 @@ const PrintRecordPage: React.FC = () => {
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
   const [previewTaskIndex, setPreviewTaskIndex] = useState(0);
   const taskDraftsRef = useRef(new Map<string, Record<string, unknown>>());
+  const taskRulesRef = useRef(new Map<string,{task:PrintCandidate;manual:Set<string>}>());
   const activeTaskIdRef = useRef<string | undefined>(undefined);
   const pasteChainRef = useRef<Promise<void>>(Promise.resolve());
   const importPendingRef = useRef(0);
@@ -311,7 +314,6 @@ const PrintRecordPage: React.FC = () => {
   // 解析单个已上传文档（PDF/Word/Excel），自动填充页数并按当前纸张规格换算，缓存源纸张规格
   const analyzeAndFillDocument = async (file: File) => {
     const taskId = activeTaskIdRef.current;
-    const before = form.getFieldsValue(true);
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return;
     try {
@@ -329,10 +331,13 @@ const PrintRecordPage: React.FC = () => {
       const sourcePaper = analysis.sourcePaperType || null;
       if (pageCount > 0 && analysis.parseable) {
         if (ocrResult) {
-          const patch: Record<string,unknown> = {};
-          if (!/^xls/.test(ext) && before.pageCount == null && form.getFieldValue('pageCount') == null) patch.pageCount = pageCount;
-          if (!before.paperType && !form.getFieldValue('paperType') && sourcePaper) patch.paperType = sourcePaper;
-          form.setFieldsValue(patch);
+          const state=taskId ? taskRulesRef.current.get(taskId) : undefined;
+          if(state && !/^xls/.test(ext)) {
+            state.task={...state.task,sourcePageCount:pageCount,sourcePaperType:sourcePaper || undefined};
+            const patch=derivePrintFields(state.task,form.getFieldsValue(true),state.manual);
+            form.setFieldsValue({...patch,...(!state.manual.has('paperGoodsId')?{paperGoodsId:findGoodsByPaperType(patch.paperType,paperGoodsList)}:{})});
+            syncSplitDefaults(state.task,patch.pageCount,state.manual);
+          }
           return;
         }
         // 自动推断纸张规格（默认 8K，单页 A4 → 16K）并按面积比换算页数、同步单双面
@@ -384,6 +389,12 @@ const PrintRecordPage: React.FC = () => {
     const matchedId = findGoodsByPaperType(paperType, paperGoodsList);
     if (matchedId) {
       form.setFieldsValue({ paperGoodsId: matchedId });
+    }
+    const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+    if(ocrResult && state) {
+      state.manual.add('paperType');
+      form.setFieldsValue({...derivePrintFields(state.task,{...form.getFieldsValue(true),paperType},state.manual),paperGoodsId:matchedId});
+      return;
     }
     if (sourcePageInfoRef.current && sourcePageInfoRef.current.pageCount > 0) {
       const converted = convertPageCount(sourcePageInfoRef.current.pageCount, sourcePageInfoRef.current.sourcePaperType, paperType);
@@ -506,6 +517,17 @@ const PrintRecordPage: React.FC = () => {
   };
 
   // 草稿状态
+  const syncSplitDefaults = (task:PrintCandidate,pages:number|undefined,manual:Set<string>) => {
+    if(['splitAnswer','answerPageCount','answerPrintCount','answerPrintSide'].some(key=>manual.has(key))) return;
+    const linked=(ocrResult?.messages || []).filter(m=>task.sourceMessageIds?.includes(m.id)).map(m=>m.text).join('\n');
+    const split=detectSplitAnswerInfo(linked,pages || 0);
+    if(split) {
+      form.setFieldsValue(split); setSplitAnswer(true);
+      setAnswerPageCount(split.answerPageCount); setAnswerPrintCount(split.answerPrintCount); setAnswerPrintSide(split.answerPrintSide);
+    } else {
+      form.setFieldsValue({splitAnswer:false}); setSplitAnswer(false);
+    }
+  };
   const [draftNotice, setDraftNotice] = useState<{ visible: boolean; timeText: string } | null>(null);
   const [discardLoading, setDiscardLoading] = useState(false);
   const [currentEditRecord, setCurrentEditRecord] = useState<any>(null);
@@ -527,6 +549,8 @@ const PrintRecordPage: React.FC = () => {
 
   // 切换试卷与答案拆分模式
   const handleSplitAnswerToggle = (checked: boolean) => {
+    const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+    if(state) state.manual.add('splitAnswer');
     setSplitAnswer(checked);
     form.setFieldsValue({ splitAnswer: checked });
 
@@ -559,11 +583,20 @@ const PrintRecordPage: React.FC = () => {
   };
 
   // 监听表单数字变化以联动计算耗纸并保存草稿
-  const handleFormValuesChange = (_: any, allValues: any) => {
+  const handleFormValuesChange = (changed: Record<string,unknown>, allValues: any) => {
+    const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+    if(ocrResult && state) {
+      Object.keys(changed).forEach(key=>state.manual.add(key));
+      const fields=derivePrintFields(state.task,allValues,state.manual);
+      form.setFieldsValue(fields);
+      allValues={...allValues,...fields};
+      syncSplitDefaults(state.task,fields.pageCount,state.manual);
+      allValues=form.getFieldsValue(true);
+    }
     const isSplit = allValues.splitAnswer !== undefined ? allValues.splitAnswer : splitAnswer;
     const sheets = computePreviewSheets(allValues, isSplit);
     setPreviewTotalSheets(sheets);
-    if (!ocrResult) triggerSaveRecordDraft(allValues);
+    triggerSaveRecordDraft(allValues);
   };
 
   // 选择教师时自动联动其任教年级
@@ -930,25 +963,38 @@ const PrintRecordPage: React.FC = () => {
     if (!task || saveLockRef.current || task.alreadyRegistered) return;
     if (activeTaskIdRef.current && modalOpen) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
     activeTaskIdRef.current = task.taskId;
+    let ruleState=task.taskId ? taskRulesRef.current.get(task.taskId) : undefined;
+    if(!ruleState) {
+      ruleState={task:{...task},manual:new Set<string>()};
+      if(task.taskId) taskRulesRef.current.set(task.taskId,ruleState);
+    }
+    const computed=derivePrintFields(ruleState.task);
     setCurrentTaskIndex(index);
     sourcePageInfoRef.current = null;
     setSplitAnswer(false);
     setIsEdit(false); setEditId(null);
     setSelectedGrade(task.grade || '');
     setModalTitle(`新增印刷登记（第 ${index + 1}/${totalTasks} 条）`);
-    const values = task.taskId && taskDraftsRef.current.get(task.taskId) || {
+    const values:Record<string,unknown> = task.taskId && taskDraftsRef.current.get(task.taskId) || {
       printName: task.printName, teacherId: task.teacherId, teacherName: task.teacherName,
       grade: task.grade, classId: task.classId, className: task.className,
-      printCount: task.printCount ?? undefined, pageCount: task.pageCount ?? undefined,
-      printSide: task.printSide || undefined, paperType: task.paperType,
-      paperGoodsId: task.paperGoodsId, remark: task.remark, attachment: task.attachment,
+      printCount: task.printCount ?? undefined, ...computed,
+      paperGoodsId: task.paperGoodsId || findGoodsByPaperType(computed.paperType,paperGoodsList), remark: task.remark, attachment: task.attachment,
       resultImg: task.resultImg, splitAnswer: false,
       operator: currentNickName || currentUserName,
       printTime: dayKey(task.timeSnippet) ? parseChatTime(task.timeSnippet, task.timeSnippet) : undefined,
       status: '0',
     };
+    if(!task.taskId || !taskDraftsRef.current.has(task.taskId)) {
+      const linkedText=(ocrResult?.messages || []).filter(m=>task.sourceMessageIds?.includes(m.id)).map(m=>m.text).join('\n');
+      const splitInfo=detectSplitAnswerInfo(linkedText,Number(values.pageCount) || 0);
+      if(splitInfo) Object.assign(values,splitInfo);
+    }
     form.resetFields(); form.setFieldsValue(values);
     setSplitAnswer(Boolean(values.splitAnswer));
+    if(values.splitAnswer) {
+      setAnswerPageCount(Number(values.answerPageCount)); setAnswerPrintCount(Number(values.answerPrintCount)); setAnswerPrintSide(String(values.answerPrintSide));
+    }
     setDraftNotice(null);
     setPreviewTotalSheets(computePreviewSheets(values, Boolean(values.splitAnswer)));
     setTextModalOpen(false); setModalOpen(true);
@@ -2064,7 +2110,7 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        {ocrResult && <ChatCandidateList compact tasks={ocrResult.taskList} selected={currentTaskIndex} disabled={savingRecord}
+        {ocrResult && <ChatCandidateList compact tasks={ocrResult.taskList.map((task,i)=>i===currentTaskIndex?{...task,pageCount:watchedPageCount,printSide:watchedPrintSide}:task)} selected={currentTaskIndex} disabled={savingRecord}
           onSelect={i=>applyTaskToForm(ocrResult.taskList[i],i,ocrResult.taskList.length)} />}
         <div data-testid="chat-register" onPasteCapture={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           {/* 右栏：登记表单（核心紧凑排布：零滚动、多字段横向矩阵组合、内嵌耗纸胶囊预算） */}
@@ -2105,6 +2151,20 @@ const PrintRecordPage: React.FC = () => {
               )}
 
             <Form disabled={savingRecord} form={form} layout="vertical" onValuesChange={handleFormValuesChange}>
+              {currentQueueTask?.existingRecordDesc && <Alert type="warning" title={currentQueueTask.existingRecordDesc} style={{marginBottom:8}} />}
+              {currentQueueTask?.attachmentStatus==='ambiguous' && <Form.Item label="选择当前材料对应的附件">
+                <Select placeholder="同名附件需要手动关联" options={sessionAttachments.filter(f=>f.url).map((f,i)=>({value:i,label:`${f.name} (${i+1})`}))}
+                  onChange={i=>{
+                    const file=sessionAttachments.filter(f=>f.url)[i];
+                    const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+                    if(!state) return;
+                    state.task={...state.task,sourcePageCount:file.pageCount,sourcePaperType:file.sourcePaperType};
+                    const fields=derivePrintFields(state.task,form.getFieldsValue(true),state.manual);
+                    form.setFieldsValue({...fields,attachment:file.url,...(!state.manual.has('paperGoodsId')?{paperGoodsId:findGoodsByPaperType(fields.paperType,paperGoodsList)}:{})});
+                    syncSplitDefaults(state.task,fields.pageCount,state.manual);
+                    triggerSaveRecordDraft(form.getFieldsValue(true));
+                  }} />
+              </Form.Item>}
               {currentQueueTask?.reviewReasons?.some(r=>/指代|确认|推测|取消|替代/.test(r)) &&
                 <Form.Item name="reviewConfirmed" valuePropName="checked" rules={[{validator:(_,value)=>value?Promise.resolve():Promise.reject(new Error('请对照当天聊天确认有歧义的内容'))}]}>
                   <Checkbox>已对照当天聊天，确认当前任务的指代及打印要求</Checkbox>
@@ -2500,8 +2560,7 @@ const PrintRecordPage: React.FC = () => {
               )}
             </Form>
           </div>
-          {ocrResult && currentQueueTask && <ChatSourcePanel key={currentQueueTask.taskId} result={ocrResult} task={currentQueueTask} files={sessionAttachments}
-            onAttachment={file=>form.setFieldsValue({attachment:file.url})} />}
+          {ocrResult && currentQueueTask && <ChatSourcePanel key={currentQueueTask.taskId} result={ocrResult} task={currentQueueTask} />}
         </div>
       </Modal>
 

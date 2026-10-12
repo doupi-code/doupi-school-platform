@@ -1,5 +1,6 @@
 import { Tag } from 'antd';
 import type { PrintCandidate } from './chatPrefill';
+import {derivePrintFields} from './printRules';
 
 export default function ChatCandidateList({tasks, selected, onSelect, disabled=false, compact=false}: {
   tasks: PrintCandidate[]; selected:number; onSelect:(index:number)=>void; disabled?:boolean; compact?:boolean;
@@ -12,7 +13,10 @@ export default function ChatCandidateList({tasks, selected, onSelect, disabled=f
         <Tag>{task.attachment ? '已有附件' : task.attachmentStatus==='failed'?'附件上传失败':'附件未取得'}</Tag>
         {task.alreadyRegistered && <Tag color="green">本次已保存</Tag>}
         {task.existingPrintId && <Tag color="orange">疑似已登记 #{task.existingPrintId}</Tag>}
-        {task.reviewReasons?.length ? <span style={{color:'#ad6800'}}>{task.reviewReasons.join('；')}</span> : null}
+        {task.reviewReasons?.length ? <span style={{color:'#ad6800'}}>{task.reviewReasons.filter(reason=>{
+          const fields=derivePrintFields(task);
+          return !(reason==='单双面未知' && fields.printSide) && !(reason==='页数未知' && fields.pageCount) && !/^纸张.*未知$/.test(reason);
+        }).join('；')}</span> : null}
       </div>
     </button>)}
   </div>;

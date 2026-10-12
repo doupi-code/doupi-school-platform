@@ -6,6 +6,7 @@ export interface PrintCandidate {
   timeSnippet?: string; time?: string; teacherId?: number | string; teacherName?: string;
   teacherMatched?: boolean; grade?: string; subject?: string; classId?: number | string; className?: string;
   printCount?: number | null; pageCount?: number | null; printSide?: string | null;
+  sourcePageCount?: number; sourcePaperType?: string;
   paperType?: string; paperGoodsId?: number | string; paperGoodsName?: string;
   remark?: string; attachment?: string; resultImg?: string; attachmentStatus?: string;
   alreadyRegistered?: boolean; existingPrintId?: number; existingRecordDesc?: string;
@@ -91,7 +92,7 @@ export function attachFiles(tasks: PrintCandidate[], files: UploadedAttachment[]
     }
     const f = matches[0];
     return { ...task, attachment: task.attachment || f.url, attachmentStatus: f.status,
-      pageCount: task.pageCount ?? f.pageCount, paperType: task.paperType || f.sourcePaperType };
+      sourcePageCount:f.pageCount, sourcePaperType:f.sourcePaperType };
   });
 }
 export function dayKey(time?: string) {
