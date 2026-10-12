@@ -1,12 +1,12 @@
 import { Tag } from 'antd';
 import type { PrintCandidate } from './chatPrefill';
 
-export default function ChatCandidateList({tasks, selected, onSelect, disabled=false}: {
-  tasks: PrintCandidate[]; selected:number; onSelect:(index:number)=>void; disabled?:boolean;
+export default function ChatCandidateList({tasks, selected, onSelect, disabled=false, compact=false}: {
+  tasks: PrintCandidate[]; selected:number; onSelect:(index:number)=>void; disabled?:boolean; compact?:boolean;
 }) {
-  return <div style={{maxHeight:250,overflowY:'auto',display:'grid',gap:8,marginBottom:12}}>
+  return <div style={{maxHeight:compact?96:250,overflowY:compact?'hidden':'auto',overflowX:compact?'auto':undefined,display:compact?'flex':'grid',gap:8,marginBottom:12}}>
     {tasks.map((task,i)=><button type="button" disabled={disabled || task.alreadyRegistered} key={task.taskId || i} onClick={()=>onSelect(i)}
-      style={{textAlign:'left',padding:10,border:`1px solid ${i===selected?'#1677ff':'#ddd'}`,borderRadius:6,background:i===selected?'#e6f4ff':'white',cursor:'pointer'}}>
+      style={{textAlign:'left',padding:8,flex:compact?'0 0 300px':undefined,overflow:compact?'auto':undefined,border:`1px solid ${i===selected?'#1677ff':'#ddd'}`,borderRadius:6,background:i===selected?'#e6f4ff':'white',cursor:'pointer'}}>
       <strong>#{i+1} {task.printName || '材料名称待填写'}</strong> <span>{task.timeSnippet || '时间未知'}</span>
       <div><Tag>{task.printCount == null?'份数未知':`${task.printCount}份`}</Tag>
         <Tag>{task.attachment ? '已有附件' : task.attachmentStatus==='failed'?'附件上传失败':'附件未取得'}</Tag>

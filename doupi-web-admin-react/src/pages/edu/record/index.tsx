@@ -1,6 +1,8 @@
 import ChatSourcePanel from './ChatSourcePanel';
 import ChatCandidateList from './ChatCandidateList';
-import { readChatClipboard, isDocument, fileCandidates, attachFiles, namespaceResult, mergeSessions, dayKey } from './chatPrefill';
+import ChatDebugPanel from './ChatDebugPanel';
+import type { ChatDebugEntry } from './ChatDebugPanel';
+import { readChatClipboard, recoverChatClipboard, attachmentNameMatches, isDocument, fileCandidates, attachFiles, namespaceResult, mergeSessions, dayKey } from './chatPrefill';
 import type { PrefillResult, PrintCandidate, UploadedAttachment } from './chatPrefill';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -171,6 +173,17 @@ const PrintRecordPage: React.FC = () => {
   const [textModalOpen, setTextModalOpen] = useState(false);
   const [rawText, setRawText] = useState('');
   const [parsingText, setParsingText] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugEntries, setDebugEntries] = useState<ChatDebugEntry[]>([]);
+  const [debugSelected, setDebugSelected] = useState('');
+  const updateDebug = (id:string, patch:Partial<ChatDebugEntry>) => setDebugEntries(entries=>entries.map(e=>e.id===id?{...e,...patch}:e));
+  const startDebug = (source:string, snapshot:ReturnType<typeof readChatClipboard>) => {
+    const id=crypto.randomUUID();
+    setDebugEntries(entries=>[...entries,{id,time:new Date().toLocaleTimeString(),source,status:'读取中',
+      types:snapshot.types,items:snapshot.items,plain:snapshot.plain,html:snapshot.html,eventText:snapshot.text,
+      files:snapshot.files.map(f=>({name:f.name,type:f.type,size:f.size}))}].slice(-10));
+    setDebugSelected(id); return id;
+  };
 
   // 微信智能识别解析与跨天多任务队列
   const [ocrResult, setOcrResult] = useState<PrefillResult | null>(null);
@@ -1448,24 +1461,27 @@ const PrintRecordPage: React.FC = () => {
     return uploaded;
   };
 
-  const importChat = async (text: string, files: File[]) => {
+  const importChat = async (text: string, files: File[], debugId?:string) => {
     setParsingText(true);
+    if(debugId) updateDebug(debugId,{submittedText:text,status:text.trim()?'正在请求后端解析':'未读到文字，未请求文字解析，仅保留文件'});
     try {
       let result: PrefillResult = {taskList:[], messages:[], rawText:text};
       if (text.trim()) {
         const response = await textParse({text});
         result = response.data as unknown as PrefillResult;
+        if(debugId) updateDebug(debugId,{result:JSON.parse(JSON.stringify(result)) as PrefillResult,status:'后端解析已返回'});
       }
       const docs = files.filter(isDocument);
       if (!text.trim()) result.taskList = fileCandidates(docs, crypto.randomUUID());
       else {
         // Actual documents not mentioned in the text must also remain reviewable.
-        result.taskList.push(...fileCandidates(docs.filter(f=>!result.taskList.some(t=>t.originalDocName===f.name)), crypto.randomUUID()));
+        result.taskList.push(...fileCandidates(docs.filter(f=>!result.taskList.some(t=>attachmentNameMatches(f.name,t.originalDocName))), crypto.randomUUID()));
       }
       const uploads = await uploadPastedDocs(docs);
       result.taskList = attachFiles(result.taskList, uploads);
       handleParsedResult(result);
     } catch (error) {
+      if(debugId) updateDebug(debugId,{status:'解析失败',error:error instanceof Error?error.message:'请求失败'});
       message.error(error instanceof Error ? error.message : '解析失败，原文已保留，请重试');
       if (files.some(isDocument)) handleParsedResult({taskList:fileCandidates(files,crypto.randomUUID()),rawText:text,messages:[]});
     } finally { setParsingText(false); }
@@ -1481,19 +1497,27 @@ const PrintRecordPage: React.FC = () => {
   };
   const parseAndHandleText = async (text: string) => {
     if (!text.trim()) { message.warning('请先粘贴聊天文字'); return; }
-    await enqueueImport(()=>importChat(text, []));
+    const id=startDebug('手动解析文字',{text,plain:text,html:'',files:[],types:[],items:[]});
+    await enqueueImport(()=>importChat(text, [],id));
   };
   const handleParseText = () => parseAndHandleText(rawText);
   const handleModalPaste = (e: React.ClipboardEvent) => {
     const snapshot = readChatClipboard(e.clipboardData);
+    const debugId=startDebug('Ctrl+V 粘贴',snapshot);
     if (!snapshot.text.trim() && !snapshot.files.some(isDocument)) {
       const image = snapshot.files.find(f=>f.type.startsWith('image/'));
       if (image) { e.preventDefault(); e.stopPropagation(); enqueueImport(()=>parseScreenshotFile(image)); }
+      updateDebug(debugId,{status:image?'已转交截图识别（非文字解析）':'事件中没有可解析的文字或文件'});
       return;
     }
     e.preventDefault(); e.stopPropagation();
-    setRawText(snapshot.text);
-    enqueueImport(()=>importChat(snapshot.text,snapshot.files));
+    const recovered = recoverChatClipboard(snapshot, navigator.clipboard);
+    enqueueImport(async()=>{
+      const content = await recovered;
+      updateDebug(debugId,{recoveryNotes:content.recoveryNotes});
+      setRawText(content.text);
+      await importChat(content.text,content.files,debugId);
+    });
   };
 
   // 登记弹窗全局快捷粘贴：根据文件后缀自动分流并处理
@@ -2023,14 +2047,15 @@ const PrintRecordPage: React.FC = () => {
 
       {/* 新增 / 修改登记弹窗（微信智能预填与文印登记标杆弹窗） */}
       <Modal
-        title={modalTitle}
+        title={<Space>{modalTitle}<Button size="small" onClick={()=>setDebugOpen(true)}>查看解析调试</Button></Space>}
         open={modalOpen && !textModalOpen}
         onOk={handleSaveRecord}
         confirmLoading={savingRecord}
         onCancel={() => { if (saveLockRef.current) return; if (activeTaskIdRef.current) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true)); setModalOpen(false); }}
         width={ocrResult ? 1280 : 880}
+        style={{ top: 12, paddingBottom: 0 }}
         destroyOnHidden={false}
-        styles={{ body: { padding: '14px 18px', maxHeight: 'calc(88vh - 80px)', overflowY: 'auto' } }}
+        styles={{ body: { padding: '8px 0', maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
       >
         <DraftNoticeAlert
           visible={!!draftNotice?.visible}
@@ -2039,7 +2064,7 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        {ocrResult && <ChatCandidateList tasks={ocrResult.taskList} selected={currentTaskIndex} disabled={savingRecord}
+        {ocrResult && <ChatCandidateList compact tasks={ocrResult.taskList} selected={currentTaskIndex} disabled={savingRecord}
           onSelect={i=>applyTaskToForm(ocrResult.taskList[i],i,ocrResult.taskList.length)} />}
         <div data-testid="chat-register" onPasteCapture={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           {/* 右栏：登记表单（核心紧凑排布：零滚动、多字段横向矩阵组合、内嵌耗纸胶囊预算） */}
@@ -2480,10 +2505,11 @@ const PrintRecordPage: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal title="微信聊天记录智能预填" open={textModalOpen} width={900} onCancel={()=>setTextModalOpen(false)} footer={null}>
+      <Modal title="微信聊天记录智能预填" open={textModalOpen} width={900} style={{top:12,paddingBottom:0}} styles={{body:{maxHeight:'calc(100dvh - 110px)',overflowY:'auto'}}} onCancel={()=>setTextModalOpen(false)} footer={null}>
         <div data-testid="chat-import" onPasteCapture={handleModalPaste}>
           <TextArea rows={5} value={rawText} onChange={e=>setRawText(e.target.value)} placeholder="粘贴多天聊天记录；也可粘贴文件，未知信息稍后手动填写" />
           <Button loading={parsingText} onClick={handleParseText} style={{margin:'10px 0'}}>解析文字并加入候选</Button>
+          <Button onClick={()=>setDebugOpen(true)} style={{marginLeft:8}}>查看解析调试</Button>
           <label style={{marginLeft:12}}>识别聊天截图 <input aria-label="识别聊天截图" type="file" accept="image/*" disabled={parsingText} onChange={e=>{
             const file=e.target.files?.[0]; if(file) enqueueImport(()=>parseScreenshotFile(file)); e.target.value='';
           }} /></label>
@@ -2498,6 +2524,8 @@ const PrintRecordPage: React.FC = () => {
       </Modal>
 
       {/* 标记完成与成品留样弹窗 */}
+      <ChatDebugPanel open={debugOpen} entries={debugEntries} selected={debugSelected} onSelect={setDebugSelected}
+        onClose={()=>setDebugOpen(false)} onClear={()=>{setDebugEntries([]);setDebugSelected('');}} />
       <Modal
         title="标记印刷完成 & 上传成品留样"
         open={completeModalOpen}

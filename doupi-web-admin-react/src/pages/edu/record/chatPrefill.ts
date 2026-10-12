@@ -39,9 +39,37 @@ export function readChatClipboard(cd: DataTransfer) {
   const timestamps = (text: string) => (text.match(/\d{1,2}:\d{2}/g) || []).length;
   // Some clipboard providers offer filenames as plain text and the actual conversation as HTML.
   const text = !plain.trim() || timestamps(rich) > timestamps(plain) ? rich || plain : plain;
-  return { text, files };
+  return { text, files, plain, html, types: Array.from(cd.types || []),
+    items: Array.from(cd.items || []).map(item=>({kind:item.kind,type:item.type})) };
 }
 export const isDocument = (f: File) => /\.(docx?|docm|pdf|wps|xlsx?|xlsm|pptx?|pptm|txt|zip|rar|7z)$/i.test(f.name);
+// Invoke during the paste gesture, before queued uploads consume user activation.
+// Windows may expose CF_HDROP files in the paste event but text only via Clipboard API.
+export async function recoverChatClipboard(snapshot: {text:string; files:File[]}, clipboard?: {
+  readText?: () => Promise<string>;
+  read?: () => Promise<readonly ClipboardItem[]>;
+}) {
+  const recoveryNotes:string[]=[];
+  if (snapshot.text.trim() || !snapshot.files.some(isDocument) || !clipboard) return {...snapshot,recoveryNotes:[snapshot.text.trim()?'事件已包含文字，无需补读':!clipboard?'浏览器未提供 Clipboard API':'无文档文件，不补读剪贴板']};
+  try {
+    const text = await clipboard.readText?.();
+    recoveryNotes.push(`Clipboard.readText: ${text?.length ?? 0} 字符`);
+    if (text?.trim()) return {...snapshot, text,recoveryNotes};
+  } catch (error) { recoveryNotes.push(`Clipboard.readText 失败: ${error instanceof Error?error.message:String(error)}`); }
+  try {
+    for (const item of await clipboard.read?.() || []) {
+      for (const type of ['text/plain', 'text/html']) {
+        if (!item.types.includes(type)) continue;
+        const blob = await item.getType(type);
+        const value = await blob.text();
+        const text = type === 'text/html' ? htmlToChatText(value) : value;
+        recoveryNotes.push(`Clipboard.read ${type}: ${text.length} 字符`);
+        if (text.trim()) return {...snapshot, text,recoveryNotes};
+      }
+    }
+  } catch (error) { recoveryNotes.push(`Clipboard.read 失败: ${error instanceof Error?error.message:String(error)}`); }
+  return {...snapshot,recoveryNotes};
+}
 export function fileCandidates(files: File[], batch: string): PrintCandidate[] {
   return files.filter(isDocument).map((f, i) => ({
     taskId: `${batch}:file:${i}`, originalDocName: f.name, printName: f.name.replace(/\.[^.]+$/, ''),
@@ -50,9 +78,13 @@ export function fileCandidates(files: File[], batch: string): PrintCandidate[] {
   }));
 }
 const filenameKey = (s?: string) => (s || '').trim().normalize('NFC');
+export function attachmentNameMatches(uploaded: string, original?: string) {
+  const key = (s?: string) => filenameKey(s).replace(/\s*(\.[^.]+)$/, '$1');
+  return key(uploaded) === key(original) || key(uploaded).replace(/\s*\(\d+\)(\.[^.]+)$/, '$1') === key(original);
+}
 export function attachFiles(tasks: PrintCandidate[], files: UploadedAttachment[]): PrintCandidate[] {
   return tasks.map(task => {
-    const matches = files.filter(f => filenameKey(f.name) === filenameKey(task.originalDocName));
+    const matches = files.filter(f => attachmentNameMatches(f.name, task.originalDocName));
     if (!matches.length) return task;
     if (matches.length !== 1 || tasks.filter(t => filenameKey(t.originalDocName) === filenameKey(task.originalDocName)).length !== 1) {
       return { ...task, attachmentStatus: 'ambiguous', reviewReasons: [...(task.reviewReasons || []), '同名附件无法唯一关联，请手动选择'] };

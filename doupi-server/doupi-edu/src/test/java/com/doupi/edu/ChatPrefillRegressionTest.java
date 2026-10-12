@@ -8,6 +8,14 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ChatPrefillRegressionTest {
+    @Test void septemberRepeatedFileMessagesKeepSeparateCounts() throws Exception {
+        var r=parse("洛卡\n2026年09月24日 15:01\n[文件] 9.26 8班辅导阅读理解（历史文化类）.docx\n\n洛卡\n2026年09月24日 15:01\n龙老师 帮我印13份哈\n\n洛卡\n2026年09月24日 15:03\n[文件] B2U2 重点句型操练（T）.docx\n\n洛卡\n2026年09月24日 15:04\n这个印25份\n\n洛卡\n2026年09月24日 15:04\n[文件] B2U2 重点句型操练（T）.docx\n\n洛卡\n2026年09月24日 15:04\n这个印1份");
+        assertEquals(3,r.getTaskList().size());
+        assertEquals(13L,r.getTaskList().get(0).getPrintCount());
+        assertEquals(25L,r.getTaskList().get(1).getPrintCount());
+        assertEquals(1L,r.getTaskList().get(2).getPrintCount());
+        assertEquals(6,r.getMessages().size());
+    }
     private EduPrintOcrResult parse(String text) throws Exception {
         Method factory = OcrParseTest.class.getDeclaredMethod("getMockedService");
         factory.setAccessible(true);

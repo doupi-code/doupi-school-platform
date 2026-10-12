@@ -1,11 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { recoverChatClipboard, attachmentNameMatches } from '../src/pages/edu/record/chatPrefill.ts';
 import { readChatClipboard, fileCandidates, attachFiles, messagesForDay, mergeSessions } from '../src/pages/edu/record/chatPrefill.ts';
 
 test('mixed clipboard keeps text and files', () => {
   const file = new File(['a'], '练习.docx');
   const result = readChatClipboard({ files: [file], items: [], getData: (type: string) => type === 'text/plain' ? '洛卡\n打33份' : '' } as unknown as DataTransfer);
   assert.equal(result.text, '洛卡\n打33份'); assert.equal(result.files.length, 1);
+});
+test('Windows file paste recovers text through Clipboard API when event omits it', async () => {
+  const file = new File(['a'], '练习.docx');
+  const result = await recoverChatClipboard({text:'', files:[file]}, {readText:async ()=>'洛卡\n2026年09月24日 15:01\n帮我印13份'});
+  assert.match(result.text, /印13份/); assert.equal(result.files[0], file);
+});
+test('clipboard denial preserves files and event text never reads unrelated clipboard', async () => {
+  const file = new File(['a'], '练习.docx');
+  const denied = await recoverChatClipboard({text:'',files:[file]}, {readText:async()=>{throw new Error('denied');}});
+  assert.equal(denied.files.length,1); assert.equal(denied.text,'');
+  const existing = await recoverChatClipboard({text:'聊天原文',files:[file]}, {readText:async()=>{throw new Error('must not read');}});
+  assert.equal(existing.text,'聊天原文');
 });
 test('file-only candidates keep missing fields empty even when upload fails', () => {
   const tasks = fileCandidates([new File(['a'], '练习.docx')], 'paste1');
@@ -16,6 +29,13 @@ test('ambiguous same-name attachments cannot overwrite tasks', () => {
   const tasks = [{taskId:'a', originalDocName:'同名.pdf'}, {taskId:'b', originalDocName:'同名.pdf'}];
   const result = attachFiles(tasks, [{name:'同名.pdf', url:'/a', status:'available'}]);
   assert.equal(result[0].attachment, undefined); assert.equal(result[1].attachmentStatus, 'ambiguous');
+});
+test('Windows duplicate suffix stays associated with the original chat material', () => {
+  assert.ok(attachmentNameMatches('B2U2 重点句型操练（T） (1).docx', 'B2U2 重点句型操练（T）.docx'));
+  const tasks = [{taskId:'a',originalDocName:'B2U2.docx'}, {taskId:'b',originalDocName:'B2U2.docx'}];
+  const result = attachFiles(tasks,[{name:'B2U2.docx',url:'/a',status:'available'},{name:'B2U2 (1).docx',url:'/b',status:'available'}]);
+  assert.equal(result.length,2); assert.equal(result[0].attachmentStatus,'ambiguous');
+  assert.equal(result[1].attachment,undefined);
 });
 test('day panel includes unrelated messages on the same day', () => {
   const messages = [{id:'1',time:'2026年07月20日 7:49',text:'[文件] a.pdf'}, {id:'2',time:'2026年07月20日 8:00',text:'好的'}, {id:'3',time:'2026年07月21日 7:49',text:'下一天'}];
