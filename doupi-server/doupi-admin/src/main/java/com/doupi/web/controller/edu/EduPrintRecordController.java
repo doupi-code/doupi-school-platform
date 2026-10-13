@@ -20,6 +20,7 @@ import com.doupi.common.core.domain.AjaxResult;
 import com.doupi.common.enums.BusinessType;
 import com.doupi.edu.domain.EduPrintRecord;
 import com.doupi.edu.domain.dto.EduPrintOcrResult;
+import com.doupi.edu.domain.dto.WechatStructuredParseRequest;
 import com.doupi.edu.service.IEduOcrService;
 import com.doupi.edu.service.IEduPrintRecordService;
 import com.doupi.common.utils.poi.ExcelUtil;
@@ -95,6 +96,17 @@ public class EduPrintRecordController extends BaseController
     public AjaxResult add(@RequestBody EduPrintRecord eduPrintRecord)
     {
         return toAjax(eduPrintRecordService.insertEduPrintRecord(eduPrintRecord));
+    }
+
+    /**
+     * 批量新增印刷登记（用于试卷与答案拆分等需要在同一事务内原子保存并扣减库存的场景）
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:add')")
+    @Log(title = "批量印刷登记", businessType = BusinessType.INSERT)
+    @PostMapping("/batch")
+    public AjaxResult addBatch(@RequestBody List<EduPrintRecord> eduPrintRecords)
+    {
+        return toAjax(eduPrintRecordService.insertEduPrintRecordBatch(eduPrintRecords));
     }
 
     /**
@@ -187,6 +199,28 @@ public class EduPrintRecordController extends BaseController
         result.setSuccess(true);
         result.setMsg("文本信息智能提取完成！");
         return success(result);
+    }
+
+    /**
+     * 微信导出目录结构化聊天记录解析预填（各会话独立解析，保留会话ID、消息ID与附件引用）
+     */
+    @PreAuthorize("@ss.hasPermi('edu:record:add')")
+    @PostMapping("/structured-parse")
+    public AjaxResult structuredParse(@RequestBody WechatStructuredParseRequest request)
+    {
+        EduPrintOcrResult result = eduOcrService.parseStructuredMessages(request);
+        return success(result);
+    }
+
+    /**
+     * 查询微信导出会话ID的已登记状态（用于导出清单列表展示“是否登记”）
+     */
+    @PreAuthorize("@ss.hasAnyPermi('edu:record:list,edu:record:add')")
+    @PostMapping("/wechat-export/status")
+    public AjaxResult wechatExportStatus(@RequestBody java.util.Map<String, List<String>> body)
+    {
+        List<String> conversationIds = body != null ? body.get("conversationIds") : java.util.Collections.emptyList();
+        return success(eduPrintRecordService.selectRegisteredConversationCounts(conversationIds));
     }
 
     /**

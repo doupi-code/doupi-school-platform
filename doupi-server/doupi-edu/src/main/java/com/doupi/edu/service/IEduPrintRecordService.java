@@ -44,6 +44,22 @@ public interface IEduPrintRecordService
     public int insertEduPrintRecord(EduPrintRecord eduPrintRecord);
 
     /**
+     * 批量新增印刷登记（同一事务，用于试卷与答案拆分登记等原子保存场景）
+     * 
+     * @param eduPrintRecords 印刷登记列表
+     * @return 结果
+     */
+    public int insertEduPrintRecordBatch(List<EduPrintRecord> eduPrintRecords);
+
+    /**
+     * 统计微信导出会话已登记的有效记录数
+     *
+     * @param conversationIds 会话ID列表（为空时统计全部有来源会话ID的记录）
+     * @return 会话ID -> 已登记有效记录数
+     */
+    public java.util.Map<String, Integer> selectRegisteredConversationCounts(List<String> conversationIds);
+
+    /**
      * 修改印刷登记
      * 
      * @param eduPrintRecord 印刷登记

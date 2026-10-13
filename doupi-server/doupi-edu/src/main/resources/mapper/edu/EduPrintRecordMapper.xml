@@ -12,6 +12,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="printCount"    column="print_count"    />
         <result property="pageCount"    column="page_count"    />
         <result property="printSide"    column="print_side"    />
+        <result property="templatePaperCount"    column="template_paper_count"    />
+        <result property="previewPaperCount"    column="preview_paper_count"    />
         <result property="totalPages"    column="total_pages"    />
         <result property="teacherId"    column="teacher_id"    />
         <result property="grade"        column="grade"         />
@@ -36,15 +38,31 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="errorRemark"    column="error_remark"    />
         <result property="errorOutId"    column="error_out_id"    />
         <result property="errorOutNo"    column="error_out_no"    />
+        <result property="sourceConversationId"    column="source_conversation_id"    />
+        <result property="sourceMessageId"    column="source_message_id"    />
     </resultMap>
 
+    <!-- Updating even an existing row acquires an exclusive lock through transaction completion. -->
+    <insert id="lockSourceRegistration" parameterType="String">
+        INSERT INTO edu_print_source_lock (source_conversation_id) VALUES (#{sourceConversationId})
+        ON DUPLICATE KEY UPDATE source_conversation_id = source_conversation_id
+    </insert>
+
+    <select id="selectSourceRecordsForUpdate" parameterType="String" resultMap="EduPrintRecordResult" useCache="false" flushCache="true">
+        SELECT print_id, source_conversation_id, source_message_id, status, del_flag
+        FROM edu_print_record
+        WHERE source_conversation_id = #{sourceConversationId} AND del_flag = '0' AND status != '2'
+        FOR UPDATE
+    </select>
+
     <sql id="selectEduPrintRecordVo">
-        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.total_pages, r.teacher_id, r.grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
+        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.template_paper_count, r.preview_paper_count, r.total_pages, r.teacher_id, r.grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
                coalesce(u.nick_name, t.teacher_name) as teacher_name,
                g.goods_name as paper_goods_name,
                o.out_no as out_no,
                r.error_count, r.error_remark, r.error_out_id,
-               eo.out_no as error_out_no
+               eo.out_no as error_out_no,
+               r.source_conversation_id, r.source_message_id
         from edu_print_record r
         left join sys_user u on r.teacher_id = u.user_id
         left join edu_teacher t on r.teacher_id = t.teacher_id
@@ -77,6 +95,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="outId != null"> and r.out_id = #{outId}</if>
             <if test="outNo != null and outNo != ''"> and o.out_no like concat('%', #{outNo}, '%')</if>
             <if test="printId != null"> and r.print_id = #{printId}</if>
+            <if test="sourceConversationId != null and sourceConversationId != ''"> and r.source_conversation_id = #{sourceConversationId}</if>
+            <if test="sourceMessageId != null and sourceMessageId != ''"> and r.source_message_id = #{sourceMessageId}</if>
         </where>
         order by r.print_id desc
     </select>
@@ -101,6 +121,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">print_count,</if>
             <if test="pageCount != null">page_count,</if>
             <if test="printSide != null and printSide != ''">print_side,</if>
+            <if test="templatePaperCount != null">template_paper_count,</if>
+            <if test="previewPaperCount != null">preview_paper_count,</if>
             <if test="totalPages != null">total_pages,</if>
             <if test="teacherId != null">teacher_id,</if>
             <if test="grade != null and grade != ''">grade,</if>
@@ -121,6 +143,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="errorCount != null">error_count,</if>
             <if test="errorRemark != null and errorRemark != ''">error_remark,</if>
             <if test="errorOutId != null">error_out_id,</if>
+            <if test="sourceConversationId != null and sourceConversationId != ''">source_conversation_id,</if>
+            <if test="sourceMessageId != null and sourceMessageId != ''">source_message_id,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="printName != null and printName != ''">#{printName},</if>
@@ -129,6 +153,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">#{printCount},</if>
             <if test="pageCount != null">#{pageCount},</if>
             <if test="printSide != null and printSide != ''">#{printSide},</if>
+            <if test="templatePaperCount != null">#{templatePaperCount},</if>
+            <if test="previewPaperCount != null">#{previewPaperCount},</if>
             <if test="totalPages != null">#{totalPages},</if>
             <if test="teacherId != null">#{teacherId},</if>
             <if test="grade != null and grade != ''">#{grade},</if>
@@ -149,6 +175,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="errorCount != null">#{errorCount},</if>
             <if test="errorRemark != null and errorRemark != ''">#{errorRemark},</if>
             <if test="errorOutId != null">#{errorOutId},</if>
+            <if test="sourceConversationId != null and sourceConversationId != ''">#{sourceConversationId},</if>
+            <if test="sourceMessageId != null and sourceMessageId != ''">#{sourceMessageId},</if>
          </trim>
     </insert>
 
@@ -161,6 +189,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">print_count = #{printCount},</if>
             <if test="pageCount != null">page_count = #{pageCount},</if>
             <if test="printSide != null and printSide != ''">print_side = #{printSide},</if>
+            <if test="templatePaperCount != null">template_paper_count = #{templatePaperCount},</if>
+            <if test="previewPaperCount != null">preview_paper_count = #{previewPaperCount},</if>
             <if test="totalPages != null">total_pages = #{totalPages},</if>
             <if test="teacherId != null">teacher_id = #{teacherId},</if>
             <if test="grade != null">grade = #{grade},</if>
@@ -181,6 +211,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="errorCount != null">error_count = #{errorCount},</if>
             <if test="errorRemark != null">error_remark = #{errorRemark},</if>
             <if test="errorOutId != null">error_out_id = #{errorOutId},</if>
+            <if test="sourceConversationId != null">source_conversation_id = #{sourceConversationId},</if>
+            <if test="sourceMessageId != null">source_message_id = #{sourceMessageId},</if>
         </trim>
         where print_id = #{printId}
     </update>
@@ -201,9 +233,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             coalesce(sum(case when status != '2' then 1 else 0 end), 0) as totalJobs,
             coalesce(sum(case when status != '2' then print_count else 0 end), 0) as totalPrintCount,
             coalesce(sum(case when status != '2' then total_pages else 0 end), 0) as totalPages,
+            coalesce(sum(case when status != '2' then coalesce(template_paper_count, 0) else 0 end), 0) as totalTemplatePages,
+            coalesce(sum(case when status != '2' then coalesce(preview_paper_count, 0) else 0 end), 0) as totalPreviewPages,
             coalesce(sum(case when status = '1' then 1 else 0 end), 0) as completedJobs,
             coalesce(sum(case when status = '1' then print_count else 0 end), 0) as completedPrintCount,
             coalesce(sum(case when status = '1' then total_pages else 0 end), 0) as completedPages,
+            coalesce(sum(case when status = '1' then coalesce(template_paper_count, 0) else 0 end), 0) as completedTemplatePages,
+            coalesce(sum(case when status = '1' then coalesce(preview_paper_count, 0) else 0 end), 0) as completedPreviewPages,
             coalesce(sum(case when status = '0' then 1 else 0 end), 0) as pendingJobs,
             coalesce(sum(case when status = '0' then print_count else 0 end), 0) as pendingPrintCount,
             coalesce(sum(case when status = '0' then total_pages else 0 end), 0) as pendingPages,

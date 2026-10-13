@@ -1,5 +1,8 @@
 export interface SourceMessage {
   id: string; sender?: string; time?: string; text: string; type?: string; order?: number;
+  conversationId?: string; conversationName?: string; rawMessageId?: string;
+  fileName?: string; exportMediaUrl?: string; attachmentRelativePath?: string;
+  exportMediaError?: string; attachmentMissing?: boolean;
 }
 export interface PrintCandidate {
   taskId?: string; sender?: string; printName?: string; originalDocName?: string;
@@ -11,6 +14,11 @@ export interface PrintCandidate {
   remark?: string; attachment?: string; resultImg?: string; attachmentStatus?: string;
   alreadyRegistered?: boolean; existingPrintId?: number; existingRecordDesc?: string;
   sourceMessageIds?: string[]; fieldEvidence?: Record<string, string[]>; reviewReasons?: string[];
+  sourceConversationId?: string; sourceConversationName?: string; sourceMessageId?: string;
+  exportMediaUrl?: string; attachmentRelativePath?: string; exportMediaError?: string;
+  matchedAttachmentPath?: string; matchedAttachmentName?: string; matchedAttachmentKey?: string;
+  attachmentUploadError?: string; allowSaveWithoutAttachment?: boolean;
+  skipped?: boolean; reprintConfirmed?: boolean;
 }
 export interface PrefillResult extends PrintCandidate {
   taskList: PrintCandidate[]; messages?: SourceMessage[]; rawText?: string;
@@ -100,8 +108,11 @@ export function dayKey(time?: string) {
   return match ? `${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}` : undefined;
 }
 export function messagesForDay(messages: SourceMessage[], task: PrintCandidate) {
+  const convFiltered = task.sourceConversationId
+    ? messages.filter(m => !m.conversationId || m.conversationId === task.sourceConversationId)
+    : messages;
   const day = dayKey(task.timeSnippet);
-  return day ? messages.filter(m => dayKey(m.time) === day) : messages;
+  return day ? convFiltered.filter(m => dayKey(m.time) === day) : convFiltered;
 }
 export function namespaceResult(result: PrefillResult, batch: string): PrefillResult {
   const id = (value: string) => `${batch}:${value}`;

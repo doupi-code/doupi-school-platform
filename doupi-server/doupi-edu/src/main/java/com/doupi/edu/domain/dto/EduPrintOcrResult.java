@@ -13,6 +13,7 @@ public class EduPrintOcrResult implements Serializable
         public void setMessages(java.util.List<SourceMessage> value) { this.messages = value; }
 
     public static class SourceMessage implements Serializable {
+        private static final long serialVersionUID = 1L;
         private String id;
         public String getId() { return id; }
         public void setId(String value) { this.id = value; }
@@ -31,6 +32,33 @@ public class EduPrintOcrResult implements Serializable
         private int order;
         public int getOrder() { return order; }
         public void setOrder(int value) { this.order = value; }
+        private String conversationId;
+        public String getConversationId() { return conversationId; }
+        public void setConversationId(String value) { this.conversationId = value; }
+        private String conversationName;
+        public String getConversationName() { return conversationName; }
+        public void setConversationName(String value) { this.conversationName = value; }
+        private String rawMessageId;
+        public String getRawMessageId() { return rawMessageId; }
+        public void setRawMessageId(String value) { this.rawMessageId = value; }
+        private String rawType;
+        public String getRawType() { return rawType; }
+        public void setRawType(String value) { this.rawType = value; }
+        private String fileName;
+        public String getFileName() { return fileName; }
+        public void setFileName(String value) { this.fileName = value; }
+        private String exportMediaUrl;
+        public String getExportMediaUrl() { return exportMediaUrl; }
+        public void setExportMediaUrl(String value) { this.exportMediaUrl = value; }
+        private String attachmentRelativePath;
+        public String getAttachmentRelativePath() { return attachmentRelativePath; }
+        public void setAttachmentRelativePath(String value) { this.attachmentRelativePath = value; }
+        private String exportMediaError;
+        public String getExportMediaError() { return exportMediaError; }
+        public void setExportMediaError(String value) { this.exportMediaError = value; }
+        private Boolean attachmentMissing;
+        public Boolean getAttachmentMissing() { return attachmentMissing; }
+        public void setAttachmentMissing(Boolean value) { this.attachmentMissing = value; }
     }
 
 
@@ -312,6 +340,30 @@ public class EduPrintOcrResult implements Serializable
         private String attachmentStatus;
         public String getAttachmentStatus() { return attachmentStatus; }
         public void setAttachmentStatus(String value) { this.attachmentStatus = value; }
+        private String sourceConversationId;
+        public String getSourceConversationId() { return sourceConversationId; }
+        public void setSourceConversationId(String value) { this.sourceConversationId = value; }
+        private String sourceConversationName;
+        public String getSourceConversationName() { return sourceConversationName; }
+        public void setSourceConversationName(String value) { this.sourceConversationName = value; }
+        private String sourceMessageId;
+        public String getSourceMessageId() { return sourceMessageId; }
+        public void setSourceMessageId(String value) { this.sourceMessageId = value; }
+        private String exportMediaUrl;
+        public String getExportMediaUrl() { return exportMediaUrl; }
+        public void setExportMediaUrl(String value) { this.exportMediaUrl = value; }
+        private String attachmentRelativePath;
+        public String getAttachmentRelativePath() { return attachmentRelativePath; }
+        public void setAttachmentRelativePath(String value) { this.attachmentRelativePath = value; }
+        private String exportMediaError;
+        public String getExportMediaError() { return exportMediaError; }
+        public void setExportMediaError(String value) { this.exportMediaError = value; }
+        private Boolean skipped = false;
+        public Boolean getSkipped() { return skipped; }
+        public void setSkipped(Boolean value) { this.skipped = value; }
+        private Boolean reprintConfirmed = false;
+        public Boolean getReprintConfirmed() { return reprintConfirmed; }
+        public void setReprintConfirmed(Boolean value) { this.reprintConfirmed = value; }
         /** 纯净印刷材料名称（已剔除科目、年级） */
         private String printName;
 

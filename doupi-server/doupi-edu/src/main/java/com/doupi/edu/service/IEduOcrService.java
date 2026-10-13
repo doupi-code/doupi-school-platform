@@ -4,6 +4,7 @@ import java.io.File;
 import org.springframework.web.multipart.MultipartFile;
 import com.doupi.edu.domain.dto.DocumentAnalysisResult;
 import com.doupi.edu.domain.dto.EduPrintOcrResult;
+import com.doupi.edu.domain.dto.WechatStructuredParseRequest;
 
 /**
  * 本地离线OCR及截图信息解析服务接口
@@ -25,6 +26,14 @@ public interface IEduOcrService
      * @return 结构化提取结果
      */
     public EduPrintOcrResult extractInfoFromText(String text);
+
+    /**
+     * 解析微信导出目录的结构化聊天消息（各会话独立解析，保留会话ID、消息ID及附件引用）
+     * 
+     * @param request 结构化聊天消息请求
+     * @return 结构化提取结果
+     */
+    public EduPrintOcrResult parseStructuredMessages(WechatStructuredParseRequest request);
 
     /**
      * 解析文档文件（PDF/Word/Excel）的页数与纸张规格，用于登记自动换算耗纸数

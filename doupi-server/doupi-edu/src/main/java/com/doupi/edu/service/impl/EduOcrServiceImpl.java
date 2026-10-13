@@ -174,18 +174,153 @@ public class EduOcrServiceImpl implements IEduOcrService
     public EduPrintOcrResult extractInfoFromText(String text) 
     {
         EduPrintOcrResult result = com.doupi.edu.service.impl.ocr.ChatPrefillParser.parse(text);
+        matchTeachersForTasks(result);
         checkExistingRecordsAndArrangeQueue(result);
         return result;
     }
 
-    /** Historical name matches are review hints, not evidence that this request was saved. */
+    @Override
+    public EduPrintOcrResult parseStructuredMessages(com.doupi.edu.domain.dto.WechatStructuredParseRequest request)
+    {
+        EduPrintOcrResult result = com.doupi.edu.service.impl.ocr.WechatExportStructuredParser.parse(request);
+        matchTeachersForTasks(result);
+        checkExistingRecordsAndArrangeQueue(result);
+        return result;
+    }
+
+    /**
+     * 按发送人或会话显示名匹配系统内教师档案（仅在唯一匹配时自动预填，同名多教师或未匹配时留空）
+     */
+    private void matchTeachersForTasks(EduPrintOcrResult result)
+    {
+        if (result == null || result.getTaskList() == null || result.getTaskList().isEmpty())
+        {
+            return;
+        }
+        List<EduTeacher> teachers = getTeachers();
+        if (teachers == null || teachers.isEmpty())
+        {
+            return;
+        }
+        for (EduPrintOcrResult.PrintTaskItem item : result.getTaskList())
+        {
+            if (item.getTeacherId() != null)
+            {
+                continue;
+            }
+            EduTeacher matched = findUniqueMatchingTeacher(teachers, item.getSender(), item.getSourceConversationName());
+            if (matched != null)
+            {
+                item.setTeacherId(matched.getTeacherId());
+                item.setTeacherName(matched.getTeacherName());
+                item.setTeacherMatched(true);
+                if (StringUtils.isEmpty(item.getGrade()) && StringUtils.isNotEmpty(matched.getGrade()))
+                {
+                    item.setGrade(matched.getGrade());
+                }
+                if (StringUtils.isEmpty(item.getSubject()) && StringUtils.isNotEmpty(matched.getSubject()))
+                {
+                    item.setSubject(matched.getSubject());
+                }
+            }
+        }
+    }
+
+    private EduTeacher findUniqueMatchingTeacher(List<EduTeacher> teachers, String sender, String convName)
+    {
+        String[] candidates = new String[] { sender, convName };
+        for (String raw : candidates)
+        {
+            if (StringUtils.isEmpty(raw))
+            {
+                continue;
+            }
+            String clean = raw.trim();
+            // 1. 精确匹配
+            List<EduTeacher> exact = teachers.stream()
+                    .filter(t -> t != null && StringUtils.isNotEmpty(t.getTeacherName()) && clean.equals(t.getTeacherName().trim()))
+                    .toList();
+            if (exact.size() == 1)
+            {
+                return exact.get(0);
+            }
+            // 2. 包含匹配（如“校办-汪思雅”匹配“汪思雅”）
+            List<EduTeacher> contained = teachers.stream()
+                    .filter(t -> t != null && StringUtils.isNotEmpty(t.getTeacherName()) && t.getTeacherName().trim().length() >= 2 && clean.contains(t.getTeacherName().trim()))
+                    .toList();
+            if (contained.size() == 1)
+            {
+                return contained.get(0);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 校验是否已登记：
+     * 1. 若存在相同 (sourceConversationId, sourceMessageId) 的有效登记，标记 alreadyRegistered = true（默认不再自动提交，需明确选择重印）
+     * 2. 否则按材料名称查询历史同名登记，仅作为疑似重复提示，不自动跳过
+     */
     private void checkExistingRecordsAndArrangeQueue(EduPrintOcrResult result)
     {
         result.setFirstUnregisteredIndex(0);
-        if (eduPrintRecordMapper == null || result.getTaskList() == null) return;
+        if (eduPrintRecordMapper == null || result.getTaskList() == null || result.getTaskList().isEmpty()) return;
+
+        // 预先按会话ID批量拉取该会话下的已有记录，避免逐条查询
+        java.util.Map<String, List<com.doupi.edu.domain.EduPrintRecord>> recordsByConv = new java.util.HashMap<>();
         for (EduPrintOcrResult.PrintTaskItem item : result.getTaskList())
         {
-            if (StringUtils.isEmpty(item.getPrintName())) continue;
+            String convId = item.getSourceConversationId();
+            if (StringUtils.isNotEmpty(convId) && !recordsByConv.containsKey(convId))
+            {
+                try
+                {
+                    com.doupi.edu.domain.EduPrintRecord q = new com.doupi.edu.domain.EduPrintRecord();
+                    q.setSourceConversationId(convId);
+                    List<com.doupi.edu.domain.EduPrintRecord> list = eduPrintRecordMapper.selectEduPrintRecordList(q);
+                    recordsByConv.put(convId, list != null ? list : Collections.emptyList());
+                }
+                catch (Exception ex)
+                {
+                    log.warn("按会话ID查询已有印刷记录失败, sourceConversationId: {}", convId, ex);
+                    recordsByConv.put(convId, Collections.emptyList());
+                }
+            }
+        }
+
+        for (EduPrintOcrResult.PrintTaskItem item : result.getTaskList())
+        {
+            boolean matchedBySource = false;
+            String convId = item.getSourceConversationId();
+            String msgId = item.getSourceMessageId();
+            if (StringUtils.isNotEmpty(convId) && StringUtils.isNotEmpty(msgId))
+            {
+                List<com.doupi.edu.domain.EduPrintRecord> convRecords = recordsByConv.getOrDefault(convId, Collections.emptyList());
+                for (com.doupi.edu.domain.EduPrintRecord record : convRecords)
+                {
+                    if ("2".equals(record.getStatus()) || "2".equals(record.getDelFlag()))
+                    {
+                        continue;
+                    }
+                    if (sourceMessageMatches(msgId, record.getSourceMessageId()))
+                    {
+                        item.setAlreadyRegistered(true);
+                        item.setReprintConfirmed(false);
+                        item.setExistingPrintId(record.getPrintId());
+                        String time = record.getPrintTime() == null ? "时间未知" :
+                                com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
+                        item.setExistingRecordDesc("已登记（来源会话与消息匹配）：单据 #" + record.getPrintId() + "，" + time);
+                        if (!item.getReviewReasons().contains("该聊天消息已登记，如需再次提交请选择重印"))
+                        {
+                            item.getReviewReasons().add("该聊天消息已登记，如需再次提交请选择重印");
+                        }
+                        matchedBySource = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedBySource || StringUtils.isEmpty(item.getPrintName())) continue;
             com.doupi.edu.domain.EduPrintRecord query = new com.doupi.edu.domain.EduPrintRecord();
             query.setPrintName(item.getPrintName());
             if (item.getTeacherId() != null) query.setTeacherId(item.getTeacherId());
@@ -210,6 +345,55 @@ public class EduOcrServiceImpl implements IEduOcrService
                 log.warn("查询已有印刷记录失败, printName: {}", item.getPrintName(), ex);
             }
         }
+
+        // 设置首个未登记且未跳过的候选索引
+        int firstUnregistered = 0;
+        for (int i = 0; i < result.getTaskList().size(); i++)
+        {
+            EduPrintOcrResult.PrintTaskItem t = result.getTaskList().get(i);
+            if (!Boolean.TRUE.equals(t.getAlreadyRegistered()) && !Boolean.TRUE.equals(t.getSkipped()))
+            {
+                firstUnregistered = i;
+                break;
+            }
+        }
+        result.setFirstUnregisteredIndex(firstUnregistered);
+    }
+
+    private boolean sourceMessageMatches(String candidateMsgId, String recordedMsgId)
+    {
+        if (StringUtils.isEmpty(candidateMsgId) || StringUtils.isEmpty(recordedMsgId))
+        {
+            return false;
+        }
+        if (candidateMsgId.trim().equals(recordedMsgId.trim()))
+        {
+            return true;
+        }
+        java.util.Set<String> cTokens = splitMessageTokens(candidateMsgId);
+        java.util.Set<String> rTokens = splitMessageTokens(recordedMsgId);
+        for (String ct : cTokens)
+        {
+            if (rTokens.contains(ct))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private java.util.Set<String> splitMessageTokens(String raw)
+    {
+        java.util.Set<String> tokens = new java.util.HashSet<>();
+        for (String part : raw.split(","))
+        {
+            String p = part.trim().replaceFirst("#answer$", "");
+            if (!p.isEmpty())
+            {
+                tokens.add(p);
+            }
+        }
+        return tokens;
     }
 
     /**

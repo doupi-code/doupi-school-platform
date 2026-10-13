@@ -19,31 +19,53 @@ public final class ChatPrefillParser {
         result.setMessages(messages);
         List<PrintTaskItem> tasks = new ArrayList<>();
         Map<String, BindingContext> contexts = new HashMap<>();
+        Map<String, SourceMessage> messageById = new HashMap<>();
         for (SourceMessage m : messages) {
+            if (m.getId() != null) messageById.put(m.getId(), m);
             String day = m.getTime() == null ? "" : m.getTime().replaceFirst("\\s*(?:上午|下午|晚上)?\\s*\\d{1,2}:\\d{2}.*$", "");
-            String key = String.valueOf(m.getSender()) + "|" + day;
+            String convPrefix = m.getConversationId() != null ? m.getConversationId() + "|" : "";
+            String key = convPrefix + String.valueOf(m.getSender()) + "|" + day;
             BindingContext binding = contexts.computeIfAbsent(key, ignored -> new BindingContext());
-            String body = m.getText();
+            String body = m.getText() == null ? "" : m.getText();
             if ("file".equals(m.getType())) {
                 if (binding.afterDirective) { binding.files.clear(); binding.afterDirective=false; }
                 PrintTaskItem task;
                 if (binding.pending != null) { task=binding.pending; binding.pending=null; }
                 else { task=create(m); tasks.add(task); }
-                String name=ChatMessageNormalizer.fileName(body.lines().findFirst().orElse(body));
-                if(name.matches("(?:次|[（(]2[）)])\\.docx?") && m.getOrder()>0) {
+                String name = (m.getFileName() != null && !m.getFileName().isBlank())
+                        ? m.getFileName()
+                        : ChatMessageNormalizer.fileName(body.lines().findFirst().orElse(body));
+                if(m.getFileName() == null && name.matches("(?:次|[（(]2[）)])\\.docx?") && m.getOrder()>0 && m.getOrder()<=messages.size()) {
                     SourceMessage previous=messages.get(m.getOrder()-1);
-                    if(previous.getText().length()<=40 && !previous.getText().matches(".*(?:份|打印|老师|谢谢).*")) {
+                    if(previous.getText() != null && previous.getText().length()<=40 && !previous.getText().matches(".*(?:份|打印|老师|谢谢).*")) {
                         name=previous.getText()+name.replaceFirst("^次", "（2）");
                         evidence(task,"printName",previous);
                         task.getReviewReasons().add("文件名由OCR折行推测，请核对");
                     }
                 }
-                task.setOriginalDocName(name); task.setPrintName(name.replaceFirst("\\.[^.]+$", ""));
-                task.setAttachmentStatus("missing");
+                task.setOriginalDocName(name);
+                task.setPrintName(name.replace("&#x20;", " ").replaceFirst("\\.[^.]+$", ""));
+                if (m.getConversationId() != null) task.setSourceConversationId(m.getConversationId());
+                if (m.getConversationName() != null) task.setSourceConversationName(m.getConversationName());
+                if (m.getExportMediaUrl() != null && !m.getExportMediaUrl().isBlank() && !Boolean.TRUE.equals(m.getAttachmentMissing())) {
+                    task.setExportMediaUrl(m.getExportMediaUrl());
+                    task.setAttachmentRelativePath(m.getAttachmentRelativePath());
+                    task.setAttachmentStatus("ready");
+                } else {
+                    task.setExportMediaUrl(m.getExportMediaUrl());
+                    task.setAttachmentRelativePath(m.getAttachmentRelativePath());
+                    task.setExportMediaError(m.getExportMediaError());
+                    task.setAttachmentStatus("missing");
+                    if (Boolean.TRUE.equals(m.getAttachmentMissing()) || m.getExportMediaError() != null || m.getConversationId() != null) {
+                        if (!task.getReviewReasons().contains("附件缺失")) {
+                            task.getReviewReasons().add("附件缺失");
+                        }
+                    }
+                }
                 evidence(task,"printName",m); binding.files.add(task);
                 continue;
             }
-            if ("operator".equals(m.getType()) || TurnIntentResolver.isConversationalNoise(body)) continue;
+            if ("operator".equals(m.getType()) || "context".equals(m.getType()) || TurnIntentResolver.isConversationalNoise(body)) continue;
             Long count = TurnIntentResolver.parsePrintCount(RANGE.matcher(body).replaceAll(""));
             String side = body.matches(".*(?:双面|正反面|两面).*") ? "2" : body.contains("单面") ? "1" : null;
             Matcher range = RANGE.matcher(body);
@@ -80,7 +102,7 @@ public final class ChatPrefillParser {
             List<PrintTaskItem> named=new ArrayList<>();
             for(PrintTaskItem t:binding.files) if(t.getPrintName()!=null && body.contains(t.getPrintName())) named.add(t);
             if(named.size()==1) {targets=named; uncertain=false;}
-            if(targets.isEmpty() && binding.pending != null && count == null) targets.add(binding.pending);
+            if(targets.isEmpty() && binding.pending != null && (count == null || binding.pending.getPrintCount() == null)) targets.add(binding.pending);
             if(targets.isEmpty()) {
                 PrintTaskItem task=create(m); tasks.add(task); targets.add(task); binding.pending=task;
                 task.getReviewReasons().add("缺少材料名称，请对照聊天填写");
@@ -111,6 +133,31 @@ public final class ChatPrefillParser {
             if(task.getPrintCount()==null) task.getReviewReasons().add("份数未知");
             if(task.getPageCount()==null) task.getReviewReasons().add("页数未知");
             if(task.getPrintSide()==null) task.getReviewReasons().add("单双面未知");
+            if(task.getSourceMessageId() == null && task.getSourceMessageIds() != null && !task.getSourceMessageIds().isEmpty()) {
+                String primaryRawId = null;
+                List<String> rawIds = new ArrayList<>();
+                for (String mid : task.getSourceMessageIds()) {
+                    SourceMessage sm = messageById.get(mid);
+                    if (sm != null) {
+                        if (task.getSourceConversationId() == null && sm.getConversationId() != null) {
+                            task.setSourceConversationId(sm.getConversationId());
+                        }
+                        if (task.getSourceConversationName() == null && sm.getConversationName() != null) {
+                            task.setSourceConversationName(sm.getConversationName());
+                        }
+                        String rid = sm.getRawMessageId() != null ? sm.getRawMessageId() : sm.getId();
+                        if (rid != null && !rawIds.contains(rid)) rawIds.add(rid);
+                        if ("file".equals(sm.getType()) && primaryRawId == null) {
+                            primaryRawId = rid;
+                        }
+                    }
+                }
+                if (primaryRawId != null) {
+                    task.setSourceMessageId(primaryRawId);
+                } else if (!rawIds.isEmpty()) {
+                    task.setSourceMessageId(String.join(",", rawIds));
+                }
+            }
         }
         result.setTaskList(tasks); result.setFirstUnregisteredIndex(0);
         if(!tasks.isEmpty()) {
@@ -134,6 +181,8 @@ public final class ChatPrefillParser {
         PrintTaskItem task=new PrintTaskItem(); task.setTaskId("task-"+m.getId()); task.setSender(m.getSender());
         task.setTimeSnippet(m.getTime()); task.setSourceMessageIds(new ArrayList<>());
         task.setFieldEvidence(new LinkedHashMap<>()); task.setReviewReasons(new ArrayList<>());
+        task.setSourceConversationId(m.getConversationId());
+        task.setSourceConversationName(m.getConversationName());
         task.setAttachmentStatus("missing"); return task;
     }
     private static void evidence(PrintTaskItem t,String field,SourceMessage m) {

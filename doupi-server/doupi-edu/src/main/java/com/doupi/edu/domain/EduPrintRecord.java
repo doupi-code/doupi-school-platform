@@ -44,6 +44,14 @@ public class EduPrintRecord extends BaseEntity
     @Excel(name = "印刷方式", readConverterExp = "1=单页印刷,2=双页印刷")
     private String printSide;
 
+    /** 模板用纸张数（新规则固定1张，历史记录为0表示旧规则未计入） */
+    @Excel(name = "模板用纸(张)")
+    private Long templatePaperCount;
+
+    /** 印刷预览用纸张数（新规则固定1张，历史记录为0表示旧规则未计入） */
+    @Excel(name = "印刷预览用纸(张)")
+    private Long previewPaperCount;
+
     /** 消耗总纸张数 */
     @Excel(name = "总耗纸量(张)")
     private Long totalPages;
@@ -118,6 +126,55 @@ public class EduPrintRecord extends BaseEntity
     /** 错误关联出库单号 */
     @Excel(name = "错误出库单号")
     private String errorOutNo;
+
+    /** 来源微信导出会话ID */
+    private String sourceConversationId;
+
+    /** 来源微信消息标识 */
+    private String sourceMessageId;
+
+    /** 是否已明确确认重印（非持久化控制字段，仅在用户显式点击“选择重印”时为 true） */
+    private Boolean reprintConfirmed;
+
+    public Long getTemplatePaperCount() {
+        return templatePaperCount;
+    }
+
+    public void setTemplatePaperCount(Long templatePaperCount) {
+        this.templatePaperCount = templatePaperCount;
+    }
+
+    public Long getPreviewPaperCount() {
+        return previewPaperCount;
+    }
+
+    public void setPreviewPaperCount(Long previewPaperCount) {
+        this.previewPaperCount = previewPaperCount;
+    }
+
+    public String getSourceConversationId() {
+        return sourceConversationId;
+    }
+
+    public void setSourceConversationId(String sourceConversationId) {
+        this.sourceConversationId = sourceConversationId;
+    }
+
+    public String getSourceMessageId() {
+        return sourceMessageId;
+    }
+
+    public void setSourceMessageId(String sourceMessageId) {
+        this.sourceMessageId = sourceMessageId;
+    }
+
+    public Boolean getReprintConfirmed() {
+        return reprintConfirmed;
+    }
+
+    public void setReprintConfirmed(Boolean reprintConfirmed) {
+        this.reprintConfirmed = reprintConfirmed;
+    }
 
     public String getTeacherName() {
         return teacherName;
@@ -375,6 +432,8 @@ public class EduPrintRecord extends BaseEntity
             .append("printCount", getPrintCount())
             .append("pageCount", getPageCount())
             .append("printSide", getPrintSide())
+            .append("templatePaperCount", getTemplatePaperCount())
+            .append("previewPaperCount", getPreviewPaperCount())
             .append("totalPages", getTotalPages())
             .append("attachment", getAttachment())
             .append("resultImg", getResultImg())
@@ -387,6 +446,8 @@ public class EduPrintRecord extends BaseEntity
             .append("remark", getRemark())
             .append("status", getStatus())
             .append("outId", getOutId())
+            .append("sourceConversationId", getSourceConversationId())
+            .append("sourceMessageId", getSourceMessageId())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

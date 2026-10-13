@@ -90,4 +90,21 @@ public class PrintSplitAnswerTest {
         assertTrue(m2.find());
         assertEquals("1", m2.group(1));
     }
+
+    @Test
+    public void testExtraPaperRuleAndSplitTotal() {
+        // 验收示例：40份、每份3页，单面正式耗纸120 + 模板1 + 预览1 = 122张；双面正式耗纸80 + 模板1 + 预览1 = 82张
+        long singleFormal = calculateSheets(40, 3, "1");
+        assertEquals(120, singleFormal);
+        assertEquals(122, singleFormal + 1 + 1);
+
+        long doubleFormal = calculateSheets(40, 3, "2");
+        assertEquals(80, doubleFormal);
+        assertEquals(82, doubleFormal + 1 + 1);
+
+        // 试卷与答案拆分为两条登记时，每条各加2张（模板1+预览1），合计增加4张
+        long examTotal = calculateSheets(60, 3, "2") + 2; // 120 + 2 = 122
+        long ansTotal = calculateSheets(2, 1, "1") + 2;   // 2 + 2 = 4
+        assertEquals(126, examTotal + ansTotal);
+    }
 }

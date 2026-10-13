@@ -60,6 +60,7 @@ import { listRecord } from '@/api/edu/record';
 import { listTeacher } from '@/api/edu/teacher';
 import { getDicts } from '@/api/system/dict';
 import { downloadExcel } from '@/utils/download';
+import { formatExtraPaperLabel, isLegacyExtraPaperRecord } from '../record/printRules';
 
 const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -667,12 +668,13 @@ const PrintLedgerReportPage: React.FC = () => {
     {
       title: '总耗纸量',
       dataIndex: 'totalPages',
-      width: 110,
+      width: 125,
       align: 'right',
       render: (_, r) => {
+        const extraLabel = formatExtraPaperLabel(r, false);
         if (r.status === '2') {
           return (
-            <Tooltip title="该登记已作废，纸张已自动回退库存，不计入有效耗用">
+            <Tooltip title={`该登记已作废，纸张已自动回退库存，不计入有效耗用（${extraLabel}）`}>
               <Text delete type="danger">
                 {r.totalPages} 张
               </Text>
@@ -680,9 +682,16 @@ const PrintLedgerReportPage: React.FC = () => {
           );
         }
         return (
-          <Text strong style={{ color: '#52C41A', fontSize: 15 }}>
-            {r.totalPages} 张
-          </Text>
+          <Tooltip title={`总耗纸 ${r.totalPages} 张（${extraLabel}）`}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2 }}>
+              <Text strong style={{ color: '#52C41A', fontSize: 15 }}>
+                {r.totalPages} 张
+              </Text>
+              <span style={{ fontSize: 10, color: isLegacyExtraPaperRecord(r) ? '#8C8C8C' : '#1677FF' }}>
+                {isLegacyExtraPaperRecord(r) ? '旧规则，未计入' : '含模板1+预览1'}
+              </span>
+            </div>
+          </Tooltip>
         );
       },
     },
@@ -1427,6 +1436,11 @@ const PrintLedgerReportPage: React.FC = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="单份资料页数">
                     {selectedRecord.pageCount || 1} 页/份
+                  </Descriptions.Item>
+                  <Descriptions.Item label="固定额外用纸" span={2}>
+                    <Tag color={isLegacyExtraPaperRecord(selectedRecord) ? 'default' : 'blue'}>
+                      {formatExtraPaperLabel(selectedRecord, false)}
+                    </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="实际耗纸张数">
                     <strong style={{ color: selectedRecord.status === '2' ? '#999' : '#52C41A', fontSize: 16 }}>

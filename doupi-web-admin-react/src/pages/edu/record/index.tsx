@@ -1,10 +1,29 @@
 import ChatSourcePanel from './ChatSourcePanel';
-import {derivePrintFields} from './printRules';
+import {
+  derivePrintFields,
+  calculateFormalSheets,
+  calculateTotalSheetsWithExtra,
+  calculateSplitSheetsWithExtra,
+  DEFAULT_TEMPLATE_PAPER_COUNT,
+  DEFAULT_PREVIEW_PAPER_COUNT,
+  isLegacyExtraPaperRecord,
+  formatExtraPaperLabel,
+} from './printRules';
 import ChatCandidateList from './ChatCandidateList';
 import ChatDebugPanel from './ChatDebugPanel';
 import type { ChatDebugEntry } from './ChatDebugPanel';
 import { readChatClipboard, recoverChatClipboard, attachmentNameMatches, isDocument, fileCandidates, attachFiles, namespaceResult, mergeSessions, dayKey } from './chatPrefill';
 import type { PrefillResult, PrintCandidate, UploadedAttachment } from './chatPrefill';
+import {
+  loadWechatExportManifest,
+  applyRegisteredStatusToManifest,
+  loadSavedContactSelection,
+  saveContactSelection,
+  filterManifestConversations,
+  readSelectedConversationsMessages,
+  type WechatExportDirectorySession,
+  type FileLike,
+} from './wechatExportImport';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
@@ -29,6 +48,7 @@ import {
   Row,
   Select,
   Space,
+  Table,
   Tag,
   Tooltip,
   Typography,
@@ -52,6 +72,7 @@ import {
   ExclamationCircleFilled,
   QuestionCircleOutlined,
   WarningOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
 import Authorized from '@/components/Authorized';
 import DraftNoticeAlert from '@/components/DraftNoticeAlert';
@@ -63,6 +84,7 @@ import {
   listRecord,
   getRecord,
   addRecord,
+  addRecordBatch,
   updateRecord,
   delRecord,
   cancelRecord,
@@ -71,6 +93,8 @@ import {
   cancelRecords,
   recordPrintError,
   textParse,
+  structuredParse,
+  getWechatExportRegisteredStatus,
   ocrParse,
   uploadFile,
   uploadFileSmart,
@@ -408,14 +432,15 @@ const PrintRecordPage: React.FC = () => {
     loadBaseData();
   }, []);
 
-  // 计算预计耗纸张数
-  const calculateTotalSheets = (count: number, pages: number, side: string) => {
-    const p = Number(pages) || 1;
-    const c = Number(count) || 0;
-    if (side === '2') {
-      return c * Math.ceil(p / 2);
-    }
-    return c * p;
+  // 计算预计耗纸张数（含模板用纸与印刷预览用纸；编辑历史记录时按该记录保存的两项数量计算）
+  const calculateTotalSheets = (
+    count: number,
+    pages: number,
+    side: string,
+    templatePaperCount: number = DEFAULT_TEMPLATE_PAPER_COUNT,
+    previewPaperCount: number = DEFAULT_PREVIEW_PAPER_COUNT
+  ) => {
+    return calculateTotalSheetsWithExtra(count, pages, side, templatePaperCount, previewPaperCount);
   };
 
   // 试卷与答案合并拆分模式状态
@@ -423,30 +448,51 @@ const PrintRecordPage: React.FC = () => {
   const [answerPageCount, setAnswerPageCount] = useState<number>(1);
   const [answerPrintCount, setAnswerPrintCount] = useState<number>(2);
   const [answerPrintSide, setAnswerPrintSide] = useState<string>('1');
+  const [draftNotice, setDraftNotice] = useState<{ visible: boolean; timeText: string } | null>(null);
+  const [discardLoading, setDiscardLoading] = useState(false);
+  const [currentEditRecord, setCurrentEditRecord] = useState<any>(null);
+
+  // 获取当前表单适用的模板用纸与预览用纸张数（新增固定 1+1，编辑已有记录沿用记录自身保存的值）
+  const getActiveExtraPaperCounts = (recordOverride?: any) => {
+    const target = recordOverride ?? (isEdit ? currentEditRecord : null);
+    if (target) {
+      return {
+        templatePaperCount: Number(target.templatePaperCount ?? 0),
+        previewPaperCount: Number(target.previewPaperCount ?? 0),
+      };
+    }
+    return {
+      templatePaperCount: DEFAULT_TEMPLATE_PAPER_COUNT,
+      previewPaperCount: DEFAULT_PREVIEW_PAPER_COUNT,
+    };
+  };
 
   // 统一动态计算总耗纸张数（支持普通单份录入与试卷答案合并拆分录入）
-  const computePreviewSheets = (values: any, isSplit: boolean) => {
+  const computePreviewSheets = (values: any, isSplit: boolean, recordOverride?: any) => {
     if (!values?.printCount || !values?.pageCount || !values?.printSide) return 0;
+    const { templatePaperCount, previewPaperCount } = getActiveExtraPaperCounts(recordOverride);
     if (isSplit) {
       const totalPageCount = Number(values?.pageCount) || 1;
       const ansPage = Math.min(Math.max(1, Number(values?.answerPageCount) || 1), Math.max(1, totalPageCount - 1));
       const examPage = Math.max(1, totalPageCount - ansPage);
-      const examSheets = calculateTotalSheets(
+      const splitCalc = calculateSplitSheetsWithExtra(
         values?.printCount || 0,
         examPage,
-        values?.printSide || '1'
-      );
-      const ansSheets = calculateTotalSheets(
+        values?.printSide || '1',
         values?.answerPrintCount || 0,
         ansPage,
-        values?.answerPrintSide || '1'
+        values?.answerPrintSide || '1',
+        templatePaperCount,
+        previewPaperCount
       );
-      return examSheets + ansSheets;
+      return splitCalc.totalSheets;
     }
     return calculateTotalSheets(
       values?.printCount || 0,
       values?.pageCount || 1,
-      values?.printSide || '1'
+      values?.printSide || '1',
+      templatePaperCount,
+      previewPaperCount
     );
   };
 
@@ -473,7 +519,7 @@ const PrintRecordPage: React.FC = () => {
     const isSplit = values.splitAnswer === undefined ? splitAnswer : !!values.splitAnswer;
     setPreviewTotalSheets(computePreviewSheets(values, isSplit));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedPrintCount, watchedPageCount, watchedPrintSide, watchedSplitAnswer, watchedAnswerPageCount, watchedAnswerPrintCount, watchedAnswerPrintSide]);
+  }, [watchedPrintCount, watchedPageCount, watchedPrintSide, watchedSplitAnswer, watchedAnswerPageCount, watchedAnswerPrintCount, watchedAnswerPrintSide, isEdit, currentEditRecord]);
 
   // 智能识别文本中是否包含试卷与答案合并的信息
   const detectSplitAnswerInfo = (text: string, totalPages: number) => {
@@ -528,9 +574,6 @@ const PrintRecordPage: React.FC = () => {
       form.setFieldsValue({splitAnswer:false}); setSplitAnswer(false);
     }
   };
-  const [draftNotice, setDraftNotice] = useState<{ visible: boolean; timeText: string } | null>(null);
-  const [discardLoading, setDiscardLoading] = useState(false);
-  const [currentEditRecord, setCurrentEditRecord] = useState<any>(null);
 
   // 触发草稿保存
   const triggerSaveRecordDraft = (values?: any) => {
@@ -682,14 +725,31 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
-  // 批量指定申请教师：将所选教师应用到队列中所有待登记任务
-  const applyTeacherToQueue = (teacher: any) => {
+  // 批量指定申请教师：将所选教师应用到当前候选所属联系人的待登记任务（优先按会话 ID 匹配，避免同名联系人混用）
+  const applyTeacherToQueue = (teacher: any, explicitTargetTask?: PrintCandidate) => {
     if (!ocrResult?.taskList) return;
+    const targetTask =
+      explicitTargetTask ||
+      (textModalOpen || exportModalOpen ? ocrResult.taskList[previewTaskIndex] : currentQueueTask);
+    if (!targetTask) return;
+
+    const isSameContact = (task: PrintCandidate) => {
+      if (targetTask.sourceConversationId) {
+        return task.sourceConversationId === targetTask.sourceConversationId;
+      }
+      return !task.sourceConversationId && task.sender === targetTask.sender;
+    };
+
     const updated = ocrResult.taskList.map((task: any) => {
-      if (task.alreadyRegistered || task.sender !== (textModalOpen ? ocrResult.taskList[previewTaskIndex]?.sender : currentQueueTask?.sender)) return task;
-      if(task.taskId && taskDraftsRef.current.has(task.taskId)) {
+      if (task.alreadyRegistered || task.skipped || !isSameContact(task)) return task;
+      if (task.taskId && taskDraftsRef.current.has(task.taskId)) {
         const draft = taskDraftsRef.current.get(task.taskId)!;
-        taskDraftsRef.current.set(task.taskId,{...draft,teacherId:teacher.teacherId,teacherName:teacher.teacherName,grade:draft.grade || teacher.grade});
+        taskDraftsRef.current.set(task.taskId, {
+          ...draft,
+          teacherId: teacher.teacherId,
+          teacherName: teacher.teacherName,
+          grade: draft.grade || teacher.grade,
+        });
       }
       return {
         ...task,
@@ -700,12 +760,19 @@ const PrintRecordPage: React.FC = () => {
       };
     });
     setOcrResult({ ...ocrResult, taskList: updated, teacherMatched: true });
+    if (currentQueueTask && isSameContact(currentQueueTask) && modalOpen) {
+      form.setFieldsValue({
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        grade: form.getFieldValue('grade') || teacher.grade,
+      });
+    }
     message.success(`已批量指定申请教师：${teacher.teacherName}`);
   };
 
-  const handleBatchAssignTeacher = (teacherId: any) => {
+  const handleBatchAssignTeacher = (teacherId: any, explicitTargetTask?: PrintCandidate) => {
     const t = teacherList.find((item) => String(item.teacherId) === String(teacherId));
-    if (t) applyTeacherToQueue(t);
+    if (t) applyTeacherToQueue(t, explicitTargetTask);
   };
 
   // 批量指定印刷份数：将设置份数统一应用到多任务队列中所有待登记任务
@@ -720,6 +787,233 @@ const PrintRecordPage: React.FC = () => {
       status: '0',
     });
     setTeacherModalOpen(true);
+  };
+
+  // 微信导出目录导入状态
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportSession, setExportSession] = useState<WechatExportDirectorySession | null>(null);
+  const [exportSelectedIds, setExportSelectedIds] = useState<string[]>([]);
+  const [exportSearchKeyword, setExportSearchKeyword] = useState('');
+  const [exportRegisteredFilter, setExportRegisteredFilter] = useState<'all' | 'registered' | 'unregistered'>('all');
+  const [exportHideEmpty, setExportHideEmpty] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState<[any, any] | null>(null);
+  const [exportLoadingManifest, setExportLoadingManifest] = useState(false);
+  const [exportRecognizing, setExportRecognizing] = useState(false);
+  const [exportDamagedNotices, setExportDamagedNotices] = useState<{ conversationId: string; conversationName: string; reason: string }[]>([]);
+  const exportFolderInputRef = useRef<HTMLInputElement | null>(null);
+  // 按导入批次隔离缓存微信导出目录中匹配到的本地文件引用（key = `${batchId}:${relPath}`，仅在实际保存登记时才上传）
+  const exportAttachmentFilesRef = useRef<Map<string, FileLike>>(new Map());
+
+  const currentStorageUserKey = React.useMemo(
+    () => currentUserName || currentNickName || 'anonymous',
+    [currentUserName, currentNickName]
+  );
+
+  // 更新并持久化微信导出联系人勾选状态（按当前系统用户 + 会话 ID 保存在浏览器）
+  const updateExportSelectedIds = (nextIds: string[]) => {
+    const unique = Array.from(new Set(nextIds.filter(Boolean)));
+    setExportSelectedIds(unique);
+    saveContactSelection(currentStorageUserKey, unique);
+  };
+
+  // 第一步：选择整个微信导出文件夹，仅读取 导出清单.json，不读取各会话 messages.js
+  const handleSelectExportFolder = async (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) return;
+    setExportLoadingManifest(true);
+    setExportDamagedNotices([]);
+    try {
+      let session = await loadWechatExportManifest(files);
+      // 查询后端已登记状态
+      try {
+        const allConvIds = session.conversations.map((c) => c.id);
+        if (allConvIds.length > 0) {
+          const statusRes: any = await getWechatExportRegisteredStatus(allConvIds);
+          if (statusRes?.data) {
+            session = applyRegisteredStatusToManifest(session, statusRes.data);
+          }
+        }
+      } catch {
+        // 即使后端状态查询异常也不阻断清单展示
+      }
+      setExportSession(session);
+      // 恢复当前系统用户在当前浏览器保存的联系人会话 ID 选择（首次全部未选，新联系人默认未选）
+      const restored = loadSavedContactSelection(
+        currentStorageUserKey,
+        session.conversations.map((c) => c.id)
+      );
+      setExportSelectedIds(restored);
+      message.success(
+        `已读取导出清单：共 ${session.conversations.length} 个会话${restored.length > 0 ? `，已恢复上次勾选的 ${restored.length} 个联系人` : '（首次默认全部未选）'}`
+      );
+    } catch (err: any) {
+      message.error(err?.message || '读取微信导出目录清单失败');
+    } finally {
+      setExportLoadingManifest(false);
+    }
+  };
+
+  // 第二步：点击“开始识别”后才按需读取选中会话的 data/messages.js 并调用后端结构化解析接口
+  const handleStartExportRecognize = async () => {
+    if (!exportSession) {
+      message.warning('请先选择微信导出目录文件夹');
+      return;
+    }
+    if (exportSelectedIds.length === 0) {
+      message.warning('请先勾选至少 1 个需要识别的联系人会话');
+      return;
+    }
+    setExportRecognizing(true);
+    try {
+      const startDate = exportDateRange?.[0] ? dayjs(exportDateRange[0]).format('YYYY-MM-DD') : undefined;
+      const endDate = exportDateRange?.[1] ? dayjs(exportDateRange[1]).format('YYYY-MM-DD') : undefined;
+      const readRes = await readSelectedConversationsMessages(exportSession, exportSelectedIds, {
+        startDate,
+        endDate,
+      });
+      setExportDamagedNotices(readRes.damagedConversations || []);
+
+      if (readRes.conversations.length === 0) {
+        const emptyInfo = readRes.emptyConversations.length > 0
+          ? `（所选 ${readRes.emptyConversations.length} 个会话在当前日期范围内无消息）`
+          : '';
+        message.info(`未读取到可解析的聊天消息${emptyInfo}`);
+        return;
+      }
+
+      const batchId = crypto.randomUUID();
+      const res: any = await structuredParse({
+        conversations: readRes.conversations,
+        startDate,
+        endDate,
+      });
+      const parsedData = (res?.data || { taskList: [], messages: [], rawText: '' }) as PrefillResult;
+
+      // 按当前导入批次 (batchId) 隔离缓存本地附件，仅使用本次 readRes.attachmentFilesByPath 中实际存在的文件，避免跨次导入同名覆盖或串用旧缓存
+      parsedData.taskList = (parsedData.taskList || []).map((task) => {
+        const relPath = task.attachmentRelativePath || task.matchedAttachmentPath;
+        if (relPath && !task.exportMediaError && task.attachmentStatus !== 'missing' && readRes.attachmentFilesByPath.has(relPath)) {
+          const matchedFile = readRes.attachmentFilesByPath.get(relPath)!;
+          const attachmentCacheKey = `${batchId}:${relPath}`;
+          exportAttachmentFilesRef.current.set(attachmentCacheKey, matchedFile);
+          return {
+            ...task,
+            matchedAttachmentKey: attachmentCacheKey,
+            matchedAttachmentPath: relPath,
+            attachmentStatus: 'matched',
+            matchedAttachmentName: matchedFile.name,
+          };
+        }
+        return {
+          ...task,
+          matchedAttachmentKey: undefined,
+        };
+      });
+
+      if (!parsedData.taskList.length) {
+        message.info('选中联系人的聊天记录中未发现打印需求或材料');
+        return;
+      }
+
+      const incoming = namespaceResult(parsedData, batchId);
+      if (activeTaskIdRef.current && modalOpen) {
+        taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
+      }
+      setOcrResult((previous) => mergeSessions(previous, incoming));
+      setPreviewTaskIndex(0);
+      message.success(
+        `已完成 ${readRes.conversations.length} 个联系人会话解析，生成 ${incoming.taskList.length} 条登记候选！请逐条核对确认`
+      );
+    } catch (err: any) {
+      message.error(err?.message || '结构化聊天记录识别失败');
+    } finally {
+      setExportRecognizing(false);
+    }
+  };
+
+  // 切换候选的“跳过 / 不登记”状态
+  const handleToggleSkipCandidate = (index: number) => {
+    if (!ocrResult?.taskList) return;
+    const target = ocrResult.taskList[index];
+    if (!target) return;
+    const nextSkipped = !target.skipped;
+    const updatedTaskList = ocrResult.taskList.map((item, i) =>
+      i === index ? { ...item, skipped: nextSkipped } : item
+    );
+    setOcrResult({
+      ...ocrResult,
+      taskList: updatedTaskList,
+    });
+    message.info(nextSkipped ? `已跳过候选【${target.printName || '未命名材料'}】，不会登记` : `已恢复候选【${target.printName || '未命名材料'}】`);
+  };
+
+  // 已登记候选显式点击“选择重印”：解除已登记锁定并标记 reprintConfirmed = true，允许用户重新核对并保存为新登记
+  const handleReprintCandidate = (index: number) => {
+    if (!ocrResult?.taskList) return;
+    const target = ocrResult.taskList[index];
+    if (!target) return;
+    const sameContactCandidate = ocrResult.taskList.find(
+      (item, i) => i !== index && item.teacherId && item.sourceConversationId && item.sourceConversationId === target.sourceConversationId
+    );
+    const updatedTaskList = ocrResult.taskList.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            alreadyRegistered: false,
+            skipped: false,
+            reprintConfirmed: true,
+            teacherId: item.teacherId || sameContactCandidate?.teacherId,
+            teacherName: item.teacherName || sameContactCandidate?.teacherName,
+            teacherMatched: item.teacherMatched || Boolean(sameContactCandidate?.teacherId),
+            grade: item.grade || sameContactCandidate?.grade,
+            existingRecordDesc: item.existingRecordDesc
+              ? `${item.existingRecordDesc}（已选择重印）`
+              : '历史已登记记录（已选择重印）',
+          }
+        : item
+    );
+    const updatedResult = {
+      ...ocrResult,
+      taskList: updatedTaskList,
+    };
+    setOcrResult(updatedResult);
+    setPreviewTaskIndex(index);
+    message.success(`已为【${target.printName || '候选材料'}】开启重印登记，请核对后保存`);
+    applyTaskToForm(updatedTaskList[index], index, updatedTaskList.length, updatedTaskList);
+  };
+
+  // 在登记表单弹窗中直接点击“跳过此条 / 不登记”，自动跳转下一条待处理候选
+  const handleSkipCurrentTaskInModal = () => {
+    if (!ocrResult?.taskList || !ocrResult.taskList[currentTaskIndex]) return;
+    const currentTask = ocrResult.taskList[currentTaskIndex];
+    const updatedTaskList = ocrResult.taskList.map((item, i) =>
+      i === currentTaskIndex ? { ...item, skipped: true } : item
+    );
+    setOcrResult({
+      ...ocrResult,
+      taskList: updatedTaskList,
+    });
+    const nextIdx = findNextPendingTaskIndex(updatedTaskList, currentTaskIndex);
+    if (nextIdx !== -1) {
+      message.info(`已跳过【${currentTask.printName || '当前候选'}】，自动载入下一条候选`);
+      applyTaskToForm(updatedTaskList[nextIdx], nextIdx, updatedTaskList.length, updatedTaskList);
+    } else {
+      message.info(`已跳过【${currentTask.printName || '当前候选'}】，队列中已无待登记候选`);
+      setModalOpen(false);
+    }
+  };
+
+  const findNextPendingTaskIndex = (taskList: PrintCandidate[], fromIndex: number): number => {
+    for (let i = fromIndex + 1; i < taskList.length; i++) {
+      if (!taskList[i].alreadyRegistered && !taskList[i].skipped) {
+        return i;
+      }
+    }
+    for (let i = 0; i < fromIndex; i++) {
+      if (!taskList[i].alreadyRegistered && !taskList[i].skipped) {
+        return i;
+      }
+    }
+    return -1;
   };
 
   // 打开新增弹窗
@@ -747,7 +1041,7 @@ const PrintRecordPage: React.FC = () => {
         ...draft.formValues,
         printTime: draft.formValues.printTime ? dayjs(draft.formValues.printTime) : dayjs(),
       });
-      const sheets = computePreviewSheets(draft.formValues, isDraftSplit);
+      const sheets = computePreviewSheets(draft.formValues, isDraftSplit, null);
       setPreviewTotalSheets(sheets);
       setDraftNotice({ visible: true, timeText: draft.timeText });
       message.info('检测到未保存的新增草稿，已为您自动恢复！');
@@ -772,7 +1066,7 @@ const PrintRecordPage: React.FC = () => {
         printTime: dayjs(),
         status: '0',
       });
-      setPreviewTotalSheets(1);
+      setPreviewTotalSheets(calculateTotalSheets(1, 1, '1', DEFAULT_TEMPLATE_PAPER_COUNT, DEFAULT_PREVIEW_PAPER_COUNT));
       setDraftNotice(null);
     }
     setModalOpen(true);
@@ -789,6 +1083,9 @@ const PrintRecordPage: React.FC = () => {
     setSplitAnswer(false);
     setModalTitle(`修改印刷登记信息 (ID: ${record.printId})`);
 
+    const recTemplate = Number(record.templatePaperCount ?? 0);
+    const recPreview = Number(record.previewPaperCount ?? 0);
+
     // 检查是否有该记录的未保存草稿
     const draft = FormDraftUtil.getDraft('edu_record', record.printId);
     if (draft && draft.formValues) {
@@ -801,7 +1098,9 @@ const PrintRecordPage: React.FC = () => {
         calculateTotalSheets(
           draft.formValues.printCount || record.printCount,
           draft.formValues.pageCount || record.pageCount,
-          draft.formValues.printSide || record.printSide
+          draft.formValues.printSide || record.printSide,
+          recTemplate,
+          recPreview
         )
       );
       setDraftNotice({ visible: true, timeText: draft.timeText });
@@ -816,7 +1115,7 @@ const PrintRecordPage: React.FC = () => {
         printTime: record.printTime ? dayjs(record.printTime) : dayjs(),
       });
       setPreviewTotalSheets(
-        calculateTotalSheets(record.printCount, record.pageCount, record.printSide)
+        calculateTotalSheets(record.printCount, record.pageCount, record.printSide, recTemplate, recPreview)
       );
       setDraftNotice(null);
     }
@@ -843,7 +1142,13 @@ const PrintRecordPage: React.FC = () => {
           printTime: currentEditRecord.printTime ? dayjs(currentEditRecord.printTime) : dayjs(),
         });
         setPreviewTotalSheets(
-          calculateTotalSheets(currentEditRecord.printCount, currentEditRecord.pageCount, currentEditRecord.printSide)
+          calculateTotalSheets(
+            currentEditRecord.printCount,
+            currentEditRecord.pageCount,
+            currentEditRecord.printSide,
+            Number(currentEditRecord.templatePaperCount ?? 0),
+            Number(currentEditRecord.previewPaperCount ?? 0)
+          )
         );
       } else {
         setSplitAnswer(false);
@@ -868,7 +1173,7 @@ const PrintRecordPage: React.FC = () => {
           printTime: dayjs(),
           status: '0',
         });
-        setPreviewTotalSheets(1);
+        setPreviewTotalSheets(calculateTotalSheets(1, 1, '1', DEFAULT_TEMPLATE_PAPER_COUNT, DEFAULT_PREVIEW_PAPER_COUNT));
       }
       if (isEdit) {
         message.success('已丢弃本地草稿，已恢复为数据库数据！');
@@ -960,7 +1265,15 @@ const PrintRecordPage: React.FC = () => {
 
   // 根据识别到的原始文档名，匹配粘贴上传的附件 URL（支持精确与去扩展名/括号去噪的模糊匹配）
   const applyTaskToForm = (task: PrintCandidate, index: number, totalTasks: number, _taskList?: PrintCandidate[]) => {
-    if (!task || saveLockRef.current || task.alreadyRegistered) return;
+    if (!task || saveLockRef.current) return;
+    if (task.alreadyRegistered) {
+      message.warning('该条记录已登记，如需再次印刷请点击「选择重印」');
+      return;
+    }
+    if (task.skipped) {
+      message.info('该条候选已标记为跳过，如需登记请先点击「取消跳过」');
+      return;
+    }
     if (activeTaskIdRef.current && modalOpen) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
     activeTaskIdRef.current = task.taskId;
     let ruleState=task.taskId ? taskRulesRef.current.get(task.taskId) : undefined;
@@ -973,6 +1286,7 @@ const PrintRecordPage: React.FC = () => {
     sourcePageInfoRef.current = null;
     setSplitAnswer(false);
     setIsEdit(false); setEditId(null);
+    setCurrentEditRecord(null);
     setSelectedGrade(task.grade || '');
     setModalTitle(`新增印刷登记（第 ${index + 1}/${totalTasks} 条）`);
     const values:Record<string,unknown> = task.taskId && taskDraftsRef.current.get(task.taskId) || {
@@ -996,11 +1310,13 @@ const PrintRecordPage: React.FC = () => {
       setAnswerPageCount(Number(values.answerPageCount)); setAnswerPrintCount(Number(values.answerPrintCount)); setAnswerPrintSide(String(values.answerPrintSide));
     }
     setDraftNotice(null);
-    setPreviewTotalSheets(computePreviewSheets(values, Boolean(values.splitAnswer)));
-    setTextModalOpen(false); setModalOpen(true);
+    setPreviewTotalSheets(computePreviewSheets(values, Boolean(values.splitAnswer), null));
+    setTextModalOpen(false);
+    setExportModalOpen(false);
+    setModalOpen(true);
   };
 
-  // 提交保存
+  // 提交保存（实际保存时才上传导出目录关联附件、写入登记和扣库存；试卷答案拆分使用后端同一事务）
   const handleSaveRecord = async () => {
     if (importPendingRef.current > 0) { message.info('聊天和附件仍在解析，请稍后保存'); return; }
     if (saveLockRef.current) return;
@@ -1047,7 +1363,63 @@ const PrintRecordPage: React.FC = () => {
         ? (dayjs.isDayjs(values.printTime) ? values.printTime.format('YYYY-MM-DD HH:mm:ss') : values.printTime)
         : dayjs().format('YYYY-MM-DD HH:mm:ss');
 
-      // 1. 如果是新增模式且启用了试卷与答案拆分
+      // 如果来自微信导出目录且匹配了本地附件，在实际保存时才上传附件
+      let finalAttachment = values.attachment;
+      const expectedAttachmentKey = currentQueueTask?.matchedAttachmentKey;
+      const hasMatchedLocalAttachment =
+        !isEdit &&
+        Boolean(expectedAttachmentKey || (currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath));
+      if (!finalAttachment && hasMatchedLocalAttachment) {
+        const matchedLocalFile = expectedAttachmentKey
+          ? exportAttachmentFilesRef.current.get(expectedAttachmentKey)
+          : undefined;
+        let uploadErrorMsg = '';
+        if (!matchedLocalFile) {
+          uploadErrorMsg = `未找到当前批次关联的本地附件文件（${currentQueueTask?.originalDocName || currentQueueTask?.matchedAttachmentName || '未知文件'}）`;
+        } else {
+          try {
+            const fileToUpload =
+              matchedLocalFile instanceof File
+                ? matchedLocalFile
+                : new File([await matchedLocalFile.text()], matchedLocalFile.name, {
+                    type: matchedLocalFile.type || 'application/octet-stream',
+                  });
+            const uploadRes: any = await uploadFileSmart(fileToUpload);
+            finalAttachment = uploadRes?.url || uploadRes?.fileName || '';
+            if (finalAttachment) {
+              form.setFieldsValue({ attachment: finalAttachment });
+            } else {
+              uploadErrorMsg = `导出目录附件「${matchedLocalFile.name}」上传未返回有效文件地址`;
+            }
+          } catch (uploadErr: any) {
+            uploadErrorMsg = `导出目录附件「${matchedLocalFile.name}」上传失败：${uploadErr?.message || '网络或服务器异常'}`;
+          }
+        }
+
+        if (!finalAttachment) {
+          if (!currentQueueTask?.allowSaveWithoutAttachment) {
+            if (ocrResult?.taskList) {
+              const updatedList = ocrResult.taskList.map((item, i) =>
+                i === currentTaskIndex ? { ...item, attachmentUploadError: uploadErrorMsg } : item
+              );
+              setOcrResult({ ...ocrResult, taskList: updatedList });
+            }
+            message.error(`${uploadErrorMsg}。已暂停保存，请点击「确定」重试上传，或勾选「允许无附件直接登记」后再保存`);
+            return;
+          }
+        } else if (currentQueueTask?.attachmentUploadError && ocrResult?.taskList) {
+          const updatedList = ocrResult.taskList.map((item, i) =>
+            i === currentTaskIndex ? { ...item, attachmentUploadError: undefined } : item
+          );
+          setOcrResult({ ...ocrResult, taskList: updatedList });
+        }
+      }
+
+      const sourceConversationId = !isEdit ? currentQueueTask?.sourceConversationId : undefined;
+      const sourceMessageId = !isEdit ? currentQueueTask?.sourceMessageId : undefined;
+      const reprintConfirmed = !isEdit ? Boolean(currentQueueTask?.reprintConfirmed) : undefined;
+
+      // 1. 如果是新增模式且启用了试卷与答案拆分（使用后端同一事务批量保存，每条各加模板1+预览1，共+4张）
       if (!isEdit && splitAnswer) {
         const pageCount = Number(values.pageCount || 1);
         const ansPageCount = Number(values.answerPageCount || 1);
@@ -1075,8 +1447,18 @@ const PrintRecordPage: React.FC = () => {
         const examPrintCount = Number(values.printCount || 1);
         const examPrintSide = String(values.printSide || '1');
 
-        const examSheets = calculateTotalSheets(examPrintCount, examPageCount, examPrintSide);
-        const ansSheets = calculateTotalSheets(ansPrintCount, ansPageCount, ansPrintSide);
+        const splitCalc = calculateSplitSheetsWithExtra(
+          examPrintCount,
+          examPageCount,
+          examPrintSide,
+          ansPrintCount,
+          ansPageCount,
+          ansPrintSide,
+          DEFAULT_TEMPLATE_PAPER_COUNT,
+          DEFAULT_PREVIEW_PAPER_COUNT
+        );
+        const examSheets = splitCalc.examSheets;
+        const ansSheets = splitCalc.answerSheets;
 
         const rawPrintName = (values.printName || '印刷资料').trim();
         const cleanName = rawPrintName.replace(/^\[(试卷|答案)\]\s*/, '');
@@ -1090,37 +1472,48 @@ const PrintRecordPage: React.FC = () => {
 
         const examPayload = {
           ...values,
+          attachment: finalAttachment,
           printName: `[试卷] ${cleanName}`,
           pageCount: examPageCount,
           printCount: examPrintCount,
           printSide: examPrintSide,
+          templatePaperCount: DEFAULT_TEMPLATE_PAPER_COUNT,
+          previewPaperCount: DEFAULT_PREVIEW_PAPER_COUNT,
           totalPages: examSheets,
           printTime: formattedPrintTime,
           teacherId,
           teacherName,
           className,
           paperGoodsId,
+          sourceConversationId,
+          sourceMessageId,
+          ...(reprintConfirmed ? { reprintConfirmed: true } : {}),
           remark: examRemark,
         };
 
         const ansPayload = {
           ...values,
+          attachment: finalAttachment,
           printName: `[答案] ${cleanName}`,
           pageCount: ansPageCount,
           printCount: ansPrintCount,
           printSide: ansPrintSide,
+          templatePaperCount: DEFAULT_TEMPLATE_PAPER_COUNT,
+          previewPaperCount: DEFAULT_PREVIEW_PAPER_COUNT,
           totalPages: ansSheets,
           printTime: formattedPrintTime,
           teacherId,
           teacherName,
           className,
           paperGoodsId,
+          sourceConversationId,
+          sourceMessageId: sourceMessageId ? `${sourceMessageId}#answer` : undefined,
+          ...(reprintConfirmed ? { reprintConfirmed: true } : {}),
           remark: ansRemark,
         };
 
-        // 依次提交试卷与答案，分别核算并生成独立出库单
-        await addRecord(examPayload);
-        await addRecord(ansPayload);
+        // 后端同一事务提交试卷与答案两条登记，避免库存不足或异常时只保存一半
+        await addRecordBatch([examPayload, ansPayload]);
 
         FormDraftUtil.clearDraft('edu_record', 'create');
         setDraftNotice(null);
@@ -1132,7 +1525,7 @@ const PrintRecordPage: React.FC = () => {
         if (isQueueMode) {
           const updatedTaskList = ocrResult.taskList.map((item: any, i: number) => {
             if (i === currentTaskIndex) {
-              return { ...item, alreadyRegistered: true };
+              return { ...item, alreadyRegistered: true, reprintConfirmed: false, attachmentUploadError: undefined, attachment: finalAttachment || item.attachment };
             }
             return item;
           });
@@ -1142,21 +1535,7 @@ const PrintRecordPage: React.FC = () => {
             taskList: updatedTaskList,
           });
 
-          let nextIdx = -1;
-          for (let i = currentTaskIndex + 1; i < updatedTaskList.length; i++) {
-            if (!updatedTaskList[i].alreadyRegistered) {
-              nextIdx = i;
-              break;
-            }
-          }
-          if (nextIdx === -1) {
-            for (let i = 0; i < currentTaskIndex; i++) {
-              if (!updatedTaskList[i].alreadyRegistered) {
-                nextIdx = i;
-                break;
-              }
-            }
-          }
+          const nextIdx = findNextPendingTaskIndex(updatedTaskList, currentTaskIndex);
 
           if (nextIdx !== -1) {
             const nextTask = updatedTaskList[nextIdx];
@@ -1176,7 +1555,7 @@ const PrintRecordPage: React.FC = () => {
           }
         } else {
           message.success(
-            `🎉 试卷与答案已成功拆分为 2 条文印登记记录！\n【试卷】${examPageCount}页/${examPrintCount}份(耗纸${examSheets}张)，【答案】${ansPageCount}页/${ansPrintCount}份(耗纸${ansSheets}张)，合计联动出库扣减 ${examSheets + ansSheets} 张纸。`
+            `🎉 试卷与答案已成功拆分为 2 条文印登记记录！\n【试卷】${examPageCount}页/${examPrintCount}份(含模板1+预览1共耗纸${examSheets}张)，【答案】${ansPageCount}页/${ansPrintCount}份(含模板1+预览1共耗纸${ansSheets}张)，合计联动出库扣减 ${examSheets + ansSheets} 张纸。`
           );
           setModalOpen(false);
           setOcrResult(null);
@@ -1185,20 +1564,29 @@ const PrintRecordPage: React.FC = () => {
       }
 
       // 2. 普通单条记录处理（或编辑已有记录）
+      const { templatePaperCount, previewPaperCount } = getActiveExtraPaperCounts();
       const totalPages = calculateTotalSheets(
         values.printCount,
         values.pageCount,
-        values.printSide
+        values.printSide,
+        templatePaperCount,
+        previewPaperCount
       );
 
       const payload = {
         ...values,
+        attachment: finalAttachment,
         printTime: formattedPrintTime,
         teacherId,
         teacherName,
         className,
         paperGoodsId,
+        templatePaperCount,
+        previewPaperCount,
         totalPages,
+        ...(sourceConversationId ? { sourceConversationId } : {}),
+        ...(sourceMessageId ? { sourceMessageId } : {}),
+        ...(reprintConfirmed ? { reprintConfirmed: true } : {}),
       };
 
       if (isEdit && editId) {
@@ -1220,7 +1608,7 @@ const PrintRecordPage: React.FC = () => {
           // 标记当前任务在前端队列中已登记
           const updatedTaskList = ocrResult.taskList.map((item: any, i: number) => {
             if (i === currentTaskIndex) {
-              return { ...item, alreadyRegistered: true };
+              return { ...item, alreadyRegistered: true, reprintConfirmed: false, attachmentUploadError: undefined, attachment: finalAttachment || item.attachment };
             }
             return item;
           });
@@ -1230,22 +1618,8 @@ const PrintRecordPage: React.FC = () => {
             taskList: updatedTaskList,
           });
 
-          // 寻找下一个未登记的任务
-          let nextIdx = -1;
-          for (let i = currentTaskIndex + 1; i < updatedTaskList.length; i++) {
-            if (!updatedTaskList[i].alreadyRegistered) {
-              nextIdx = i;
-              break;
-            }
-          }
-          if (nextIdx === -1) {
-            for (let i = 0; i < currentTaskIndex; i++) {
-              if (!updatedTaskList[i].alreadyRegistered) {
-                nextIdx = i;
-                break;
-              }
-            }
-          }
+          // 寻找下一个未登记且未跳过的任务
+          const nextIdx = findNextPendingTaskIndex(updatedTaskList, currentTaskIndex);
 
           if (nextIdx !== -1) {
             const currentTaskName = values.printName;
@@ -1266,13 +1640,27 @@ const PrintRecordPage: React.FC = () => {
             return;
           }
         } else {
-          message.success('印刷登记成功！已自动关联生成耗材出库单扣减纸张库存');
+          message.success('印刷登记成功！已自动关联生成耗材出库单扣减纸张库存（含模板1张+预览1张）');
           setModalOpen(false);
           setOcrResult(null);
         }
       }
     } catch (e: any) {
-      message.error(e.message || '操作失败');
+      const errMsg = e?.message || '操作失败';
+      if (errMsg.includes('该微信聊天记录已登记') && ocrResult?.taskList) {
+        const updatedTaskList = ocrResult.taskList.map((item: any, i: number) =>
+          i === currentTaskIndex
+            ? {
+                ...item,
+                alreadyRegistered: true,
+                reprintConfirmed: false,
+                existingRecordDesc: errMsg,
+              }
+            : item
+        );
+        setOcrResult({ ...ocrResult, taskList: updatedTaskList });
+      }
+      message.error(errMsg);
     } finally { saveLockRef.current = false; setSavingRecord(false); }
   };
 
@@ -1806,15 +2194,32 @@ const PrintRecordPage: React.FC = () => {
     {
       title: '总耗纸量',
       dataIndex: 'totalPages',
-      width: 100,
+      width: 125,
       align: 'center',
-      render: (_, record) => (
-        <Tag color="geekblue" style={{ fontWeight: 600 }}>
-          {record.totalPages ||
-            calculateTotalSheets(record.printCount, record.pageCount, record.printSide)}{' '}
-          张
-        </Tag>
-      ),
+      render: (_, record) => {
+        const extraLabel = formatExtraPaperLabel(record, false);
+        const total =
+          record.totalPages ||
+          calculateTotalSheets(
+            record.printCount,
+            record.pageCount,
+            record.printSide,
+            Number(record.templatePaperCount ?? 0),
+            Number(record.previewPaperCount ?? 0)
+          );
+        return (
+          <Tooltip title={`总耗纸 ${total} 张（${extraLabel}）`}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+              <Tag color="geekblue" style={{ fontWeight: 600, margin: 0 }}>
+                {total} 张
+              </Tag>
+              <span style={{ fontSize: 10, color: isLegacyExtraPaperRecord(record) ? '#8C8C8C' : '#1677FF', marginTop: 2 }}>
+                {isLegacyExtraPaperRecord(record) ? '旧规则，未计入' : '含模板1+预览1'}
+              </span>
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '原稿附件',
@@ -2006,6 +2411,15 @@ const PrintRecordPage: React.FC = () => {
     ? classList.filter((c) => !c.grade || c.grade === selectedGrade)
     : classList;
 
+  const filteredExportConversations = React.useMemo(() => {
+    if (!exportSession) return [];
+    return filterManifestConversations(exportSession.conversations, {
+      keyword: exportSearchKeyword,
+      registeredFilter: exportRegisteredFilter,
+      hideEmpty: exportHideEmpty,
+    });
+  }, [exportSession, exportSearchKeyword, exportRegisteredFilter, exportHideEmpty]);
+
   return (
     <PageContainer header={{ title: '文印智能登记管理' }}>
       <ProTable
@@ -2075,6 +2489,18 @@ const PrintRecordPage: React.FC = () => {
         }}
         toolBarRender={() => [
           <Button
+            key="export-dir-btn"
+            data-testid="open-wechat-export-modal"
+            type="dashed"
+            icon={<FolderOpenOutlined style={{ color: '#1677FF' }} />}
+            onClick={() => {
+              loadBaseData();
+              setExportModalOpen(true);
+            }}
+          >
+            📂 导入微信导出目录
+          </Button>,
+          <Button
             key="smart-btn"
             type="dashed"
             icon={<MessageOutlined style={{ color: '#52C41A' }} />}
@@ -2093,8 +2519,20 @@ const PrintRecordPage: React.FC = () => {
 
       {/* 新增 / 修改登记弹窗（微信智能预填与文印登记标杆弹窗） */}
       <Modal
-        title={<Space>{modalTitle}<Button size="small" onClick={()=>setDebugOpen(true)}>查看解析调试</Button></Space>}
-        open={modalOpen && !textModalOpen}
+        title={
+          <Space>
+            {modalTitle}
+            <Button size="small" onClick={() => setDebugOpen(true)}>
+              查看解析调试
+            </Button>
+            {ocrResult && currentQueueTask && !isEdit && (
+              <Button size="small" danger onClick={handleSkipCurrentTaskInModal}>
+                跳过此条 / 不登记
+              </Button>
+            )}
+          </Space>
+        }
+        open={modalOpen && !textModalOpen && !exportModalOpen}
         onOk={handleSaveRecord}
         confirmLoading={savingRecord}
         onCancel={() => { if (saveLockRef.current) return; if (activeTaskIdRef.current) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true)); setModalOpen(false); }}
@@ -2110,8 +2548,19 @@ const PrintRecordPage: React.FC = () => {
           loading={discardLoading}
           isEdit={isEdit}
         />
-        {ocrResult && <ChatCandidateList compact tasks={ocrResult.taskList.map((task,i)=>i===currentTaskIndex?{...task,pageCount:watchedPageCount,printSide:watchedPrintSide}:task)} selected={currentTaskIndex} disabled={savingRecord}
-          onSelect={i=>applyTaskToForm(ocrResult.taskList[i],i,ocrResult.taskList.length)} />}
+        {ocrResult && (
+          <ChatCandidateList
+            compact
+            tasks={ocrResult.taskList.map((task, i) =>
+              i === currentTaskIndex ? { ...task, pageCount: watchedPageCount, printSide: watchedPrintSide } : task
+            )}
+            selected={currentTaskIndex}
+            disabled={savingRecord}
+            onSelect={(i) => applyTaskToForm(ocrResult.taskList[i], i, ocrResult.taskList.length)}
+            onToggleSkip={handleToggleSkipCandidate}
+            onReprint={handleReprintCandidate}
+          />
+        )}
         <div data-testid="chat-register" onPasteCapture={handleSmartRegisterModalPaste} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           {/* 右栏：登记表单（核心紧凑排布：零滚动、多字段横向矩阵组合、内嵌耗纸胶囊预算） */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -2152,6 +2601,42 @@ const PrintRecordPage: React.FC = () => {
 
             <Form disabled={savingRecord} form={form} layout="vertical" onValuesChange={handleFormValuesChange}>
               {currentQueueTask?.existingRecordDesc && <Alert type="warning" title={currentQueueTask.existingRecordDesc} style={{marginBottom:8}} />}
+              {currentQueueTask?.attachmentUploadError && (
+                <Alert
+                  type="error"
+                  showIcon
+                  style={{ marginBottom: 8 }}
+                  title={
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>
+                        {currentQueueTask.attachmentUploadError}（未写入登记、未扣库存，可直接点击「确定」重试上传）
+                      </span>
+                      <Checkbox
+                        data-testid="allow-save-without-attachment-checkbox"
+                        checked={Boolean(currentQueueTask.allowSaveWithoutAttachment)}
+                        onChange={(e) => {
+                          if (!ocrResult?.taskList) return;
+                          const checked = e.target.checked;
+                          const updatedList = ocrResult.taskList.map((item, i) =>
+                            i === currentTaskIndex ? { ...item, allowSaveWithoutAttachment: checked } : item
+                          );
+                          setOcrResult({ ...ocrResult, taskList: updatedList });
+                        }}
+                      >
+                        允许无附件直接登记此条记录
+                      </Checkbox>
+                    </div>
+                  }
+                />
+              )}
+              {currentQueueTask?.attachmentStatus === 'missing' && (
+                <Alert
+                  type="error"
+                  showIcon
+                  title={`导出目录缺失对应附件：${currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentPath || '未知附件'}（候选已保留，可手动补传原稿或直接保存登记）`}
+                  style={{ marginBottom: 8 }}
+                />
+              )}
               {currentQueueTask?.attachmentStatus==='ambiguous' && <Form.Item label="选择当前材料对应的附件">
                 <Select placeholder="同名附件需要手动关联" options={sessionAttachments.filter(f=>f.url).map((f,i)=>({value:i,label:`${f.name} (${i+1})`}))}
                   onChange={i=>{
@@ -2274,13 +2759,38 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={9}>
-                  <Form.Item label="实际出库耗纸预算（自动折算）" style={{ marginBottom: 10 }}>
+                  <Form.Item
+                    label={
+                      <Space size={4}>
+                        <span>实际出库耗纸预算（自动折算）</span>
+                        <Tag color={isEdit && isLegacyExtraPaperRecord(currentEditRecord) ? 'default' : 'blue'} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+                          {isEdit
+                            ? formatExtraPaperLabel(currentEditRecord, false)
+                            : splitAnswer
+                            ? '试卷/答案各加: 模板1+预览1(共+4张)'
+                            : '固定加: 模板1张+预览1张'}
+                        </Tag>
+                      </Space>
+                    }
+                    style={{ marginBottom: 10 }}
+                  >
                     <div
+                      data-testid="preview-total-sheets-box"
                       style={{
                         height: 32,
                         padding: '0 10px',
-                        background: splitAnswer ? '#F6FFED' : '#E6F4FF',
-                        border: splitAnswer ? '1px solid #B7EB8F' : '1px solid #91CAFF',
+                        background:
+                          currentPaperGoods && previewTotalSheets > currentPaperStockSheets
+                            ? '#FFF2F0'
+                            : splitAnswer
+                            ? '#F6FFED'
+                            : '#E6F4FF',
+                        border:
+                          currentPaperGoods && previewTotalSheets > currentPaperStockSheets
+                            ? '1px solid #FFCCC7'
+                            : splitAnswer
+                            ? '1px solid #B7EB8F'
+                            : '1px solid #91CAFF',
                         borderRadius: 6,
                         display: 'flex',
                         alignItems: 'center',
@@ -2290,8 +2800,21 @@ const PrintRecordPage: React.FC = () => {
                       <span style={{ fontSize: 12, color: splitAnswer ? '#237804' : '#0958D9', fontWeight: 500 }}>
                         {splitAnswer ? '试卷+答案合计' : '总耗纸量'}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 'bold', color: splitAnswer ? '#389E0D' : '#1677FF' }}>
+                      <span
+                        data-testid="preview-total-sheets-value"
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 'bold',
+                          color:
+                            currentPaperGoods && previewTotalSheets > currentPaperStockSheets
+                              ? '#CF1322'
+                              : splitAnswer
+                              ? '#389E0D'
+                              : '#1677FF',
+                        }}
+                      >
                         {previewTotalSheets} 张 (≈ {(previewTotalSheets / currentPaperRate).toFixed(1)} 包)
+                        {currentPaperGoods && previewTotalSheets > currentPaperStockSheets ? ' [库存不足]' : ''}
                       </span>
                     </div>
                   </Form.Item>
@@ -2375,7 +2898,19 @@ const PrintRecordPage: React.FC = () => {
               {/* 第 4 行：原稿电子附件 (9) + 成品留样 (7) + 补充备注 (8) */}
               <Row gutter={10}>
                 <Col span={9}>
-                  <Form.Item key={currentQueueTask?.taskId || "manual"} name="attachment" label="原稿电子文件 / 附件" style={{ marginBottom: 8 }}>
+                  <Form.Item
+                    key={currentQueueTask?.taskId || 'manual'}
+                    name="attachment"
+                    label="原稿电子文件 / 附件"
+                    style={{ marginBottom: 8 }}
+                    extra={
+                      currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath ? (
+                        <span style={{ fontSize: 11, color: '#389E0D' }}>
+                          📎 已精确匹配导出目录附件：{currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}（保存登记时自动上传）
+                        </span>
+                      ) : undefined
+                    }
+                  >
                     <FileUpload
                       contextKey={currentQueueTask?.taskId}
                       disabled={savingRecord}
@@ -2424,10 +2959,21 @@ const PrintRecordPage: React.FC = () => {
                       style={{ fontSize: 12 }}
                     >
                       <span style={{ color: splitAnswer ? '#237804' : '#595959', fontWeight: splitAnswer ? 600 : 400 }}>
-                        📑 包含试卷与答案合并文件（自动拆分为【试卷】与【答案】两条独立记录）
+                        📑 包含试卷与答案合并文件（自动拆分为【试卷】与【答案】两条独立记录，每条各加模板1张+预览1张）
                       </span>
                     </Checkbox>
                     <Space size={6}>
+                      <Button
+                        size="small"
+                        type="link"
+                        icon={<FolderOpenOutlined />}
+                        onClick={() => {
+                          setExportModalOpen(true);
+                        }}
+                        style={{ fontSize: 11, padding: 0 }}
+                      >
+                        导入微信导出目录
+                      </Button>
                       <Button
                         size="small"
                         type="link"
@@ -2569,16 +3115,253 @@ const PrintRecordPage: React.FC = () => {
           <TextArea rows={5} value={rawText} onChange={e=>setRawText(e.target.value)} placeholder="粘贴多天聊天记录；也可粘贴文件，未知信息稍后手动填写" />
           <Button loading={parsingText} onClick={handleParseText} style={{margin:'10px 0'}}>解析文字并加入候选</Button>
           <Button onClick={()=>setDebugOpen(true)} style={{marginLeft:8}}>查看解析调试</Button>
+          <Button icon={<FolderOpenOutlined />} onClick={() => { setTextModalOpen(false); setExportModalOpen(true); }} style={{marginLeft:8}}>导入微信导出目录</Button>
           <label style={{marginLeft:12}}>识别聊天截图 <input aria-label="识别聊天截图" type="file" accept="image/*" disabled={parsingText} onChange={e=>{
             const file=e.target.files?.[0]; if(file) enqueueImport(()=>parseScreenshotFile(file)); e.target.value='';
           }} /></label>
           {ocrResult && <>
             <div style={{marginBottom:12}}>共 {ocrResult.taskList.length} 条候选。未知信息留空，选择一条后对照当天全部聊天填写。</div>
-            <Select showSearch optionFilterProp="label" placeholder="为当前联系人的候选统一指定申请教师" style={{width:350,marginBottom:12}}
-              options={teacherList.filter(t=>t.teacherId!==-999).map(t=>({value:t.teacherId,label:t.teacherName}))} onChange={handleBatchAssignTeacher} />
-            <ChatCandidateList tasks={ocrResult.taskList} selected={previewTaskIndex} onSelect={setPreviewTaskIndex} />
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="为当前联系人的候选统一指定申请教师"
+              style={{width:350,marginBottom:12}}
+              value={
+                ocrResult.taskList[previewTaskIndex]?.teacherId &&
+                ocrResult.taskList[previewTaskIndex]?.teacherId !== -999
+                  ? ocrResult.taskList[previewTaskIndex]?.teacherId
+                  : undefined
+              }
+              options={teacherList.filter(t=>t.teacherId!==-999).map(t=>({value:t.teacherId,label:t.teacherName}))}
+              onChange={(teacherId) => handleBatchAssignTeacher(teacherId, ocrResult.taskList[previewTaskIndex])}
+            />
+            <ChatCandidateList
+              tasks={ocrResult.taskList}
+              selected={previewTaskIndex}
+              onSelect={setPreviewTaskIndex}
+              onToggleSkip={handleToggleSkipCandidate}
+              onReprint={handleReprintCandidate}
+            />
             <Button type="primary" onClick={()=>applyTaskToForm(ocrResult.taskList[previewTaskIndex],previewTaskIndex,ocrResult.taskList.length)}>打开当前任务并逐条登记</Button>
           </>}
+        </div>
+      </Modal>
+
+      {/* 导入微信导出目录弹窗（先读导出清单选联系人，点击开始识别后才读取选中会话 messages.js） */}
+      <Modal
+        title="导入微信导出目录（先选联系人，再生成登记候选）"
+        open={exportModalOpen}
+        width={1060}
+        style={{ top: 12, paddingBottom: 0 }}
+        styles={{ body: { maxHeight: 'calc(100dvh - 110px)', overflowY: 'auto' } }}
+        onCancel={() => setExportModalOpen(false)}
+        footer={null}
+      >
+        <div data-testid="wechat-export-import">
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            title="选择整个微信导出文件夹后，首先仅读取《导出清单.json》展示联系人；勾选联系人并点击「开始识别」后才读取选中会话的消息与匹配附件。预览和筛选均不会写入登记或扣减库存。"
+          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+            <input
+              ref={exportFolderInputRef}
+              data-testid="wechat-export-dir-input"
+              type="file"
+              {...({ webkitdirectory: '', directory: '' } as any)}
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                handleSelectExportFolder(e.target.files);
+                e.target.value = '';
+              }}
+            />
+            <Button
+              type="primary"
+              icon={<FolderOpenOutlined />}
+              loading={exportLoadingManifest}
+              onClick={() => exportFolderInputRef.current?.click()}
+            >
+              选择微信导出文件夹
+            </Button>
+            {exportSession && (
+              <Tag color="blue">
+                共 {exportSession.conversations.length} 个会话 | 已勾选 {exportSelectedIds.length} 个联系人
+              </Tag>
+            )}
+            <DatePicker.RangePicker
+              value={exportDateRange as any}
+              onChange={(dates) => setExportDateRange(dates as any)}
+              placeholder={['开始日期（默认全部历史）', '结束日期（默认全部历史）']}
+              allowEmpty={[true, true]}
+              style={{ width: 290 }}
+            />
+            <Button
+              type="primary"
+              data-testid="start-wechat-recognize-btn"
+              loading={exportRecognizing}
+              disabled={!exportSession || exportSelectedIds.length === 0}
+              onClick={handleStartExportRecognize}
+            >
+              开始识别选中联系人 ({exportSelectedIds.length})
+            </Button>
+          </div>
+
+          {exportSession && (
+            <Card size="small" style={{ marginBottom: 12 }} title="第一步：勾选需要识别的联系人会话（按当前登录用户自动记忆勾选）">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                <Input.Search
+                  allowClear
+                  placeholder="搜索联系人名称或会话ID"
+                  value={exportSearchKeyword}
+                  onChange={(e) => setExportSearchKeyword(e.target.value)}
+                  style={{ width: 240 }}
+                />
+                <Radio.Group
+                  size="small"
+                  value={exportRegisteredFilter}
+                  onChange={(e) => setExportRegisteredFilter(e.target.value)}
+                >
+                  <Radio.Button value="all">全部</Radio.Button>
+                  <Radio.Button value="unregistered">未登记</Radio.Button>
+                  <Radio.Button value="registered">已登记</Radio.Button>
+                </Radio.Group>
+                <Checkbox checked={exportHideEmpty} onChange={(e) => setExportHideEmpty(e.target.checked)}>
+                  隐藏 0 消息会话
+                </Checkbox>
+                <Space size={4} style={{ marginLeft: 'auto' }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      const merged = new Set(exportSelectedIds);
+                      filteredExportConversations.forEach((c) => merged.add(c.id));
+                      updateExportSelectedIds(Array.from(merged));
+                    }}
+                  >
+                    全选当前筛选 ({filteredExportConversations.length})
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      const currentSet = new Set(exportSelectedIds);
+                      filteredExportConversations.forEach((c) => {
+                        if (currentSet.has(c.id)) currentSet.delete(c.id);
+                        else currentSet.add(c.id);
+                      });
+                      updateExportSelectedIds(Array.from(currentSet));
+                    }}
+                  >
+                    反选当前筛选
+                  </Button>
+                  <Button size="small" danger onClick={() => updateExportSelectedIds([])}>
+                    清空选择
+                  </Button>
+                </Space>
+              </div>
+
+              <Table
+                size="small"
+                rowKey="id"
+                dataSource={filteredExportConversations}
+                pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
+                scroll={{ y: 240 }}
+                rowSelection={{
+                  selectedRowKeys: exportSelectedIds,
+                  preserveSelectedRowKeys: true,
+                  onChange: (keys) => updateExportSelectedIds(keys.map(String)),
+                }}
+                columns={[
+                  {
+                    title: '联系人名称',
+                    dataIndex: 'name',
+                    render: (name: string, record: any) => (
+                      <Space size={6}>
+                        <Text strong>{name}</Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          ({record.id})
+                        </Text>
+                      </Space>
+                    ),
+                  },
+                  {
+                    title: '消息数',
+                    dataIndex: 'messageCount',
+                    width: 100,
+                    align: 'center',
+                    sorter: (a: any, b: any) => a.messageCount - b.messageCount,
+                  },
+                  {
+                    title: '导出状态',
+                    dataIndex: 'status',
+                    width: 110,
+                    align: 'center',
+                    render: (status: string) => (
+                      <Tag color={status === '成功' || status === 'ok' ? 'success' : 'warning'}>{status}</Tag>
+                    ),
+                  },
+                  {
+                    title: '是否登记',
+                    dataIndex: 'hasRegistered',
+                    width: 130,
+                    align: 'center',
+                    render: (hasReg: boolean, record: any) =>
+                      hasReg ? (
+                        <Tag color="processing">已登记 ({record.registeredCount}条)</Tag>
+                      ) : (
+                        <Tag color="default">未登记</Tag>
+                      ),
+                  },
+                ]}
+              />
+            </Card>
+          )}
+
+          {exportDamagedNotices.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 12 }}
+              title={`有 ${exportDamagedNotices.length} 个会话消息文件读取异常（已安全跳过）：${exportDamagedNotices
+                .map((d) => `${d.conversationName}(${d.reason})`)
+                .join('；')}`}
+            />
+          )}
+
+          {ocrResult && ocrResult.taskList.length > 0 && (
+            <Card size="small" title={`第二步：逐条核对登记候选（共 ${ocrResult.taskList.length} 条，普通闲聊已留作上下文）`}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="为当前选中候选所属联系人统一指定申请教师"
+                  style={{ width: 340 }}
+                  value={
+                    ocrResult.taskList[previewTaskIndex]?.teacherId &&
+                    ocrResult.taskList[previewTaskIndex]?.teacherId !== -999
+                      ? ocrResult.taskList[previewTaskIndex]?.teacherId
+                      : undefined
+                  }
+                  options={teacherList.filter((t) => t.teacherId !== -999).map((t) => ({ value: t.teacherId, label: t.teacherName }))}
+                  onChange={(teacherId) => handleBatchAssignTeacher(teacherId, ocrResult.taskList[previewTaskIndex])}
+                />
+                <Button
+                  type="primary"
+                  data-testid="open-selected-candidate-btn"
+                  onClick={() => applyTaskToForm(ocrResult.taskList[previewTaskIndex], previewTaskIndex, ocrResult.taskList.length)}
+                >
+                  打开当前候选并逐条确认保存
+                </Button>
+              </div>
+              <ChatCandidateList
+                tasks={ocrResult.taskList}
+                selected={previewTaskIndex}
+                onSelect={setPreviewTaskIndex}
+                onToggleSkip={handleToggleSkipCandidate}
+                onReprint={handleReprintCandidate}
+              />
+            </Card>
+          )}
         </div>
       </Modal>
 
@@ -2647,14 +3430,21 @@ const PrintRecordPage: React.FC = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
             }}
           >
             <span style={{ fontWeight: 600, fontSize: 13, color: '#D46B08' }}>
               ✏️ 正在修改：{editTarget.printName}
             </span>
-            <span style={{ fontSize: 11, color: '#874D00' }}>
-              修改份数/页数/单双面将自动重算并联动更新库存出库
-            </span>
+            <Space size={8}>
+              <Tag color={isLegacyExtraPaperRecord(editTarget) ? 'default' : 'blue'} style={{ margin: 0 }}>
+                额外用纸：{formatExtraPaperLabel(editTarget, false)}
+              </Tag>
+              <span style={{ fontSize: 11, color: '#874D00' }}>
+                修改份数/页数/单双面将按该记录保存的额外用纸规则重算并同步库存
+              </span>
+            </Space>
           </div>
         )}
         <Form form={editForm} layout="vertical" preserve={false}>
@@ -2862,10 +3652,25 @@ const PrintRecordPage: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="印刷份数">{currentRecord.printCount} 份</Descriptions.Item>
             <Descriptions.Item label="每份页数">{currentRecord.pageCount || 1} 页</Descriptions.Item>
+            <Descriptions.Item label="模板用纸">
+              {isLegacyExtraPaperRecord(currentRecord)
+                ? '0 张（旧规则，未计入）'
+                : `${currentRecord.templatePaperCount ?? 1} 张`}
+            </Descriptions.Item>
+            <Descriptions.Item label="印刷预览用纸">
+              {isLegacyExtraPaperRecord(currentRecord)
+                ? '0 张（旧规则，未计入）'
+                : `${currentRecord.previewPaperCount ?? 1} 张`}
+            </Descriptions.Item>
             <Descriptions.Item label="纸张总消耗量" span={2}>
-              <Text strong style={{ color: '#1677FF' }}>
-                {currentRecord.totalPages} 张纸
-              </Text>
+              <Space size={8}>
+                <Text strong style={{ color: '#1677FF' }}>
+                  {currentRecord.totalPages} 张纸
+                </Text>
+                <Tag color={isLegacyExtraPaperRecord(currentRecord) ? 'default' : 'blue'}>
+                  {formatExtraPaperLabel(currentRecord, false)}
+                </Tag>
+              </Space>
             </Descriptions.Item>
             <Descriptions.Item label="经办人">{currentRecord.operator}</Descriptions.Item>
             <Descriptions.Item label="印刷时间">

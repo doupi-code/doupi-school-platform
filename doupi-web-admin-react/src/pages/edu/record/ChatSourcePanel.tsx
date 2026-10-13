@@ -15,7 +15,7 @@ export default function ChatSourcePanel({result,task}:{result:PrefillResult;task
   useEffect(()=>{locate();},[task.taskId]);
   return <aside ref={panel} style={{width:360,flexShrink:0,position:'sticky',top:0,maxHeight:'65vh',overflowY:'auto',padding:12,background:'#fafafa',border:'1px solid #eee',borderRadius:8}}>
     <div style={{position:'sticky',top:-12,background:'#fafafa',padding:'8px 0',zIndex:1}}>
-      <strong>{day ? `${day} · 当天全部聊天` : '日期暂未确定 · 本次聊天原文'}</strong>
+      <strong>{task.sourceConversationName ? `${task.sourceConversationName} · ` : ''}{day ? `${day} · 当天全部聊天` : '日期暂未确定 · 本次聊天原文'}</strong>
       <Button size="small" disabled={!messages.some(m=>related.has(m.id))} onClick={locate} style={{marginTop:6}}>定位当前记录</Button>
     </div>
     {messages.map(m=><div key={m.id} data-current-message={related.has(m.id)} style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',padding:10,marginTop:8,borderRadius:6,background:related.has(m.id)?'#e6f4ff':'white',border:related.has(m.id)?'2px solid #1677ff':'1px solid #eee'}}>

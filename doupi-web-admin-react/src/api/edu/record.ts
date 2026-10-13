@@ -26,6 +26,15 @@ export function addRecord(data: any) {
   });
 }
 
+// 批量新增印刷登记（同一事务，用于试卷与答案拆分原子保存）
+export function addRecordBatch(data: any[]) {
+  return request({
+    url: '/edu/record/batch',
+    method: 'post',
+    data,
+  });
+}
+
 // 修改印刷登记
 export function updateRecord(data: any) {
   return request({
@@ -180,6 +189,24 @@ export function textParse(data: { text: string }) {
     url: '/edu/record/text-parse',
     method: 'post',
     data,
+  });
+}
+
+// 微信导出目录结构化消息解析预填（各会话独立解析，保留会话ID、消息ID与附件引用）
+export function structuredParse(data: any) {
+  return request({
+    url: '/edu/record/structured-parse',
+    method: 'post',
+    data,
+  });
+}
+
+// 查询微信导出会话ID的已登记状态（用于导出清单列表展示“是否登记”）
+export function getWechatExportRegisteredStatus(conversationIds: string[]) {
+  return request({
+    url: '/edu/record/wechat-export/status',
+    method: 'post',
+    data: { conversationIds },
   });
 }
 

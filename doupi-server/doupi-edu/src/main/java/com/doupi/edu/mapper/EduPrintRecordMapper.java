@@ -35,6 +35,12 @@ public interface EduPrintRecordMapper
      */
     public List<EduPrintRecord> selectEduPrintRecordList(EduPrintRecord eduPrintRecord);
 
+    /** Acquire a persistent source row lock for the current database transaction. */
+    void lockSourceRegistration(String sourceConversationId);
+
+    /** Current read after acquiring the source lock; excludes cancelled/deleted records. */
+    List<EduPrintRecord> selectSourceRecordsForUpdate(String sourceConversationId);
+
     /**
      * 新增印刷登记
      * 
