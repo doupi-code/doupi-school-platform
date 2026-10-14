@@ -2426,21 +2426,21 @@ const PrintRecordPage: React.FC = () => {
     {
       title: renderSortHeader('印刷份数', 'printCount', '印刷份数', 'r.print_count', 'descend', 'center'),
       dataIndex: 'printCount',
-      width: 90,
+      width: 100,
       align: 'center',
       render: (_, record) => <Text strong style={{ color: '#1890FF' }}>{record.printCount} 份</Text>,
     },
     {
       title: renderSortHeader('每份页数', 'pageCount', '每份页数', 'r.page_count', 'descend', 'center'),
       dataIndex: 'pageCount',
-      width: 85,
+      width: 105,
       align: 'center',
       render: (_, record) => <span>{record.pageCount || 1} 页</span>,
     },
     {
       title: renderSortHeader('印刷方式', 'printSide', '印刷方式', 'r.print_side', 'ascend', 'center'),
       dataIndex: 'printSide',
-      width: 90,
+      width: 100,
       align: 'center',
       valueEnum: {
         '1': { text: '单面印' },

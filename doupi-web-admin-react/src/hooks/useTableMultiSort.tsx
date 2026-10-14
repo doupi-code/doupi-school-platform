@@ -126,10 +126,17 @@ export function useTableMultiSort(options?: UseTableMultiSortOptions) {
               userSelect: 'none',
               width: '100%',
               gap: 4,
+              whiteSpace: 'nowrap',
             }}
             className="custom-sortable-header"
           >
-            <span style={{ fontWeight: isSorted ? 600 : 'normal', color: isSorted ? '#1677FF' : 'inherit' }}>
+            <span
+              style={{
+                fontWeight: isSorted ? 600 : 'normal',
+                color: isSorted ? '#1677FF' : 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {title}
             </span>
             <span

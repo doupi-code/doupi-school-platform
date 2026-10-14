@@ -584,40 +584,60 @@ const PrintLedgerReportPage: React.FC = () => {
       title: renderSortHeader('文印资料名称', 'printName', '文印资料名称', 'r.print_name', 'ascend', 'left'),
       dataIndex: 'printName',
       ellipsis: true,
-      minWidth: 190,
+      width: 220,
       render: (_, r) => {
         const name: string = r.printName || '-';
         let prefixTag = null;
         let displayName = name;
         if (name.startsWith('[试卷]')) {
           prefixTag = (
-            <Tag color="processing" style={{ margin: 0, fontSize: 11, padding: '0 4px' }}>
+            <Tag color="processing" style={{ margin: 0, fontSize: 11, padding: '0 4px', flexShrink: 0 }}>
               试卷
             </Tag>
           );
           displayName = name.replace(/^\[试卷\]\s*/, '');
         } else if (name.startsWith('[答案]')) {
           prefixTag = (
-            <Tag color="success" style={{ margin: 0, fontSize: 11, padding: '0 4px' }}>
+            <Tag color="success" style={{ margin: 0, fontSize: 11, padding: '0 4px', flexShrink: 0 }}>
               答案
             </Tag>
           );
           displayName = name.replace(/^\[答案\]\s*/, '');
         }
         return (
-          <Space direction="vertical" size={2}>
-            <Space size={4}>
-              {prefixTag}
-              <Text strong style={{ color: r.status === '2' ? '#999' : '#1677FF' }}>
-                {displayName}
-              </Text>
-            </Space>
-            {r.remark && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                备注: {r.remark}
-              </Text>
-            )}
-          </Space>
+          <Tooltip title={name} placement="topLeft">
+            <div style={{ maxWidth: 210, cursor: 'pointer' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: '100%' }}>
+                {prefixTag}
+                <span
+                  style={{
+                    color: r.status === '2' ? '#999' : '#1677FF',
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    flex: 1,
+                  }}
+                >
+                  {displayName}
+                </span>
+              </div>
+              {r.remark && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'rgba(0, 0, 0, 0.45)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  备注: {r.remark}
+                </div>
+              )}
+            </div>
+          </Tooltip>
         );
       },
     },
@@ -661,13 +681,13 @@ const PrintLedgerReportPage: React.FC = () => {
     {
       title: renderSortHeader('纸张规格', 'paperType', '纸张规格', 'r.paper_type', 'ascend', 'left'),
       dataIndex: 'paperType',
-      width: 90,
+      width: 100,
       render: (_, r) => <Tag color="purple">{r.paperType || 'A4'}</Tag>,
     },
     {
       title: renderSortHeader('排版', 'printSide', '排版', 'r.print_side', 'ascend', 'left'),
       dataIndex: 'printSide',
-      width: 90,
+      width: 95,
       render: (_, r) => (
         <Tag color={r.printSide === '2' ? 'orange' : 'default'}>
           {r.printSide === '2' ? '双面' : '单面'}
@@ -677,14 +697,14 @@ const PrintLedgerReportPage: React.FC = () => {
     {
       title: renderSortHeader('每份页数', 'pageCount', '每份页数', 'r.page_count', 'descend', 'right'),
       dataIndex: 'pageCount',
-      width: 80,
+      width: 105,
       align: 'right',
       render: (_, r) => `${r.pageCount || 1} 页`,
     },
     {
       title: renderSortHeader('印制份数', 'printCount', '印制份数', 'r.print_count', 'descend', 'right'),
       dataIndex: 'printCount',
-      width: 90,
+      width: 100,
       align: 'right',
       render: (_, r) => <strong>{r.printCount} 份</strong>,
     },

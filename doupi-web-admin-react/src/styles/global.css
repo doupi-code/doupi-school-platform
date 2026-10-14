@@ -230,3 +230,13 @@ body {
   cursor: pointer !important;
 }
 
+/* 9. 表格表头所有标题单元格强制禁止换行折行，确保标题完整舒展 */
+.ant-table-thead > tr > th,
+.ant-table-thead th,
+.ant-table-header th,
+.custom-sortable-header,
+.custom-sortable-header * {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
