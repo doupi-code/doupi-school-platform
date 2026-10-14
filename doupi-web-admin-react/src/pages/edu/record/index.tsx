@@ -2742,20 +2742,14 @@ const PrintRecordPage: React.FC = () => {
         style={{ top: 12, paddingBottom: 12 }}
         destroyOnHidden={false}
         styles={{
-          content: {
-            height: 'calc(100dvh - 24px)',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '16px 20px',
-          },
           header: {
             flexShrink: 0,
             marginBottom: 6,
           },
           body: {
-            flex: 1,
+            height: 'calc(100dvh - 145px)',
+            maxHeight: 'calc(100dvh - 145px)',
             overflowY: 'auto',
-            minHeight: 0,
             padding: '4px 0',
           },
           footer: {
