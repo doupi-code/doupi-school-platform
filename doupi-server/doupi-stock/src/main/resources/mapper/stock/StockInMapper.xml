@@ -21,10 +21,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateTime"    column="update_time"    />
         <result property="delFlag"    column="del_flag"    />
         <result property="supplierName"    column="supplier_name"    />
+        <result property="declaredPackageCount" column="declared_package_count" />
+        <result property="declaredAmount" column="declared_amount" />
     </resultMap>
 
     <sql id="selectStockInVo">
         select i.in_id, i.in_no, i.in_type, i.supplier_id, i.in_time, i.operator, i.operator_id, i.remark, i.status, i.create_by, i.create_time, i.update_by, i.update_time, i.del_flag,
+               i.declared_package_count, i.declared_amount,
                s.supplier_name, u.nick_name as operator_nick_name
         from edu_stock_in i
         left join edu_supplier s on i.supplier_id = s.supplier_id
@@ -75,6 +78,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">update_by,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="delFlag != null">del_flag,</if>
+            <if test="declaredPackageCount != null">declared_package_count,</if>
+            <if test="declaredAmount != null">declared_amount,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="inNo != null and inNo != ''">#{inNo},</if>
@@ -90,6 +95,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">#{updateBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="delFlag != null">#{delFlag},</if>
+            <if test="declaredPackageCount != null">#{declaredPackageCount},</if>
+            <if test="declaredAmount != null">#{declaredAmount},</if>
          </trim>
     </insert>
 
@@ -109,6 +116,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="delFlag != null">del_flag = #{delFlag},</if>
+            <if test="declaredPackageCount != null">declared_package_count = #{declaredPackageCount},</if>
+            <if test="declaredAmount != null">declared_amount = #{declaredAmount},</if>
         </trim>
         where in_id = #{inId}
     </update>

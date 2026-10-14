@@ -104,6 +104,7 @@ public class SysUser extends BaseEntity
 
     /** 任教班级ID集合，逗号分隔 */
     @Excel(name = "任教班级")
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = StringOrArrayDeserializer.class)
     private String classIds;
 
     /** 所属角色名称集合，逗号分隔（展示用） */
@@ -414,5 +415,28 @@ public class SysUser extends BaseEntity
             .append("remark", getRemark())
             .append("dept", getDept())
             .toString();
+    }
+
+    public static class StringOrArrayDeserializer extends com.fasterxml.jackson.databind.JsonDeserializer<String>
+    {
+        @Override
+        public String deserialize(com.fasterxml.jackson.core.JsonParser p, com.fasterxml.jackson.databind.DeserializationContext ctxt)
+                throws java.io.IOException
+        {
+            if (p.currentToken() == com.fasterxml.jackson.core.JsonToken.START_ARRAY)
+            {
+                java.util.List<String> list = new java.util.ArrayList<>();
+                while (p.nextToken() != com.fasterxml.jackson.core.JsonToken.END_ARRAY)
+                {
+                    String text = p.getText();
+                    if (org.apache.commons.lang3.StringUtils.isNotBlank(text))
+                    {
+                        list.add(text.trim());
+                    }
+                }
+                return String.join(",", list);
+            }
+            return p.getValueAsString();
+        }
     }
 }
