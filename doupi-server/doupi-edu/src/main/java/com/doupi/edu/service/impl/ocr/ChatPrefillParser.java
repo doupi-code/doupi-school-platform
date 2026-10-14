@@ -83,7 +83,7 @@ public final class ChatPrefillParser {
                 for(PrintTaskItem t:binding.files) if(!binding.targets.contains(t)) targets.add(t);
                 int wanted=body.matches("(?s).*(?:两个|两份|2个).*" ) ? 2 : body.matches("(?s).*(?:另外个|另一个|另外一个).*" ) ? 1 : targets.size();
                 uncertain=targets.size()!=wanted;
-            } else if (body.contains("各") || body.contains("这两个") || body.contains("这些")) {
+            } else if (body.contains("各") || body.contains("每") || body.contains("全部") || body.contains("都") || body.contains("这两个") || body.contains("这些")) {
                 targets.addAll(binding.files);
                 if(body.contains("这两个") && targets.size()!=2) uncertain=true;
             } else if(!binding.files.isEmpty()) {

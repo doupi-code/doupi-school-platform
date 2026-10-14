@@ -13,7 +13,7 @@ function ChatSourcePanel({result,task,onOpenFile}:{result:PrefillResult;task:Pri
     if(container && first) container.scrollTo({top:container.scrollTop+first.getBoundingClientRect().top-container.getBoundingClientRect().top-75,behavior:'smooth'});
   };
   useEffect(()=>{locate();},[task.taskId]);
-  return <aside ref={panel} style={{width:360,flexShrink:0,position:'sticky',top:0,maxHeight:'65vh',overflowY:'auto',padding:12,background:'#fafafa',border:'1px solid #eee',borderRadius:8}}>
+  return <aside ref={panel} style={{width:380,flexShrink:0,position:'sticky',top:0,maxHeight:'calc(100vh - 210px)',overflowY:'auto',padding:12,background:'#fafafa',border:'1px solid #eee',borderRadius:8}}>
     <div style={{position:'sticky',top:-12,background:'#fafafa',padding:'8px 0',zIndex:1}}>
       <strong>{task.sourceConversationName ? `${task.sourceConversationName} · ` : ''}{day ? `${day} · 当天全部聊天` : '日期暂未确定 · 本次聊天原文'}</strong>
       <Button size="small" disabled={!messages.some(m=>related.has(m.id))} onClick={locate} style={{marginTop:6}}>定位当前记录</Button>

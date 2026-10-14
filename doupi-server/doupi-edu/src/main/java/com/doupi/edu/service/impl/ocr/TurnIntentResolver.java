@@ -40,7 +40,7 @@ public class TurnIntentResolver
             if (cnt != null && cnt > 0) 
             {
                 countDirectives.add(cnt);
-                if (m.text != null && m.text.contains("各")) 
+                if (m.text != null && (m.text.contains("各") || m.text.contains("每") || m.text.contains("都") || m.text.contains("全部"))) 
                 {
                     hasEachKeyword = true;
                 }
@@ -197,35 +197,45 @@ public class TurnIntentResolver
         }
 
         // 模式 1：明确带“份”字或错别字“分”（排除“分析/分类/分数/分配”等）
-        Pattern p1 = Pattern.compile("(?i)(?:请|麻烦|烦请|帮我|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:这个|这些|上面|这)?(?:又|再)?(?:各(?:印|打)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|要|打算|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分(?!析|数|配|工|辨|类|量|期|块|钱|钟))");
+        Pattern p1 = Pattern.compile("(?i)(?:请|麻烦|烦请|帮我|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:这个|这些|上面|这)?(?:又|再)?(?:各(?:自|个|份|印|打|要|需|来)?|每份(?:各)?|每个(?:各)?|每样(?:各)?|每种(?:各)?|打|印|打印|帮忙印|帮忙打|帮我印|帮我打|需要|要|打算|共|共计)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分(?!析|数|配|工|辨|类|量|期|块|钱|钟))");
         Matcher m1 = p1.matcher(t);
         if (m1.find()) 
         {
             return parseNumberString(m1.group(1));
         }
 
-        // 模式 2：明确带有动词打/印的简略句（如“打25”、“印6”、“打30张”、“印50本”）
-        Pattern p2 = Pattern.compile("(?i)(?:请|麻烦|帮我|帮忙)?\\s*(?:单面|双面)?\\s*(?:又|再)?(?:各(?:印|打)|打印|打|印|印制)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)(?:\\s*(?:张|本|套))?");
-        Matcher m2 = p2.matcher(t);
-        if (m2.find()) 
+        // 模式 2：明确带有“各/每份/每个/每样/每种”等分配指示词（如“各160”、“各 160”、“各个80”、“每份50”、“每样30”、“各打160”、“各要100”、“各来40”）
+        // 注意：排除“各5页”等页码描述
+        Pattern p2Each = Pattern.compile("(?i)(?:请|麻烦|烦请|帮我|帮忙)?\\s*(?:单面|双面|正反面)?\\s*(?:这个|这些|上面|这)?(?:又|再)?(?:各(?:自|个|份|样|种)?|每份(?:各)?|每个(?:各)?|每样(?:各)?|每种(?:各)?)\\s*(?:打印|打|印|印制|要|需|来)?\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)(?!\\s*页)(?:\\s*(?:张|本|套))?");
+        Matcher m2Each = p2Each.matcher(t);
+        if (m2Each.find()) 
         {
-            return parseNumberString(m2.group(1));
+            return parseNumberString(m2Each.group(1));
         }
 
-        // 模式 3：直接带份数的简短词汇（如 "25 份"、"9份"、"40份"）
-        Pattern p3 = Pattern.compile("(?i)(?:^|[^0-9])([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分(?!析|数|配|工|辨|类|量|期|块|钱|钟))(?:$|[^0-9])");
-        Matcher m3 = p3.matcher(t);
-        if (m3.find()) 
+        // 模式 3：明确带有动词打/印/印制等简略句（如“打25”、“印6”、“打30张”、“印50本”、“打印100”）
+        // 注意：排除“共5页”、“打第2页”等
+        Pattern p3Verb = Pattern.compile("(?i)(?:请|麻烦|帮我|帮忙)?\\s*(?:单面|双面)?\\s*(?:又|再)?(?:各(?:印|打)|打印|打|印|印制)\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)(?!\\s*页)(?:\\s*(?:张|本|套))?");
+        Matcher m3Verb = p3Verb.matcher(t);
+        if (m3Verb.find()) 
         {
-            return parseNumberString(m3.group(1));
+            return parseNumberString(m3Verb.group(1));
         }
 
-        // 模式 4：整行仅有纯数字与礼貌标点（如 "40"、"40。谢谢！"）
-        Pattern p4 = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:[。！!，,\\s]|谢谢)*$");
-        Matcher m4 = p4.matcher(t);
-        if (m4.find()) 
+        // 模式 4：直接带份数的简短词汇（如 "25 份"、"9份"、"40份"）
+        Pattern p4Part = Pattern.compile("(?i)(?:^|[^0-9])([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分(?!析|数|配|工|辨|类|量|期|块|钱|钟))(?:$|[^0-9])");
+        Matcher m4Part = p4Part.matcher(t);
+        if (m4Part.find()) 
         {
-            return parseNumberString(m4.group(1));
+            return parseNumberString(m4Part.group(1));
+        }
+
+        // 模式 5：整行仅有纯数字或数字+量词与礼貌标点（如 "40"、"160张"、"40。谢谢！"）
+        Pattern p5Pure = Pattern.compile("(?i)^\\s*([0-9O]{1,5}|[一二两三四五六七八九十百]+)\\s*(?:份|分|张|本|套)?\\s*(?:[。！!，,\\s]|谢谢|辛苦了|麻烦了)*$");
+        Matcher m5Pure = p5Pure.matcher(t);
+        if (m5Pure.find()) 
+        {
+            return parseNumberString(m5Pure.group(1));
         }
 
         return null;
@@ -257,7 +267,7 @@ public class TurnIntentResolver
         String t = text.trim();
 
         // 若整行纯粹由单双面、打印动作、份数及标点组成（例如“单面打印，25 份”、“请双面印50份”、“打25份”），不属于特殊排版装订备注
-        String testPure = t.replaceAll("(?i)[请麻烦烦请帮忙帮我打印单面双面正反面两面单页双页份分张本套各、，,。!！\\s\\d一二两三四五六七八九十百]+", "").trim();
+        String testPure = t.replaceAll("(?i)[请麻烦烦请帮忙帮我打印单面双面正反面两面单页双页份分张本套各每、，,。!！\\s\\d一二两三四五六七八九十百]+", "").trim();
         if (testPure.isEmpty()) 
         {
             return "";
@@ -291,23 +301,65 @@ public class TurnIntentResolver
         } 
         catch (NumberFormatException ignored) {}
 
-        if ("一".equals(s)) return 1L;
-        if ("二".equals(s) || "两".equals(s)) return 2L;
-        if ("三".equals(s)) return 3L;
-        if ("四".equals(s)) return 4L;
-        if ("五".equals(s)) return 5L;
-        if ("六".equals(s)) return 6L;
-        if ("七".equals(s)) return 7L;
-        if ("八".equals(s)) return 8L;
-        if ("九".equals(s)) return 9L;
-        if ("十".equals(s)) return 10L;
+        return parseChineseNumber(s);
+    }
 
-        if (s.startsWith("十") && s.length() == 2) 
+    public static Long parseChineseNumber(String s) 
+    {
+        if (StringUtils.isEmpty(s)) return null;
+        long total = 0;
+        long section = 0;
+        long number = 0;
+        boolean hasDigit = false;
+        for (int i = 0; i < s.length(); i++) 
         {
-            Long sub = parseNumberString(s.substring(1));
-            return sub != null ? (10L + sub) : 10L;
+            char c = s.charAt(i);
+            int digit = -1;
+            switch (c) 
+            {
+                case '零': digit = 0; break;
+                case '一': digit = 1; break;
+                case '二': case '两': digit = 2; break;
+                case '三': digit = 3; break;
+                case '四': digit = 4; break;
+                case '五': digit = 5; break;
+                case '六': digit = 6; break;
+                case '七': digit = 7; break;
+                case '八': digit = 8; break;
+                case '九': digit = 9; break;
+                case '十':
+                    hasDigit = true;
+                    if (number == 0) number = 1;
+                    section += number * 10;
+                    number = 0;
+                    break;
+                case '百':
+                    hasDigit = true;
+                    section += number * 100;
+                    number = 0;
+                    break;
+                case '千':
+                    hasDigit = true;
+                    section += number * 1000;
+                    number = 0;
+                    break;
+                case '万':
+                    hasDigit = true;
+                    total += (section + number) * 10000;
+                    section = 0;
+                    number = 0;
+                    break;
+                default:
+                    return null;
+            }
+            if (digit >= 0) 
+            {
+                number = digit;
+                hasDigit = true;
+            }
         }
-
-        return null;
+        if (!hasDigit) return null;
+        total += section + number;
+        return total > 0 ? total : null;
     }
 }

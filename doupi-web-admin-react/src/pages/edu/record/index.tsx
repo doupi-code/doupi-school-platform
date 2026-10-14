@@ -518,6 +518,7 @@ const PrintRecordPage: React.FC = () => {
   const watchedAnswerPageCount = Form.useWatch('answerPageCount', form);
   const watchedAnswerPrintCount = Form.useWatch('answerPrintCount', form);
   const watchedAnswerPrintSide = Form.useWatch('answerPrintSide', form);
+  const watchedAttachment = Form.useWatch('attachment', form);
 
   useEffect(() => {
     const values = {
@@ -2737,54 +2738,75 @@ const PrintRecordPage: React.FC = () => {
         onOk={handleSaveRecord}
         confirmLoading={savingRecord}
         onCancel={handleModalCancel}
-        width={ocrResult ? 1280 : 880}
-        style={{ top: 12, paddingBottom: 0 }}
+        width={ocrResult ? 'min(1440px, calc(100vw - 32px))' : 'min(980px, calc(100vw - 32px))'}
+        style={{ top: 12, paddingBottom: 12 }}
         destroyOnHidden={false}
-        styles={{ body: { padding: '8px 0', maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
+        styles={{
+          content: {
+            height: 'calc(100dvh - 24px)',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '16px 20px',
+          },
+          header: {
+            flexShrink: 0,
+            marginBottom: 6,
+          },
+          body: {
+            flex: 1,
+            overflowY: 'auto',
+            minHeight: 0,
+            padding: '4px 0',
+          },
+          footer: {
+            flexShrink: 0,
+            marginTop: 'auto',
+            paddingTop: 10,
+            borderTop: '1px solid #f0f0f0',
+          },
+        }}
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-            <div style={{ fontSize: 12, color: '#8c8c8c', textAlign: 'left' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', gap: 12, minHeight: 32 }}>
+            <div style={{ fontSize: 12, color: '#8c8c8c', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {currentQueueTask?.reviewReasons?.some((r) => /指代|确认|推测|取消|替代/.test(r)) && (
-                <span style={{ color: '#d46b08' }}>⚠️ 本条记录包含推测或指代要求，提交前请对照当天聊天核对</span>
+                <>
+                  <span style={{ color: '#d46b08' }}>⚠️ 本条记录包含推测或指代要求，提交前请对照当天聊天核对</span>
+                  <Form form={form} component={false}>
+                    <Form.Item
+                      name="reviewConfirmed"
+                      valuePropName="checked"
+                      rules={[{ validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error('请对照当天聊天确认有歧义的内容'))) }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox data-testid="review-confirm-checkbox" style={{ color: '#0958d9', fontWeight: 500 }}>
+                        已对照当天聊天，确认当前任务的指代及打印要求
+                      </Checkbox>
+                    </Form.Item>
+                  </Form>
+                </>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              {currentQueueTask?.reviewReasons?.some((r) => /指代|确认|推测|取消|替代/.test(r)) && (
-                <Form form={form} component={false}>
-                  <Form.Item
-                    name="reviewConfirmed"
-                    valuePropName="checked"
-                    rules={[{ validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error('请对照当天聊天确认有歧义的内容'))) }]}
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Checkbox data-testid="review-confirm-checkbox" style={{ color: '#0958d9', fontWeight: 500 }}>
-                      已对照当天聊天，确认当前任务的指代及打印要求
-                    </Checkbox>
-                  </Form.Item>
-                </Form>
-              )}
-              <Space>
-                {ocrResult && currentQueueTask && !isEdit && (
-                  <Button
-                    danger
-                    disabled={savingRecord}
-                    data-testid="skip-current-task-footer-btn"
-                    onClick={handleSkipCurrentTaskInModal}
-                  >
-                    跳过此条 / 不登记
-                  </Button>
-                )}
+            <Space style={{ flexShrink: 0, alignSelf: 'flex-end' }}>
+              {ocrResult && currentQueueTask && !isEdit && (
                 <Button
+                  danger
                   disabled={savingRecord}
-                  onClick={handleModalCancel}
+                  data-testid="skip-current-task-footer-btn"
+                  onClick={handleSkipCurrentTaskInModal}
                 >
-                  取消
+                  跳过此条 / 不登记
                 </Button>
-                <Button type="primary" loading={savingRecord} onClick={handleSaveRecord}>
-                  确定
-                </Button>
-              </Space>
-            </div>
+              )}
+              <Button
+                disabled={savingRecord}
+                onClick={handleModalCancel}
+              >
+                取消
+              </Button>
+              <Button type="primary" loading={savingRecord} onClick={handleSaveRecord}>
+                确定
+              </Button>
+            </Space>
           </div>
         }
       >
@@ -3231,13 +3253,45 @@ const PrintRecordPage: React.FC = () => {
                           disabled={savingRecord}
                           accept=".doc,.docx,.docm,.pdf,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm,.txt,.zip,.rar,.7z,.wps,image/*"
                           placeholder="上传原稿或粘贴文件"
+                          value={watchedAttachment || (form.getFieldValue('attachment') as string) || currentQueueTask?.attachment || ''}
+                          fileName={currentQueueTask?.originalDocName || form.getFieldValue('printName')}
+                          onChange={(url, uploadedName) => {
+                            form.setFieldsValue({ attachment: url });
+                            if (uploadedName && !form.getFieldValue('printName')) {
+                              form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
+                            }
+                            triggerSaveRecordDraft({ ...form.getFieldsValue(), attachment: url });
+                            if (ocrResult?.taskList && currentTaskIndex >= 0) {
+                              const updated = ocrResult.taskList.map((item, idx) =>
+                                idx === currentTaskIndex
+                                  ? { ...item, attachment: url, attachmentStatus: url ? 'available' : 'missing' }
+                                  : item
+                              );
+                              setOcrResult({ ...ocrResult, taskList: updated });
+                            }
+                          }}
                           onUploadSuccess={(_url, uploadedName, file) => {
                             const currentPrintName = form.getFieldValue('printName');
                             if (!currentPrintName && uploadedName) {
                               form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
                             }
+                            form.setFieldsValue({ attachment: _url });
                             if (file) {
                               analyzeAndFillDocument(file);
+                            }
+                            triggerSaveRecordDraft({ ...form.getFieldsValue(), attachment: _url });
+                            if (ocrResult?.taskList && currentTaskIndex >= 0) {
+                              const updated = ocrResult.taskList.map((item, idx) =>
+                                idx === currentTaskIndex
+                                  ? {
+                                      ...item,
+                                      attachment: _url,
+                                      originalDocName: uploadedName || item.originalDocName,
+                                      attachmentStatus: 'available',
+                                    }
+                                  : item
+                              );
+                              setOcrResult({ ...ocrResult, taskList: updated });
                             }
                           }}
                         />

@@ -67,4 +67,20 @@ class ChatPrefillRegressionTest {
         var t=parse("甲\n2026年10月10日 9:30\n打印30份\n双面\n[文件] A.pdf\n乙\n2026年10月10日 9:31\n好的\n甲\n2026年10月10日 9:32\n改成40份").getTaskList();
         assertEquals(1,t.size()); assertEquals(40L,t.get(0).getPrintCount()); assertEquals("2",t.get(0).getPrintSide());
     }
+
+    @Test void multipleFilesWithEachDirectiveAssignsCorrectCount() throws Exception {
+        String chat = "高复部高振元\n2026年10月12日 08:30\n"
+            + "[文件] 答题卡（可更改）.docx\n"
+            + "[文件] 精品解析：2025-2026学年广东省茂名市高三（上）统一测试英语试题（解析版）.docx\n"
+            + "[文件] 精品解析：2025-2026学年广东省茂名市高三（上）统一测试英语试题（原卷版）.docx\n"
+            + "各160";
+        var result = parse(chat);
+        var tasks = result.getTaskList();
+        assertEquals(3, tasks.size());
+        assertEquals(160L, tasks.get(0).getPrintCount(), "第1个文件份数应为160");
+        assertEquals(160L, tasks.get(1).getPrintCount(), "第2个文件份数应为160");
+        assertEquals(160L, tasks.get(2).getPrintCount(), "第3个文件份数应为160");
+        assertFalse(tasks.get(0).getReviewReasons().contains("份数未知"), "不应含有份数未知");
+        assertFalse(tasks.get(0).getReviewReasons().contains("指令关联存在歧义，请确认对应材料"), "明确的‘各’不应存在歧义");
+    }
 }

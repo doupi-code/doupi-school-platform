@@ -29,10 +29,11 @@ public class MimeTypeUtils
     public static final String[] DEFAULT_ALLOWED_EXTENSION = {
             // 图片
             "bmp", "gif", "jpg", "jpeg", "png",
-            // word excel powerpoint
-            "doc", "docx", "docm", "xls", "xlsx", "ppt", "pptx", "html", "htm", "txt",
+            // word excel powerpoint / wps 国产办公
+            "doc", "docx", "docm", "xls", "xlsx", "ppt", "pptx", "html", "htm", "txt", "csv",
+            "wps", "wpt", "et", "ett", "dps", "dpt", "ofd",
             // 压缩文件
-            "rar", "zip", "gz", "bz2",
+            "rar", "zip", "gz", "bz2", "7z",
             // 视频格式
             "mp4", "avi", "rmvb",
             // pdf
