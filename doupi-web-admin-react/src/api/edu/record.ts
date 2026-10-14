@@ -192,11 +192,12 @@ export function textParse(data: { text: string }) {
   });
 }
 
-// 微信导出目录结构化消息解析预填（各会话独立解析，保留会话ID、消息ID与附件引用）
+// 微信导出目录结构化消息解析预填（各会话独立解析，保留会话ID、消息ID与附件引用；数据量大，超时放宽至60秒）
 export function structuredParse(data: any) {
   return request({
     url: '/edu/record/structured-parse',
     method: 'post',
+    timeout: 60000,
     data,
   });
 }
@@ -206,6 +207,7 @@ export function getWechatExportRegisteredStatus(conversationIds: string[]) {
   return request({
     url: '/edu/record/wechat-export/status',
     method: 'post',
+    timeout: 30000,
     data: { conversationIds },
   });
 }

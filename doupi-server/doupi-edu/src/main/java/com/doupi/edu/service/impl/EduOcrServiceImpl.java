@@ -288,6 +288,8 @@ public class EduOcrServiceImpl implements IEduOcrService
             }
         }
 
+        java.util.Map<String, List<com.doupi.edu.domain.EduPrintRecord>> historyRecordsByName = new java.util.HashMap<>();
+
         for (EduPrintOcrResult.PrintTaskItem item : result.getTaskList())
         {
             boolean matchedBySource = false;
@@ -321,28 +323,59 @@ public class EduOcrServiceImpl implements IEduOcrService
             }
 
             if (matchedBySource || StringUtils.isEmpty(item.getPrintName())) continue;
-            com.doupi.edu.domain.EduPrintRecord query = new com.doupi.edu.domain.EduPrintRecord();
-            query.setPrintName(item.getPrintName());
-            if (item.getTeacherId() != null) query.setTeacherId(item.getTeacherId());
-            try
+
+            // 1. 优先在当前会话已拉取记录中零开销匹配（无需任何数据库查询）
+            boolean matchedSameConv = false;
+            List<com.doupi.edu.domain.EduPrintRecord> convRecords = recordsByConv.getOrDefault(convId, Collections.emptyList());
+            for (com.doupi.edu.domain.EduPrintRecord record : convRecords)
             {
-                List<com.doupi.edu.domain.EduPrintRecord> records = eduPrintRecordMapper.selectEduPrintRecordList(query);
-                if (records == null) continue;
-                for (com.doupi.edu.domain.EduPrintRecord record : records)
+                if (!item.getPrintName().equals(record.getPrintName()) || "2".equals(record.getStatus()) || "2".equals(record.getDelFlag())) continue;
+                item.setExistingPrintId(record.getPrintId());
+                String time = record.getPrintTime() == null ? "时间未知" :
+                    com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
+                item.setExistingRecordDesc("疑似重复（同联系人已有同名材料）：单据 #" + record.getPrintId() + "，" + time);
+                item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
+                matchedSameConv = true;
+                break;
+            }
+            if (matchedSameConv) continue;
+
+            // 2. 跨会话排查：使用本地缓存避免重复查询同一材料名，并限制单次解析的最大查询频次
+            String printName = item.getPrintName();
+            if (!historyRecordsByName.containsKey(printName))
+            {
+                if (historyRecordsByName.size() < 100)
                 {
-                    if (!item.getPrintName().equals(record.getPrintName()) || "2".equals(record.getStatus()) || "2".equals(record.getDelFlag())) continue;
-                    item.setExistingPrintId(record.getPrintId());
-                    String time = record.getPrintTime() == null ? "时间未知" :
-                        com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
-                    item.setExistingRecordDesc("疑似重复（材料名称匹配）：单据 #" + record.getPrintId() + "，" + time);
-                    item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
-                    break;
+                    try
+                    {
+                        com.doupi.edu.domain.EduPrintRecord query = new com.doupi.edu.domain.EduPrintRecord();
+                        query.setPrintName(printName);
+                        if (item.getTeacherId() != null) query.setTeacherId(item.getTeacherId());
+                        List<com.doupi.edu.domain.EduPrintRecord> records = eduPrintRecordMapper.selectEduPrintRecordList(query);
+                        historyRecordsByName.put(printName, records != null ? records : Collections.emptyList());
+                    }
+                    catch (Exception ex)
+                    {
+                        log.warn("查询已有印刷记录失败, printName: {}", printName, ex);
+                        historyRecordsByName.put(printName, Collections.emptyList());
+                    }
+                }
+                else
+                {
+                    historyRecordsByName.put(printName, Collections.emptyList());
                 }
             }
-            catch (Exception ex)
+
+            List<com.doupi.edu.domain.EduPrintRecord> records = historyRecordsByName.getOrDefault(printName, Collections.emptyList());
+            for (com.doupi.edu.domain.EduPrintRecord record : records)
             {
-                item.getReviewReasons().add("历史登记查询失败，请核对是否重复登记");
-                log.warn("查询已有印刷记录失败, printName: {}", item.getPrintName(), ex);
+                if (!item.getPrintName().equals(record.getPrintName()) || "2".equals(record.getStatus()) || "2".equals(record.getDelFlag())) continue;
+                item.setExistingPrintId(record.getPrintId());
+                String time = record.getPrintTime() == null ? "时间未知" :
+                    com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
+                item.setExistingRecordDesc("疑似重复（材料名称匹配）：单据 #" + record.getPrintId() + "，" + time);
+                item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
+                break;
             }
         }
 
