@@ -137,7 +137,84 @@ export async function fastExtractDocxMetadata(file: FileLike | Blob): Promise<Fa
 }
 
 /**
- * 纯前端快速分析文件页数入口（Word 本地秒解，其他回退）
+ * 纯前端本地秒级解析老版 Word .doc（OLE2 / Compound Document 格式）
+ * 读取 \x05SummaryInformation 属性流中的 PIDSI_PAGE (0x0000000e = 14) 元数据
+ */
+export async function fastExtractDocMetadata(file: FileLike | Blob): Promise<FastAnalysisResult | null> {
+  try {
+    if (typeof (file as any).arrayBuffer !== 'function') return null;
+    const arrayBuffer: ArrayBuffer = await (file as any).arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    const view = new DataView(arrayBuffer);
+    const len = bytes.length;
+    if (len < 512) return null;
+
+    // 检查 OLE2 魔数：0xe011cfd0 (little-endian for d0 cf 11 e0)
+    if (view.getUint32(0, true) !== 0xe011cfd0) return null;
+
+    // SummaryInformation 的 FMTID 16 字节：e0859ff2-f94f-6810-ab91-08002b27b3d9
+    const fmtid = [0xe0, 0x85, 0x9f, 0xf2, 0xf9, 0x4f, 0x68, 0x10, 0xab, 0x91, 0x08, 0x00, 0x2b, 0x27, 0xb3, 0xd9];
+    let pos = -1;
+    for (let i = 0; i <= len - 16; i++) {
+      if (bytes[i] === 0xe0 && bytes[i + 1] === 0x85) {
+        let match = true;
+        for (let j = 0; j < 16; j++) {
+          if (bytes[i + j] !== fmtid[j]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          pos = i;
+          break;
+        }
+      }
+    }
+    if (pos === -1 || pos < 28) return null;
+
+    const secOffset = view.getUint32(pos + 16, true);
+    const streamStart = pos - 28;
+    const secStart = streamStart + secOffset;
+    if (secStart + 8 > len) return null;
+
+    const propCount = view.getUint32(secStart + 4, true);
+
+    for (let i = 0; i < propCount; i++) {
+      const entryOffset = secStart + 8 + i * 8;
+      if (entryOffset + 8 > len) break;
+      const propId = view.getUint32(entryOffset, true);
+      const propValueOffset = view.getUint32(entryOffset + 4, true);
+
+      // PIDSI_PAGE = 14 (0x0e)
+      if (propId === 14) {
+        const valPos = secStart + propValueOffset;
+        if (valPos + 8 <= len) {
+          const valType = view.getUint32(valPos, true);
+          let pageCount: number | undefined;
+          if (valType === 3) {
+            pageCount = view.getInt32(valPos + 4, true);
+          } else if (valType === 2) {
+            pageCount = view.getInt16(valPos + 4, true);
+          }
+          if (pageCount && pageCount > 0) {
+            return {
+              parseable: true,
+              pageCount,
+              source: 'local-docx',
+              msg: `原稿 ${pageCount} 页（Word 保存的页数，请核对打印预览）`,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 纯前端快速分析文件页数入口（Word docx/doc 本地秒解，其他回退）
  */
 export async function fastAnalyzeFile(file: FileLike | Blob): Promise<FastAnalysisResult | null> {
   const fileName = (file as any).name || '';
@@ -146,6 +223,11 @@ export async function fastAnalyzeFile(file: FileLike | Blob): Promise<FastAnalys
   if (['docx', 'docm'].includes(ext)) {
     const localDocx = await fastExtractDocxMetadata(file);
     if (localDocx) return localDocx;
+  }
+
+  if (ext === 'doc') {
+    const localDoc = await fastExtractDocMetadata(file);
+    if (localDoc) return localDoc;
   }
 
   return null;

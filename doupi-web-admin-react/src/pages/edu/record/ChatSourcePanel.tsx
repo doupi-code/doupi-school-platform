@@ -2,7 +2,7 @@ import {memo,useEffect,useMemo,useRef} from 'react';
 import {Button} from 'antd';
 import type {PrefillResult,PrintCandidate} from './chatPrefill';
 import {dayKey,messagesForDay} from './chatPrefill';
-function ChatSourcePanel({result,task}:{result:PrefillResult;task:PrintCandidate}) {
+function ChatSourcePanel({result,task,onOpenFile}:{result:PrefillResult;task:PrintCandidate;onOpenFile?:()=>void}) {
   const panel=useRef<HTMLElement>(null);
   const day=dayKey(task.timeSnippet);
   const messages=useMemo(()=>messagesForDay(result.messages || [],task),[result.messages,task.sourceConversationId,day]);
@@ -19,7 +19,13 @@ function ChatSourcePanel({result,task}:{result:PrefillResult;task:PrintCandidate
       <Button size="small" disabled={!messages.some(m=>related.has(m.id))} onClick={locate} style={{marginTop:6}}>定位当前记录</Button>
     </div>
     {messages.map(m=><div key={m.id} data-current-message={related.has(m.id)} style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',padding:10,marginTop:8,borderRadius:6,background:related.has(m.id)?'#e6f4ff':'white',border:related.has(m.id)?'2px solid #1677ff':'1px solid #eee'}}>
-      <div style={{fontSize:12,color:'#666'}}>{m.sender} {m.time}</div>{m.text}
+      <div style={{fontSize:12,color:'#666'}}>{m.sender} {m.time}</div>
+      <div>{m.text}</div>
+      {related.has(m.id) && m.text.includes('[文件]') && onOpenFile && (
+        <Button size="small" type="link" style={{padding:0,marginTop:4}} onClick={onOpenFile}>
+          📄 快速打开原稿附件
+        </Button>
+      )}
     </div>)}
     {!messages.length && <pre style={{whiteSpace:'pre-wrap'}}>{day?'本次导入中没有该日期的聊天原文。':result.rawText || '本次仅取得附件，没有聊天原文。'}</pre>}
   </aside>;

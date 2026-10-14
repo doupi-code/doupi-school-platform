@@ -1340,6 +1340,51 @@ const PrintRecordPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  // 快速打开/下载当前匹配的微信导出本地原稿附件，供文印员直接在本地 Office/WPS/浏览器查看页面
+  const handleOpenMatchedAttachment = (matchedKey?: string, fallbackName?: string) => {
+    if (!matchedKey) {
+      message.warning('未找到原稿文件引用');
+      return;
+    }
+    const file = exportAttachmentFilesRef.current.get(matchedKey);
+    if (!file) {
+      message.warning('本地内存中未找到该附件文件');
+      return;
+    }
+    const fileName = fallbackName || file.name || '原稿附件';
+    try {
+      let blob: Blob;
+      if (file instanceof Blob) {
+        blob = file;
+      } else if (typeof (file as any).slice === 'function') {
+        blob = (file as any).slice();
+      } else {
+        message.warning('当前文件对象不可直接打开');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const ext = (fileName.split('.').pop() || '').toLowerCase();
+      // 如果是 PDF 或图片，直接在浏览器新标签页原生无缝预览
+      if (['pdf', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'svg'].includes(ext)) {
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      }
+      // 如果是 doc, docx, xls, xlsx 等办公文档，唤起浏览器下载（直接调起本地 Office/WPS 打开）
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      message.success(`已调起原稿文件「${fileName}」，可在 Office / WPS 中查看页数`);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      message.error(`打开原稿文件失败：${err?.message || '未知错误'}`);
+    }
+  };
+
   // Analyze only the active matched document; never upload/analyze the entire candidate queue.
   useEffect(() => {
     const task = currentQueueTask;
@@ -1347,7 +1392,7 @@ const PrintRecordPage: React.FC = () => {
     const file = exportAttachmentFilesRef.current.get(task.matchedAttachmentKey);
     if (!(file instanceof File)) return;
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!['pdf','docx','docm'].includes(ext)) {
+    if (!['pdf', 'docx', 'docm', 'doc'].includes(ext)) {
       setMatchedAnalysisStatus({taskId:task.taskId,loading:false,text:/^xls/.test(ext) ? 'Excel 工作表数不等于打印页数，请按打印预览填写。' : '该附件格式不能可靠读取页数，请手动填写。'});
       return;
     }
@@ -2972,17 +3017,52 @@ const PrintRecordPage: React.FC = () => {
                     style={{ marginBottom: 8 }}
                     extra={
                       currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath ? (
-                        <span style={{ fontSize: 11, color: '#389E0D' }}>
-                          📎 已精确匹配导出目录附件：{currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}（保存登记时自动上传）
-                          {matchedAnalysisStatus.taskId === currentQueueTask.taskId && <div style={{color:matchedAnalysisStatus.loading ? '#1677ff' : '#666'}}>
-                            {matchedAnalysisStatus.text}
-                            {!matchedAnalysisStatus.loading && <Button type="link" size="small" onClick={()=>{
-                              const file=exportAttachmentFilesRef.current.get(currentQueueTask.matchedAttachmentKey!);
-                              if(file instanceof File) matchedDocumentAnalysisRef.current.delete(file);
-                              setMatchedAnalysisRetry(n=>n+1);
-                            }}>重新读取页数</Button>}
-                          </div>}
-                        </span>
+                        <div style={{ fontSize: 12, marginTop: 4, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                            <span>
+                              <span style={{ color: '#274916', fontWeight: 600 }}>📎 已匹配导出附件：</span>
+                              <a
+                                style={{ color: '#0958d9', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                                title="点击直接打开或下载此文件查看"
+                                onClick={() => handleOpenMatchedAttachment(currentQueueTask.matchedAttachmentKey, currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName)}
+                              >
+                                {currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}
+                              </a>
+                              <span style={{ color: '#8c8c8c', marginLeft: 6, fontSize: 11 }}>（保存登记时自动上传）</span>
+                            </span>
+                            <Button
+                              type="primary"
+                              size="small"
+                              icon={<EyeOutlined />}
+                              data-testid="open-matched-file-btn"
+                              onClick={() => handleOpenMatchedAttachment(currentQueueTask.matchedAttachmentKey, currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName)}
+                            >
+                              快速打开原稿查看
+                            </Button>
+                          </div>
+                          {matchedAnalysisStatus.taskId === currentQueueTask.taskId && (
+                            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed #d9d9d9', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <span style={{ color: matchedAnalysisStatus.loading ? '#1677ff' : '#595959' }}>
+                                {matchedAnalysisStatus.loading && <ClockCircleOutlined spin style={{ marginRight: 4 }} />}
+                                {matchedAnalysisStatus.text}
+                              </span>
+                              {!matchedAnalysisStatus.loading && (
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  style={{ padding: 0 }}
+                                  onClick={() => {
+                                    const file = exportAttachmentFilesRef.current.get(currentQueueTask.matchedAttachmentKey!);
+                                    if (file instanceof File) matchedDocumentAnalysisRef.current.delete(file);
+                                    setMatchedAnalysisRetry((n) => n + 1);
+                                  }}
+                                >
+                                  重新读取页数
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : undefined
                     }
                   >
@@ -3181,7 +3261,18 @@ const PrintRecordPage: React.FC = () => {
               )}
             </Form>
           </div>
-          {ocrResult && currentQueueTask && <ChatSourcePanel result={ocrResult} task={currentQueueTask} />}
+          {ocrResult && currentQueueTask && (
+            <ChatSourcePanel
+              result={ocrResult}
+              task={currentQueueTask}
+              onOpenFile={() =>
+                handleOpenMatchedAttachment(
+                  currentQueueTask.matchedAttachmentKey,
+                  currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName
+                )
+              }
+            />
+          )}
         </div>
       </Modal>
 

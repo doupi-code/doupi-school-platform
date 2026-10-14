@@ -65,7 +65,7 @@ public final class DocumentPageAnalyzer
                 case "xls":
                     return analyzeXls(file.getInputStream());
                 case "doc":
-                    return DocumentAnalysisResult.fail(".doc 老格式无法可靠读取页数，请手动填写");
+                    return analyzeDoc(file.getBytes());
                 default:
                     return DocumentAnalysisResult.fail("不支持的文件格式：" + name);
             }
@@ -313,5 +313,93 @@ public final class DocumentPageAnalyzer
     private static boolean close(double a, double b)
     {
         return Math.abs(a - b) <= TOLERANCE_MM;
+    }
+
+    private static DocumentAnalysisResult analyzeDoc(byte[] data)
+    {
+        DocumentAnalysisResult r = new DocumentAnalysisResult();
+        r.setParseable(true);
+        int pages = parseDocSummaryPages(data);
+        if (pages > 0)
+        {
+            r.setPageCount(pages);
+            r.setMsg("已识别 Word (.doc) 保存的页数");
+            return r;
+        }
+        return DocumentAnalysisResult.fail("未能识别 .doc 页数，请手动填写或打开文件查看");
+    }
+
+    private static int parseDocSummaryPages(byte[] data)
+    {
+        if (data == null || data.length < 512) return 0;
+        if ((data[0] & 0xFF) != 0xD0 || (data[1] & 0xFF) != 0xCF || (data[2] & 0xFF) != 0x11 || (data[3] & 0xFF) != 0xE0)
+        {
+            return 0;
+        }
+        byte[] fmtid = new byte[] {
+            (byte) 0xe0, (byte) 0x85, (byte) 0x9f, (byte) 0xf2,
+            (byte) 0xf9, (byte) 0x4f, (byte) 0x68, (byte) 0x10,
+            (byte) 0xab, (byte) 0x91, (byte) 0x08, (byte) 0x00,
+            (byte) 0x2b, (byte) 0x27, (byte) 0xb3, (byte) 0xd9
+        };
+        int pos = -1;
+        for (int i = 0; i <= data.length - 16; i++)
+        {
+            if (data[i] == fmtid[0] && data[i + 1] == fmtid[1])
+            {
+                boolean match = true;
+                for (int j = 0; j < 16; j++)
+                {
+                    if (data[i + j] != fmtid[j]) { match = false; break; }
+                }
+                if (match) { pos = i; break; }
+            }
+        }
+        if (pos < 28) return 0;
+
+        int secOffset = readInt32LE(data, pos + 16);
+        int streamStart = pos - 28;
+        int secStart = streamStart + secOffset;
+        if (secStart + 8 > data.length) return 0;
+
+        int propCount = readInt32LE(data, secStart + 4);
+        for (int i = 0; i < propCount; i++)
+        {
+            int entryOffset = secStart + 8 + i * 8;
+            if (entryOffset + 8 > data.length) break;
+            int propId = readInt32LE(data, entryOffset);
+            int propValueOffset = readInt32LE(data, entryOffset + 4);
+
+            if (propId == 14) // PIDSI_PAGE
+            {
+                int valPos = secStart + propValueOffset;
+                if (valPos + 8 <= data.length)
+                {
+                    int valType = readInt32LE(data, valPos);
+                    if (valType == 3)
+                    {
+                        return readInt32LE(data, valPos + 4);
+                    }
+                    else if (valType == 2)
+                    {
+                        return readInt16LE(data, valPos + 4);
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static int readInt32LE(byte[] data, int offset)
+    {
+        return (data[offset] & 0xFF)
+            | ((data[offset + 1] & 0xFF) << 8)
+            | ((data[offset + 2] & 0xFF) << 16)
+            | ((data[offset + 3] & 0xFF) << 24);
+    }
+
+    private static int readInt16LE(byte[] data, int offset)
+    {
+        return (short) ((data[offset] & 0xFF) | ((data[offset + 1] & 0xFF) << 8));
     }
 }
