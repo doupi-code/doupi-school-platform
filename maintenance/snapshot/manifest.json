@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-10-14 18:49:16",
+  "database": "stuck_mg_rehearsal",
+  "tables": {
+    "edu_goods": {
+      "row_count": 41,
+      "sha256": "0ca6d7c229e9bc818ace161f52aa734ae60d90958e109f63e665008f08f3e5e8",
+      "file": "edu_goods.json"
+    },
+    "edu_stock_in": {
+      "row_count": 4,
+      "sha256": "7b3d10539077ab34a5f3757ad60cb92cd3787504bc54410346ba80b7294974ad",
+      "file": "edu_stock_in.json"
+    },
+    "edu_stock_in_item": {
+      "row_count": 4,
+      "sha256": "a547f207116d15eb76c26591756418cf084baba0bb8b8376b6c9efe61a6ba43a",
+      "file": "edu_stock_in_item.json"
+    },
+    "edu_print_record": {
+      "row_count": 908,
+      "sha256": "31431e809e8852fe33ca9c6a57881d2d4c4a9f63f9039e0b689b5455009b3d71",
+      "file": "edu_print_record.json"
+    },
+    "edu_stock_out": {
+      "row_count": 1113,
+      "sha256": "c65966d93c84b8a0dcec752fbd3340b84b06d5358bcdc8940c93670d66018e96",
+      "file": "edu_stock_out.json"
+    },
+    "edu_stock_out_item": {
+      "row_count": 1113,
+      "sha256": "198b043a31b76d2d922ec5ed4e65e28102cf847d577f3ea061997f8ad22126a3",
+      "file": "edu_stock_out_item.json"
+    }
+  },
+  "snapshot_hash": "28dd3bf11650cb56d221de907b8ddb063e59c22e59880c5766597660db30679c"
+}

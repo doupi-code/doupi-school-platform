@@ -1,0 +1,47 @@
+{
+  "database": {
+    "host": "127.0.0.1",
+    "port": 53061,
+    "user": "root",
+    "password": "Lt19960614.",
+    "database": "stuck_mg_rehearsal",
+    "charset": "utf8mb4"
+  },
+  "goods_map": {
+    "8K": {
+      "goods_id": 311,
+      "goods_name": "8K速印纸",
+      "conversion_rate": 2000,
+      "physical_estimate": 11000,
+      "physical_min": 11000,
+      "physical_max": 11000,
+      "count_date": "2026-10-14",
+      "count_time_precision": "实物估算约5箱半"
+    },
+    "16K": {
+      "goods_id": 312,
+      "goods_name": "16K速印纸",
+      "conversion_rate": 4000,
+      "physical_estimate": 12450,
+      "physical_min": 12400,
+      "physical_max": 12500,
+      "count_date": "2026-10-14",
+      "count_time_precision": "实物估算3箱另四五百张"
+    }
+  },
+  "real_stock_in": {
+    "in_no": "RK202605210001",
+    "in_time": "2026-05-21 10:00:00",
+    "in_type": "1",
+    "supplier_id": 1,
+    "operator": "历史进货核准",
+    "status": "0",
+    "declared_package_count": 21,
+    "declared_amount": 8000.00,
+    "remark": "2026年5月21日真实进货，合计21箱、8000元；纸型分配待后续证据补充核实，不编造明细与库存"
+  },
+  "baseline_bounds": {
+    "max_print_id": 1110,
+    "max_out_id": 1113
+  }
+}
