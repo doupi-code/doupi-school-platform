@@ -77,7 +77,10 @@ scripts/*.tar.gz
 doupi-web-admin-react/dist/
 doupi-web-client-react/dist/
 
-# 运维与修复配置文件及快照
+# 运维与修复配置文件及快照 (排除敏感密码与数据镜像)
 maintenance/*.json
-maintenance/snapshot/
-maintenance/review/
+!maintenance/*.template
+maintenance/snapshot*/
+maintenance/review*/
+maintenance/*.xlsx
+maintenance/*.pyc

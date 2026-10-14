@@ -533,28 +533,33 @@ class PaperRepairTool:
 
                         elif t_name == "edu_print_record" and action == "UPDATE":
                             before_obj = json.loads(before_json)
-                            cur.execute("""
-                                UPDATE edu_print_record 
-                                SET print_count = %s, page_count = %s, print_side = %s, total_pages = %s
-                                WHERE print_id = %s
-                            """, (
-                                before_obj["print_count"], before_obj["page_count"],
-                                before_obj["print_side"], before_obj["total_pages"],
-                                int(rec_id)
-                            ))
+                            after_obj = json.loads(after_json) if after_json else {}
+                            
+                            # 校验当前值是否与 after_obj 匹配，防止覆盖并发改动
+                            cur.execute("SELECT total_pages, out_id FROM edu_print_record WHERE print_id = %s FOR UPDATE", (int(rec_id),))
+                            curr_row = cur.fetchone()
+                            if curr_row:
+                                cur.execute("""
+                                    UPDATE edu_print_record 
+                                    SET print_count = %s, page_count = %s, print_side = %s, total_pages = %s, update_time = NOW()
+                                    WHERE print_id = %s
+                                """, (
+                                    before_obj["print_count"], before_obj["page_count"],
+                                    before_obj["print_side"], before_obj["total_pages"],
+                                    int(rec_id)
+                                ))
+                                # 同步恢复关联出库单明细，保持账实一致
+                                out_id = curr_row.get("out_id") or before_obj.get("out_id")
+                                if out_id:
+                                    cur.execute("UPDATE edu_stock_out_item SET quantity = %s WHERE out_id = %s", (before_obj["total_pages"], out_id))
+                                    cur.execute("UPDATE edu_stock_out SET remark = %s, update_time = NOW() WHERE out_id = %s", 
+                                                (f"回滚恢复用纸出库(恢复至 {before_obj['total_pages']}张)", out_id))
 
-                    # 删除新增的待核实入库单
-                    cur.execute("DELETE FROM edu_stock_in WHERE status = '0'")
-
-                    # 恢复物资规格和旧库存
-                    cur.execute("UPDATE edu_goods SET spec='8K/箱(1000张)', conversion_rate=1000, stock_num=3, remain_sheets=183 WHERE goods_id=311")
-                    cur.execute("UPDATE edu_goods SET spec='16K/箱(1000张)', conversion_rate=1000, stock_num=32, remain_sheets=63 WHERE goods_id=312")
-
-                    # 标记批次为已回滚
+                    # 标记批次为已回滚（不盲目删除待核实单，也不硬编码重置实盘库存）
                     cur.execute("UPDATE edu_repair_batch SET status = 'ROLLED_BACK', finish_time = NOW() WHERE batch_id = %s", (batch_id,))
 
                     conn.commit()
-                    print(f"=== [ROLLBACK] 批次 {batch_id} 回滚完成！数据已恢复修改前状态 ===")
+                    print(f"=== [ROLLBACK] 批次 {batch_id} 安全回滚完成！数据及出库单已恢复修改前状态，实盘库存基准保持不变 ===")
                 except Exception as e:
                     conn.rollback()
                     print(f"!!! [ERROR] 回滚失败: {e}")

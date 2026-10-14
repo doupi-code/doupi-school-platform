@@ -1,6 +1,0 @@
-{
-  "batch_id": "PAPER-20261014-01",
-  "operator": "admin_repair",
-  "fact_summary": "生产修复：4笔错误入库物理删除、历史真实进货登记待核实(21箱8000元)、纸张规格换算率修正(8K=2000, 16K=4000)、实物基准建立(8K=11000张, 16K=12450张)",
-  "approved_print_records": []
-}

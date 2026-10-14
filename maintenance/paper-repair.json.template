@@ -3,8 +3,8 @@
     "host": "127.0.0.1",
     "port": 53061,
     "user": "root",
-    "password": "Lt19960614.",
-    "database": "stuck_mg_rehearsal",
+    "password": "${DB_PASSWORD}",
+    "database": "stuck-mg",
     "charset": "utf8mb4"
   },
   "goods_map": {

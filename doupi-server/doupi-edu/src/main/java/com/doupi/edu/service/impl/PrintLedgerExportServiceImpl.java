@@ -7,9 +7,11 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
@@ -25,6 +27,8 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import com.doupi.common.utils.StringUtils;
 import com.doupi.edu.domain.EduPrintRecord;
@@ -40,6 +44,34 @@ import com.doupi.edu.service.IPrintLedgerExportService;
 public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
 {
     private static final String DEFAULT_MISSING_NAME = "名称缺失／待核实";
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    /**
+     * 从修复审计日志中加载所有标记为估算且未被回退的文印记录ID集合
+     */
+    private Set<Long> loadEstimatedPrintIds()
+    {
+        Set<Long> set = new HashSet<>();
+        if (jdbcTemplate != null)
+        {
+            try
+            {
+                List<Long> ids = jdbcTemplate.query(
+                    "SELECT CAST(record_id AS UNSIGNED) FROM edu_repair_log WHERE table_name = 'edu_print_record' AND is_estimated = 1 " +
+                    "AND record_id NOT IN (SELECT record_id FROM edu_repair_log WHERE batch_id = 'PAPER-20261014-03-REVERT-INCREASED')",
+                    (rs, rowNum) -> rs.getLong(1)
+                );
+                set.addAll(ids);
+            }
+            catch (Exception ignored)
+            {
+                // 审计表不可用时安全降级
+            }
+        }
+        return set;
+    }
 
     @Override
     public void exportLedger(HttpServletResponse response, List<EduPrintRecord> list) throws IOException
@@ -60,16 +92,18 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
             list = new ArrayList<>();
         }
 
+        Set<Long> estimatedIds = loadEstimatedPrintIds();
+
         try (Workbook workbook = new XSSFWorkbook())
         {
             // 样式准备
             Styles styles = new Styles(workbook);
 
             // 1. 构建 Sheet 0: "总览"
-            buildOverviewSheet(workbook, list, styles);
+            buildOverviewSheet(workbook, list, styles, estimatedIds);
 
             // 2. 构建 Sheet 1: "明细"
-            buildDetailsSheet(workbook, list, styles);
+            buildDetailsSheet(workbook, list, styles, estimatedIds);
 
             workbook.write(outputStream);
             outputStream.flush();
@@ -79,7 +113,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
     /**
      * 构建第一个Sheet: "总览"
      */
-    private void buildOverviewSheet(Workbook workbook, List<EduPrintRecord> list, Styles styles)
+    private void buildOverviewSheet(Workbook workbook, List<EduPrintRecord> list, Styles styles, Set<Long> estimatedIds)
     {
         Sheet sheet = workbook.createSheet("总览");
         sheet.createFreezePane(0, 1);
@@ -113,7 +147,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
         {
             String teacherKey = resolveTeacherKey(r);
             TeacherStat stat = statMap.computeIfAbsent(teacherKey, k -> new TeacherStat(resolveTeacherDisplayName(r)));
-            stat.accumulate(r);
+            stat.accumulate(r, estimatedIds);
         }
 
         int rowIdx = 1;
@@ -184,7 +218,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
     /**
      * 构建第二个Sheet: "明细"
      */
-    private void buildDetailsSheet(Workbook workbook, List<EduPrintRecord> list, Styles styles)
+    private void buildDetailsSheet(Workbook workbook, List<EduPrintRecord> list, Styles styles, Set<Long> estimatedIds)
     {
         Sheet sheet = workbook.createSheet("明细");
         sheet.createFreezePane(0, 1);
@@ -305,7 +339,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
             // 16: 状态
             writeTextCell(row, 16, resolveStatusText(r.getStatus()), styles.textCenterStyle);
             // 17: 数据说明
-            writeTextCell(row, 17, resolveDataRemark(r), styles.textStyle);
+            writeTextCell(row, 17, resolveDataRemark(r, estimatedIds), styles.textStyle);
             // 18: 备注
             writeTextCell(row, 18, StringUtils.isNotEmpty(r.getRemark()) ? r.getRemark() : "", styles.textStyle);
 
@@ -394,10 +428,19 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
         return status != null ? status : "未知";
     }
 
-    private static String resolveDataRemark(EduPrintRecord r)
+    private static boolean isEstimatedRecord(EduPrintRecord r, Set<Long> estimatedIds)
     {
+        if (estimatedIds != null && r.getPrintId() != null && estimatedIds.contains(r.getPrintId()))
+        {
+            return true;
+        }
         String remark = r.getRemark() != null ? r.getRemark() : "";
-        if (remark.contains("估算"))
+        return remark.contains("估算");
+    }
+
+    private static String resolveDataRemark(EduPrintRecord r, Set<Long> estimatedIds)
+    {
+        if (isEstimatedRecord(r, estimatedIds))
         {
             return "估算修正";
         }
@@ -408,6 +451,11 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
             return "旧规则耗纸";
         }
         return "正常登记";
+    }
+
+    private static String resolveDataRemark(EduPrintRecord r)
+    {
+        return resolveDataRemark(r, null);
     }
 
     private static void writeTextCell(Row row, int col, String value, CellStyle style)
@@ -564,7 +612,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
             this.teacherName = teacherName;
         }
 
-        void accumulate(EduPrintRecord r)
+        void accumulate(EduPrintRecord r, Set<Long> estimatedIds)
         {
             String status = r.getStatus();
             long totalPages = r.getTotalPages() != null ? r.getTotalPages() : 0L;
@@ -578,8 +626,7 @@ public class PrintLedgerExportServiceImpl implements IPrintLedgerExportService
             boolean is8k = paperType.contains("8K") || paperName.contains("8K");
             boolean is16k = paperType.contains("16K") || paperName.contains("16K");
 
-            String remark = r.getRemark() != null ? r.getRemark() : "";
-            if (remark.contains("估算"))
+            if (isEstimatedRecord(r, estimatedIds))
             {
                 estimatedRecordsCount++;
             }
