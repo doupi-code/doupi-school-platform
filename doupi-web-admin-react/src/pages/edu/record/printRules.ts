@@ -17,7 +17,10 @@ export function derivePrintFields(task:PrintCandidate,current:Record<string,unkn
   const original=task.sourcePageCount ?? task.pageCount ?? undefined;
   const paperType=manual.has('paperType') ? current.paperType as string : task.paperType || (task.sourcePaperType==='A4' && original===1?'16K':'8K');
   const pageCount=manual.has('pageCount') ? current.pageCount as number|undefined : convertPages(task.pageCount ?? original,task.sourcePaperType,paperType);
-  const printSide=manual.has('printSide') ? current.printSide as string|undefined : task.printSide || (pageCount && pageCount>0 ? pageCount===1?'1':'2' : undefined);
+  const defaultSide = (Number(pageCount) || 1) <= 1 ? '1' : '2';
+  const printSide = manual.has('printSide')
+    ? (current.printSide as string || defaultSide)
+    : (task.printSide || defaultSide);
   return {paperType,pageCount,printSide};
 }
 

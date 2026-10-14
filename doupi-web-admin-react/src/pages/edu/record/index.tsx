@@ -66,6 +66,7 @@ import {
   PaperClipOutlined,
   MessageOutlined,
   DownloadOutlined,
+  ReloadOutlined,
   UnorderedListOutlined,
   ClockCircleOutlined,
   CheckOutlined,
@@ -178,6 +179,7 @@ const PrintRecordPage: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [editId, setEditId] = useState<any>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isManualReplacingAttachment, setIsManualReplacingAttachment] = useState<boolean>(false);
 
   // 详情与出库单弹窗
   const [detailOpen, setDetailOpen] = useState(false);
@@ -1051,6 +1053,7 @@ const PrintRecordPage: React.FC = () => {
     setOcrResult(null);
     activeTaskIdRef.current = undefined;
     sourcePageInfoRef.current = null;
+    setIsManualReplacingAttachment(false);
     setModalTitle('新增印刷登记（自动生成耗材出库单联动扣库存）');
 
     // 检查是否有未保存的新增草稿
@@ -1309,6 +1312,7 @@ const PrintRecordPage: React.FC = () => {
     setCurrentTaskIndex(index);
     sourcePageInfoRef.current = null;
     setSplitAnswer(false);
+    setIsManualReplacingAttachment(false);
     setIsEdit(false); setEditId(null);
     setCurrentEditRecord(null);
     setSelectedGrade(task.grade || '');
@@ -1323,6 +1327,9 @@ const PrintRecordPage: React.FC = () => {
       printTime: dayKey(task.timeSnippet) ? parseChatTime(task.timeSnippet, task.timeSnippet) : undefined,
       status: '0',
     };
+    if (!values.printSide) {
+      values.printSide = (Number(values.pageCount) || 1) <= 1 ? '1' : '2';
+    }
     if(!task.taskId || !taskDraftsRef.current.has(task.taskId)) {
       const linkedText=(task.sourceMessageIds || []).map(id=>sourceMessageById.get(id)?.text).filter(Boolean).join('\n');
       const splitInfo=detectSplitAnswerInfo(linkedText,Number(values.pageCount) || 0);
@@ -2539,8 +2546,86 @@ const PrintRecordPage: React.FC = () => {
     });
   }, [exportSession, exportSearchKeyword, exportRegisteredFilter, exportHideEmpty, exportHideBusiness, exportOnlySelected, exportSelectedIds]);
 
+  // 关闭/退出登记弹窗前，自动妥善暂存草稿，多任务队列存在未登记时友好确认防误触
+  const handleModalCancel = () => {
+    if (saveLockRef.current) return;
+    if (activeTaskIdRef.current) {
+      taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
+    }
+    const pendingCount = ocrResult?.taskList?.filter((t) => !t.alreadyRegistered && !t.skipped)?.length || 0;
+    if (ocrResult && pendingCount > 0) {
+      Modal.confirm({
+        title: '暂存当前候选并退出？',
+        content: `当前微信队列中还有 ${pendingCount} 条未登记候选。退出后登记进度已为您完整暂存，您随时可以在页面顶部点击「继续微信登记」一键恢复。`,
+        okText: '暂存退出',
+        cancelText: '继续留在本页',
+        onOk: () => {
+          setModalOpen(false);
+        },
+      });
+    } else {
+      setModalOpen(false);
+    }
+  };
+
   return (
     <PageContainer header={{ title: '文印智能登记管理' }}>
+      {ocrResult && ocrResult.taskList && ocrResult.taskList.length > 0 && !modalOpen && !textModalOpen && !exportModalOpen && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, border: '1px solid #91caff', background: '#e6f4ff' }}
+          message={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span>
+                <b style={{ color: '#0958d9' }}>📑 微信智能导入候选队列暂存中：</b>
+                共 {ocrResult.taskList.length} 条候选（当前停留在第 {currentTaskIndex + 1} 条
+                【{ocrResult.taskList[currentTaskIndex]?.printName || '待登记任务'}】，已登记 {ocrResult.taskList.filter(t=>t.alreadyRegistered).length} 条，跳过 {ocrResult.taskList.filter(t=>t.skipped).length} 条，剩余 {ocrResult.taskList.filter(t=>!t.alreadyRegistered && !t.skipped).length} 条待处理）。
+              </span>
+              <Space size={8}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => {
+                    const task = ocrResult.taskList[currentTaskIndex] || ocrResult.taskList[0];
+                    applyTaskToForm(task, currentTaskIndex, ocrResult.taskList.length);
+                    setModalOpen(true);
+                  }}
+                >
+                  继续逐条登记（第 {currentTaskIndex + 1} 条）
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setTextModalOpen(true);
+                  }}
+                >
+                  查看全部候选列表
+                </Button>
+                <Button
+                  size="small"
+                  danger
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '清空当前微信候选队列？',
+                      content: '清空后已登记的记录不受影响，但未登记的候选进度将被清除。确定要清空吗？',
+                      okText: '确认清空',
+                      cancelText: '取消',
+                      onOk: () => {
+                        setOcrResult(null);
+                        taskDraftsRef.current.clear();
+                        message.info('已清空暂存队列');
+                      },
+                    });
+                  }}
+                >
+                  清空队列
+                </Button>
+              </Space>
+            </div>
+          }
+        />
+      )}
       <ProTable
         actionRef={actionRef}
         columns={columns}
@@ -2647,9 +2732,11 @@ const PrintRecordPage: React.FC = () => {
           </Space>
         }
         open={modalOpen && !textModalOpen && !exportModalOpen}
+        maskClosable={false}
+        keyboard={false}
         onOk={handleSaveRecord}
         confirmLoading={savingRecord}
-        onCancel={() => { if (saveLockRef.current) return; if (activeTaskIdRef.current) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true)); setModalOpen(false); }}
+        onCancel={handleModalCancel}
         width={ocrResult ? 1280 : 880}
         style={{ top: 12, paddingBottom: 0 }}
         destroyOnHidden={false}
@@ -2689,11 +2776,7 @@ const PrintRecordPage: React.FC = () => {
                 )}
                 <Button
                   disabled={savingRecord}
-                  onClick={() => {
-                    if (saveLockRef.current) return;
-                    if (activeTaskIdRef.current) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
-                    setModalOpen(false);
-                  }}
+                  onClick={handleModalCancel}
                 >
                   取消
                 </Button>
@@ -2860,8 +2943,9 @@ const PrintRecordPage: React.FC = () => {
                       addonAfter="页"
                       onChange={(val) => {
                         const newPage = Number(val) || 1;
-                        if (!ocrResult && newPage <= 1) {
-                          form.setFieldsValue({ printSide: '1' });
+                        const state = activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+                        if (!state?.manual.has('printSide')) {
+                          form.setFieldsValue({ printSide: newPage <= 1 ? '1' : '2' });
                         }
                         if (splitAnswer && newPage > 1) {
                           const curAnsPage = form.getFieldValue('answerPageCount') || 1;
@@ -3068,21 +3152,35 @@ const PrintRecordPage: React.FC = () => {
                     name="attachment"
                     label="原稿电子文件 / 附件"
                     style={{ marginBottom: 8 }}
-                    extra={
-                      currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath ? (
-                        <div style={{ fontSize: 12, marginTop: 4, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                            <span>
-                              <span style={{ color: '#274916', fontWeight: 600 }}>📎 已匹配导出附件：</span>
+                  >
+                    {currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath && !isManualReplacingAttachment ? (
+                      <div
+                        data-testid="matched-attachment-card"
+                        style={{
+                          fontSize: 12,
+                          background: '#f6ffed',
+                          border: '1px solid #b7eb8f',
+                          borderRadius: 6,
+                          padding: '8px 10px',
+                          boxSizing: 'border-box',
+                          width: '100%',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                            <span style={{ color: '#274916', fontWeight: 600, flexShrink: 0 }}>📎 已匹配附件:</span>
+                            <Tooltip title={currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}>
                               <a
-                                style={{ color: '#0958d9', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                                style={{ color: '#0958d9', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                 title="点击直接打开或下载此文件查看"
                                 onClick={() => handleOpenMatchedAttachment(currentQueueTask.matchedAttachmentKey, currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName)}
                               >
                                 {currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}
                               </a>
-                              <span style={{ color: '#8c8c8c', marginLeft: 6, fontSize: 11 }}>（保存登记时自动上传）</span>
-                            </span>
+                            </Tooltip>
+                            <span style={{ color: '#8c8c8c', marginLeft: 4, fontSize: 11, flexShrink: 0 }}>（登记时自动上传）</span>
+                          </span>
+                          <Space size={4} style={{ flexShrink: 0 }}>
                             <Button
                               type="primary"
                               size="small"
@@ -3092,48 +3190,71 @@ const PrintRecordPage: React.FC = () => {
                             >
                               快速打开原稿查看
                             </Button>
-                          </div>
-                          {matchedAnalysisStatus.taskId === currentQueueTask.taskId && (
-                            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed #d9d9d9', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                              <span style={{ color: matchedAnalysisStatus.loading ? '#1677ff' : '#595959' }}>
-                                {matchedAnalysisStatus.loading && <ClockCircleOutlined spin style={{ marginRight: 4 }} />}
-                                {matchedAnalysisStatus.text}
-                              </span>
-                              {!matchedAnalysisStatus.loading && (
-                                <Button
-                                  type="link"
-                                  size="small"
-                                  style={{ padding: 0 }}
-                                  onClick={() => {
-                                    const file = exportAttachmentFilesRef.current.get(currentQueueTask.matchedAttachmentKey!);
-                                    if (file instanceof File) matchedDocumentAnalysisRef.current.delete(file);
-                                    setMatchedAnalysisRetry((n) => n + 1);
-                                  }}
-                                >
-                                  重新读取页数
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<ReloadOutlined />}
+                              style={{ padding: '0 4px', fontSize: 11 }}
+                              onClick={() => setIsManualReplacingAttachment(true)}
+                            >
+                              替换
+                            </Button>
+                          </Space>
                         </div>
-                      ) : undefined
-                    }
-                  >
-                    <FileUpload
-                      contextKey={currentQueueTask?.taskId}
-                      disabled={savingRecord}
-                      accept=".doc,.docx,.docm,.pdf,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm,.txt,.zip,.rar,.7z,.wps,image/*"
-                      placeholder="上传原稿或粘贴文件"
-                      onUploadSuccess={(_url, uploadedName, file) => {
-                        const currentPrintName = form.getFieldValue('printName');
-                        if (!currentPrintName && uploadedName) {
-                          form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
-                        }
-                        if (file) {
-                          analyzeAndFillDocument(file);
-                        }
-                      }}
-                    />
+                        {matchedAnalysisStatus.taskId === currentQueueTask.taskId && (
+                          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed #b7eb8f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <span style={{ color: matchedAnalysisStatus.loading ? '#1677ff' : '#595959', fontSize: 12 }}>
+                              {matchedAnalysisStatus.loading && <ClockCircleOutlined spin style={{ marginRight: 4 }} />}
+                              {matchedAnalysisStatus.text}
+                            </span>
+                            {!matchedAnalysisStatus.loading && (
+                              <Button
+                                type="link"
+                                size="small"
+                                style={{ padding: 0, fontSize: 11 }}
+                                onClick={() => {
+                                  const file = exportAttachmentFilesRef.current.get(currentQueueTask.matchedAttachmentKey!);
+                                  if (file instanceof File) matchedDocumentAnalysisRef.current.delete(file);
+                                  setMatchedAnalysisRetry((n) => n + 1);
+                                }}
+                              >
+                                重新读取页数
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <FileUpload
+                          contextKey={currentQueueTask?.taskId}
+                          disabled={savingRecord}
+                          accept=".doc,.docx,.docm,.pdf,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm,.txt,.zip,.rar,.7z,.wps,image/*"
+                          placeholder="上传原稿或粘贴文件"
+                          onUploadSuccess={(_url, uploadedName, file) => {
+                            const currentPrintName = form.getFieldValue('printName');
+                            if (!currentPrintName && uploadedName) {
+                              form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
+                            }
+                            if (file) {
+                              analyzeAndFillDocument(file);
+                            }
+                          }}
+                        />
+                        {currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath && (
+                          <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                            <Button
+                              type="link"
+                              size="small"
+                              style={{ fontSize: 11, padding: 0 }}
+                              onClick={() => setIsManualReplacingAttachment(false)}
+                            >
+                              ↩ 恢复使用微信匹配附件（{currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}）
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </Form.Item>
                 </Col>
                 <Col span={7}>
@@ -3329,7 +3450,7 @@ const PrintRecordPage: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal title="微信聊天记录智能预填" open={textModalOpen} width={900} style={{top:12,paddingBottom:0}} styles={{body:{maxHeight:'calc(100dvh - 110px)',overflowY:'auto'}}} onCancel={()=>setTextModalOpen(false)} footer={null}>
+      <Modal title="微信聊天记录智能预填" open={textModalOpen} maskClosable={false} keyboard={false} width={900} style={{top:12,paddingBottom:0}} styles={{body:{maxHeight:'calc(100dvh - 110px)',overflowY:'auto'}}} onCancel={()=>setTextModalOpen(false)} footer={null}>
         <div data-testid="chat-import" onPasteCapture={handleModalPaste}>
           <TextArea rows={5} value={rawText} onChange={e=>setRawText(e.target.value)} placeholder="粘贴多天聊天记录；也可粘贴文件，未知信息稍后手动填写" />
           <Button loading={parsingText} onClick={handleParseText} style={{margin:'10px 0'}}>解析文字并加入候选</Button>
@@ -3370,6 +3491,8 @@ const PrintRecordPage: React.FC = () => {
       <Modal
         title="导入微信导出目录（先选联系人，再生成登记候选）"
         open={exportModalOpen}
+        maskClosable={false}
+        keyboard={false}
         width="min(1480px, 96vw)"
         style={{ top: 12, paddingBottom: 0 }}
         styles={{ body: { maxHeight: 'calc(100dvh - 170px)', overflowY: 'auto' } }}
