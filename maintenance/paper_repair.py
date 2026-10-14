@@ -16,6 +16,13 @@ from decimal import Decimal
 import pymysql
 from pymysql.cursors import DictCursor
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 def decimal_default(obj):
     if isinstance(obj, Decimal):
         return float(obj)

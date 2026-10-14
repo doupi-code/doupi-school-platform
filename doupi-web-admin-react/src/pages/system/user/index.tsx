@@ -252,11 +252,19 @@ const UserPage: React.FC = () => {
         setPostOptions(res.posts.map((p: any) => ({ label: p.postName, value: p.postId })));
       }
       if (res && res.data) {
+        let selectedClassIds: number[] = [];
+        if (res.data.classIds) {
+          if (Array.isArray(res.data.classIds)) {
+            selectedClassIds = res.data.classIds.map((id: any) => Number(id)).filter(Boolean);
+          } else if (typeof res.data.classIds === 'string') {
+            selectedClassIds = res.data.classIds.split(',').map((id: string) => Number(id.trim())).filter(Boolean);
+          }
+        }
         form.setFieldsValue({
           ...res.data,
           roleIds: res.roleIds || [],
           postIds: res.postIds || [],
-          classIds: res.data.classIds || [],
+          classIds: selectedClassIds,
         });
       }
     } catch (e) {}
@@ -268,16 +276,25 @@ const UserPage: React.FC = () => {
   const handleSaveUser = async () => {
     try {
       const values = await form.validateFields();
+      const payload = {
+        ...values,
+        classIds: Array.isArray(values.classIds)
+          ? values.classIds.filter(Boolean).join(',')
+          : (values.classIds || ''),
+      };
       if (editingUserId) {
-        await updateUser({ ...values, userId: editingUserId });
+        await updateUser({ ...payload, userId: editingUserId });
         message.success('修改成功');
       } else {
-        await addUser(values);
+        await addUser(payload);
         message.success('新增成功');
       }
       setModalOpen(false);
       actionRef.current?.reload();
-    } catch (e) {}
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || '保存失败');
+    }
   };
 
   // 重置密码

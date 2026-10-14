@@ -76,3 +76,8 @@ scripts/*.tar.gz
 "doupi-web-client-react/dist/" 
 doupi-web-admin-react/dist/
 doupi-web-client-react/dist/
+
+# 运维与修复配置文件及快照
+maintenance/*.json
+maintenance/snapshot/
+maintenance/review/

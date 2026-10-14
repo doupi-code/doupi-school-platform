@@ -1499,6 +1499,16 @@ const PrintRecordPage: React.FC = () => {
         if (c) className = c.className;
       }
 
+      let grade = values.grade || form.getFieldValue('grade') || selectedGrade || '';
+      if (!grade && teacherId) {
+        const t = teacherList.find((item) => String(item.teacherId) === String(teacherId));
+        if (t && t.grade) grade = t.grade;
+      }
+      if (!grade && values.classId) {
+        const c = classList.find((item) => String(item.classId) === String(values.classId));
+        if (c && c.grade) grade = c.grade;
+      }
+
       let paperGoodsId = values.paperGoodsId;
       if (!paperGoodsId && values.paperType) {
         paperGoodsId = findGoodsByPaperType(values.paperType, paperGoodsList);
@@ -1623,6 +1633,7 @@ const PrintRecordPage: React.FC = () => {
 
         const examPayload = {
           ...values,
+          grade,
           attachment: finalAttachment,
           printName: `[试卷] ${cleanName}`,
           pageCount: examPageCount,
@@ -1644,6 +1655,7 @@ const PrintRecordPage: React.FC = () => {
 
         const ansPayload = {
           ...values,
+          grade,
           attachment: finalAttachment,
           printName: `[答案] ${cleanName}`,
           pageCount: ansPageCount,
@@ -1726,6 +1738,7 @@ const PrintRecordPage: React.FC = () => {
 
       const payload = {
         ...values,
+        grade,
         attachment: finalAttachment,
         printTime: formattedPrintTime,
         teacherId,
@@ -3191,6 +3204,9 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={6}>
+                  <Form.Item name="grade" hidden>
+                    <Input />
+                  </Form.Item>
                   <Form.Item name="classId" label={<span style={{ fontWeight: 600 }}>关联班级</span>} style={{ marginBottom: 12 }}>
                     <Select
                       placeholder="选择班级"

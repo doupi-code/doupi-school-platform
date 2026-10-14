@@ -32,6 +32,7 @@ public class EduTeacher extends BaseEntity
 
     /** 任教班级 */
     @Excel(name = "任教班级")
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.doupi.common.core.domain.entity.SysUser.StringOrArrayDeserializer.class)
     private String classIds;
 
     /** 任教科目 */

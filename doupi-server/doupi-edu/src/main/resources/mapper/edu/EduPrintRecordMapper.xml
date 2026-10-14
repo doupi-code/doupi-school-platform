@@ -56,7 +56,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <sql id="selectEduPrintRecordVo">
-        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.template_paper_count, r.preview_paper_count, r.total_pages, r.teacher_id, r.grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
+        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.template_paper_count, r.preview_paper_count, r.total_pages, r.teacher_id, COALESCE(NULLIF(r.grade, ''), u.grade, t.grade, c.grade) as grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
                coalesce(u.nick_name, t.teacher_name) as teacher_name,
                g.goods_name as paper_goods_name,
                o.out_no as out_no,
