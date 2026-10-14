@@ -444,6 +444,62 @@ const { chromium } = requireBrowser('playwright');
     await expDialog.getByRole('button',{name:'全选当前筛选 (55)',exact:true}).waitFor();
     await page.screenshot({path:require('node:path').join(require('node:os').tmpdir(),'doupi-wechat-import-review.png'),fullPage:true});
 
+    // Large imported queues: bounded DOM, visible action, lazy metadata, and stale-result isolation.
+    await page.evaluate(()=>localStorage.clear());
+    await page.reload();
+    let analysisCalls=0;
+    let releaseAnalysis;
+    const analysisGate=new Promise(resolve=>{releaseAnalysis=resolve;});
+    await page.route('**/edu/record/analyze-document',async route=>{
+      analysisCalls++;
+      await analysisGate;
+      await route.fulfill({json:{code:200,data:{parseable:true,pageCount:4,sourcePaperType:'8K'}}});
+    });
+    await page.route('**/edu/record/structured-parse',async route=>{
+      await route.fulfill({json:{code:200,data:{messages:[],taskList:Array.from({length:2016},(_,i)=>({taskId:`large_${i}`,printName:`大量材料${i}`,sourceConversationId:'large',sender:'教师',teacherId:5,printCount:10,timeSnippet:'2026-10-01 09:00:00',...(i===0?{originalDocName:'原稿.docx',attachmentRelativePath:'large/files/original.docx'}:{})}))}}});
+    });
+    await page.getByTestId('open-wechat-export-modal').click();
+    await page.evaluate(()=>{
+      const dt=new DataTransfer();
+      for(const [name,content] of [
+        ['导出清单.json',JSON.stringify({conversations:[{id:'large',name:'教师',folder:'large',messageCount:1}]})],
+        ['large/data/messages.js','window.__WECHAT_EXPORT__ = '+JSON.stringify({messages:[{id:'1',type:'文件',exportMediaUrl:'files/original.docx',contentData:{title:'原稿.docx'}}]})+';'],
+        ['large/files/original.docx','mock-document']
+      ]) {
+        const f=new File([content],name.split('/').pop());
+        Object.defineProperty(f,'webkitRelativePath',{value:'large-export/'+name});dt.items.add(f);
+      }
+      const input=document.querySelector('[data-testid="wechat-export-dir-input"]');
+      Object.defineProperty(input,'files',{configurable:true,value:dt.files});
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    await expDialog.getByRole('button',{name:'全选当前筛选 (1)',exact:true}).click();
+    await expDialog.getByTestId('start-wechat-recognize-btn').click();
+    await expDialog.getByRole('button',{name:/#1 大量材料0/}).waitFor();
+    assert.ok(await expDialog.getByRole('button',{name:/#\d+ 大量材料/}).count()<=50,'preview must not render all 2016 candidates');
+    assert.equal(analysisCalls,0,'metadata must be lazy, not all-at-once');
+    const stickyStart=expDialog.locator('.ant-modal-footer').getByTestId('open-selected-candidate-btn');
+    await stickyStart.waitFor();
+    const startBox=await stickyStart.boundingBox();
+    assert.ok(startBox.y+startBox.height<=page.viewportSize().height,'start registration must remain on screen');
+    const firstAnalysis=page.waitForRequest(r=>r.url().endsWith('/edu/record/analyze-document'));
+    await stickyStart.click();
+    await firstAnalysis;
+    const largeDialog=page.getByRole('dialog',{name:/新增印刷登记/});
+    assert.ok(await largeDialog.getByRole('button',{name:/#\d+ 大量材料/}).count()<=4,'form must only render its current candidate page');
+    await largeDialog.getByRole('button',{name:/#2 大量材料1/}).click();
+    const analysisDone=page.waitForResponse(r=>r.url().endsWith('/edu/record/analyze-document'));
+    releaseAnalysis();await analysisDone;
+    assert.equal(await largeDialog.locator('#pageCount').inputValue(),'','late metadata cannot fill a different task');
+    await largeDialog.getByRole('button',{name:/#1 大量材料0/}).click();
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('#pageCount')).some(el=>el.value==='4'));
+    await largeDialog.locator('#pageCount').fill('7');
+    await largeDialog.getByRole('button',{name:/#2 大量材料1/}).click();
+    await largeDialog.getByRole('button',{name:/#1 大量材料0/}).click();
+    assert.equal(await largeDialog.locator('#pageCount').inputValue(),'7','manual page edits must survive cached analysis');
+    assert.equal(analysisCalls,1,'same File metadata must be cached across navigation');
+    console.log('PASS: 2016 candidates bounded to 50 preview / 4 form cards, sticky start, lazy cached pages, stale-result isolation');
+
     assert.deepEqual(errors,[]);
     console.log('PASS: no randomUUID, account filters, 50 rows/page, HTML paste, full-day chat, unknown fields, extra paper 122/82, split +4 paper, per-task drafts, teacher propagation by conversationId, upload-fail block & explicit override, reprintConfirmed, batch-isolated attachment cache');
   } catch(error) { await page.screenshot({path:'../browser-failure.png',fullPage:true}); throw error; } finally {await browser.close();}

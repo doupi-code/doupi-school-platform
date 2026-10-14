@@ -7,6 +7,7 @@ export interface FileLike {
   size?: number;
   type?: string;
   text: () => Promise<string>;
+  arrayBuffer?: () => Promise<ArrayBuffer>;
 }
 
 export interface WechatManifestConversation {

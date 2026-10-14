@@ -25,6 +25,7 @@ import {
   type WechatExportDirectorySession,
   type FileLike,
 } from './wechatExportImport';
+import { fastAnalyzeFile } from './documentAnalyzer';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
@@ -214,6 +215,7 @@ const PrintRecordPage: React.FC = () => {
 
   // 微信智能识别解析与跨天多任务队列
   const [ocrResult, setOcrResult] = useState<PrefillResult | null>(null);
+  const sourceMessageById = React.useMemo(() => new Map((ocrResult?.messages || []).map(message => [message.id, message])), [ocrResult?.messages]);
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
   const [previewTaskIndex, setPreviewTaskIndex] = useState(0);
   const taskDraftsRef = useRef(new Map<string, Record<string, unknown>>());
@@ -390,10 +392,18 @@ const PrintRecordPage: React.FC = () => {
     }
   };
 
-  // 解析文档并缓存到 docAnalysisRef（供微信粘贴上传的文档在填充任务时换算页数）
+  // 解析文档并缓存到 docAnalysisRef（供微信粘贴上传或导出匹配的文档在填充任务时换算页数）
   const analyzeDocumentIntoCache = async (file: File) => {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!['docx', 'docm', 'pdf', 'xls', 'xlsx', 'xlsm', 'doc'].includes(ext)) return null;
+    try {
+      const fastResult = await fastAnalyzeFile(file);
+      if (fastResult && fastResult.pageCount && fastResult.pageCount > 0) {
+        return fastResult;
+      }
+    } catch {
+      // 本地解析失败回退服务端接口
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -566,7 +576,7 @@ const PrintRecordPage: React.FC = () => {
   // 草稿状态
   const syncSplitDefaults = (task:PrintCandidate,pages:number|undefined,manual:Set<string>) => {
     if(['splitAnswer','answerPageCount','answerPrintCount','answerPrintSide'].some(key=>manual.has(key))) return;
-    const linked=(ocrResult?.messages || []).filter(m=>task.sourceMessageIds?.includes(m.id)).map(m=>m.text).join('\n');
+    const linked=(task.sourceMessageIds || []).map(id=>sourceMessageById.get(id)?.text).filter(Boolean).join('\n');
     const split=detectSplitAnswerInfo(linked,pages || 0);
     if(split) {
       form.setFieldsValue(split); setSplitAnswer(true);
@@ -806,7 +816,12 @@ const PrintRecordPage: React.FC = () => {
   const [exportLoadingManifest, setExportLoadingManifest] = useState(false);
   const [exportRecognizing, setExportRecognizing] = useState(false);
   const [exportDamagedNotices, setExportDamagedNotices] = useState<{ conversationId: string; conversationName: string; reason: string }[]>([]);
+  const matchedDocumentAnalysisRef = useRef(new WeakMap<File, Promise<any>>());
+  const matchedAnalysisQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const [matchedAnalysisStatus, setMatchedAnalysisStatus] = useState<{taskId?:string; loading:boolean; text:string}>({loading:false,text:''});
+  const [matchedAnalysisRetry, setMatchedAnalysisRetry] = useState(0);
   const exportFolderInputRef = useRef<HTMLInputElement | null>(null);
+  const exportStep2CardRef = useRef<HTMLDivElement | null>(null);
   // 按导入批次隔离缓存微信导出目录中匹配到的本地文件引用（key = `${batchId}:${relPath}`，仅在实际保存登记时才上传）
   const exportAttachmentFilesRef = useRef<Map<string, FileLike>>(new Map());
 
@@ -929,6 +944,9 @@ const PrintRecordPage: React.FC = () => {
       message.success(
         `已完成 ${readRes.conversations.length} 个联系人会话解析，生成 ${incoming.taskList.length} 条登记候选！请逐条核对确认`
       );
+      setTimeout(() => {
+        exportStep2CardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err: any) {
       message.error(err?.message || '结构化聊天记录识别失败');
     } finally {
@@ -1306,7 +1324,7 @@ const PrintRecordPage: React.FC = () => {
       status: '0',
     };
     if(!task.taskId || !taskDraftsRef.current.has(task.taskId)) {
-      const linkedText=(ocrResult?.messages || []).filter(m=>task.sourceMessageIds?.includes(m.id)).map(m=>m.text).join('\n');
+      const linkedText=(task.sourceMessageIds || []).map(id=>sourceMessageById.get(id)?.text).filter(Boolean).join('\n');
       const splitInfo=detectSplitAnswerInfo(linkedText,Number(values.pageCount) || 0);
       if(splitInfo) Object.assign(values,splitInfo);
     }
@@ -1321,6 +1339,48 @@ const PrintRecordPage: React.FC = () => {
     setExportModalOpen(false);
     setModalOpen(true);
   };
+
+  // Analyze only the active matched document; never upload/analyze the entire candidate queue.
+  useEffect(() => {
+    const task = currentQueueTask;
+    if (!modalOpen || isEdit || !task?.taskId || !task.matchedAttachmentKey) return;
+    const file = exportAttachmentFilesRef.current.get(task.matchedAttachmentKey);
+    if (!(file instanceof File)) return;
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!['pdf','docx','docm'].includes(ext)) {
+      setMatchedAnalysisStatus({taskId:task.taskId,loading:false,text:/^xls/.test(ext) ? 'Excel 工作表数不等于打印页数，请按打印预览填写。' : '该附件格式不能可靠读取页数，请手动填写。'});
+      return;
+    }
+    let cancelled = false;
+    setMatchedAnalysisStatus({taskId:task.taskId,loading:true,text:'正在读取附件页数…'});
+    let pending = matchedDocumentAnalysisRef.current.get(file);
+    if (!pending) {
+      pending = matchedAnalysisQueueRef.current.catch(()=>undefined).then(()=>analyzeDocumentIntoCache(file));
+      matchedDocumentAnalysisRef.current.set(file,pending);
+      matchedAnalysisQueueRef.current = pending;
+    }
+    pending.then(analysis => {
+      if (!analysis) matchedDocumentAnalysisRef.current.delete(file);
+      if (cancelled || activeTaskIdRef.current !== task.taskId) return;
+      const pages = Number(analysis?.pageCount);
+      if (!analysis?.parseable || !Number.isFinite(pages) || pages <= 0) {
+        setMatchedAnalysisStatus({taskId:task.taskId,loading:false,text:analysis?.msg || '未取得可靠页数，请重试或手动填写。'});
+        return;
+      }
+      const state = taskRulesRef.current.get(task.taskId!);
+      if (!state) return;
+      state.task = {...state.task,sourcePageCount:pages,sourcePaperType:analysis.sourcePaperType || undefined};
+      const fields = derivePrintFields(state.task,form.getFieldsValue(true),state.manual);
+      form.setFieldsValue({...fields,...(!state.manual.has('paperGoodsId') ? {paperGoodsId:findGoodsByPaperType(fields.paperType,paperGoodsList)} : {})});
+      syncSplitDefaults(state.task,fields.pageCount,state.manual);
+      const currentValues = form.getFieldsValue(true);
+      taskDraftsRef.current.set(task.taskId!, currentValues);
+      setPreviewTotalSheets(computePreviewSheets(currentValues, Boolean(currentValues.splitAnswer), null));
+      setOcrResult(previous => previous ? {...previous,taskList:previous.taskList.map(item=>item.taskId===task.taskId ? {...item,sourcePageCount:pages,sourcePaperType:analysis.sourcePaperType || undefined} : item)} : previous);
+      setMatchedAnalysisStatus({taskId:task.taskId,loading:false,text:`原稿 ${pages} 页${ext==='pdf' ? '' : '（Word 保存的页数，请核对打印预览）'}`});
+    });
+    return () => { cancelled = true; };
+  }, [modalOpen,isEdit,currentQueueTask?.taskId,currentQueueTask?.matchedAttachmentKey,matchedAnalysisRetry]);
 
   // 提交保存（实际保存时才上传导出目录关联附件、写入登记和扣库存；试卷答案拆分使用后端同一事务）
   const handleSaveRecord = async () => {
@@ -2559,9 +2619,8 @@ const PrintRecordPage: React.FC = () => {
         {ocrResult && (
           <ChatCandidateList
             compact
-            tasks={ocrResult.taskList.map((task, i) =>
-              i === currentTaskIndex ? { ...task, pageCount: watchedPageCount, printSide: watchedPrintSide } : task
-            )}
+            tasks={ocrResult.taskList}
+            selectedFields={{pageCount:watchedPageCount,printSide:watchedPrintSide}}
             selected={currentTaskIndex}
             disabled={savingRecord}
             onSelect={(i) => applyTaskToForm(ocrResult.taskList[i], i, ocrResult.taskList.length)}
@@ -2915,6 +2974,14 @@ const PrintRecordPage: React.FC = () => {
                       currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath ? (
                         <span style={{ fontSize: 11, color: '#389E0D' }}>
                           📎 已精确匹配导出目录附件：{currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentName}（保存登记时自动上传）
+                          {matchedAnalysisStatus.taskId === currentQueueTask.taskId && <div style={{color:matchedAnalysisStatus.loading ? '#1677ff' : '#666'}}>
+                            {matchedAnalysisStatus.text}
+                            {!matchedAnalysisStatus.loading && <Button type="link" size="small" onClick={()=>{
+                              const file=exportAttachmentFilesRef.current.get(currentQueueTask.matchedAttachmentKey!);
+                              if(file instanceof File) matchedDocumentAnalysisRef.current.delete(file);
+                              setMatchedAnalysisRetry(n=>n+1);
+                            }}>重新读取页数</Button>}
+                          </div>}
                         </span>
                       ) : undefined
                     }
@@ -3114,7 +3181,7 @@ const PrintRecordPage: React.FC = () => {
               )}
             </Form>
           </div>
-          {ocrResult && currentQueueTask && <ChatSourcePanel key={currentQueueTask.taskId} result={ocrResult} task={currentQueueTask} />}
+          {ocrResult && currentQueueTask && <ChatSourcePanel result={ocrResult} task={currentQueueTask} />}
         </div>
       </Modal>
 
@@ -3161,9 +3228,18 @@ const PrintRecordPage: React.FC = () => {
         open={exportModalOpen}
         width="min(1480px, 96vw)"
         style={{ top: 12, paddingBottom: 0 }}
-        styles={{ body: { maxHeight: 'calc(100dvh - 110px)', overflowY: 'auto' } }}
+        styles={{ body: { maxHeight: 'calc(100dvh - 170px)', overflowY: 'auto' } }}
         onCancel={() => setExportModalOpen(false)}
-        footer={null}
+        footer={
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+            <Text type="secondary">{ocrResult?.taskList.length ? `已生成 ${ocrResult.taskList.length} 条候选，核对后逐条保存` : '先选择联系人，再点击“开始识别”'}</Text>
+            <Button type="primary" data-testid="open-selected-candidate-btn"
+              disabled={!ocrResult?.taskList[previewTaskIndex] || ocrResult.taskList[previewTaskIndex].alreadyRegistered || ocrResult.taskList[previewTaskIndex].skipped || exportRecognizing}
+              onClick={() => ocrResult && applyTaskToForm(ocrResult.taskList[previewTaskIndex], previewTaskIndex, ocrResult.taskList.length)}>
+              开始登记{ocrResult?.taskList.length ? `（第 ${previewTaskIndex + 1} 条）` : ''}
+            </Button>
+          </div>
+        }
       >
         <div data-testid="wechat-export-import">
           <Alert
@@ -3354,7 +3430,22 @@ const PrintRecordPage: React.FC = () => {
           )}
 
           {ocrResult && ocrResult.taskList.length > 0 && (
-            <Card size="small" title={`第二步：逐条核对登记候选（共 ${ocrResult.taskList.length} 条，普通闲聊已留作上下文）`}>
+            <Card
+              ref={exportStep2CardRef}
+              size="small"
+              title={`第二步：逐条核对登记候选（共 ${ocrResult.taskList.length} 条，普通闲聊已留作上下文）`}
+              extra={
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  data-testid="step2-open-selected-candidate-btn"
+                  disabled={!ocrResult?.taskList[previewTaskIndex] || ocrResult.taskList[previewTaskIndex].alreadyRegistered || ocrResult.taskList[previewTaskIndex].skipped || exportRecognizing}
+                  onClick={() => ocrResult && applyTaskToForm(ocrResult.taskList[previewTaskIndex], previewTaskIndex, ocrResult.taskList.length)}
+                >
+                  开启登记{ocrResult?.taskList.length ? `（第 ${previewTaskIndex + 1} 条）` : ''}
+                </Button>
+              }
+            >
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
                 <Select
                   showSearch
@@ -3372,10 +3463,11 @@ const PrintRecordPage: React.FC = () => {
                 />
                 <Button
                   type="primary"
-                  data-testid="open-selected-candidate-btn"
-                  onClick={() => applyTaskToForm(ocrResult.taskList[previewTaskIndex], previewTaskIndex, ocrResult.taskList.length)}
+                  data-testid="open-selected-candidate-btn-inline"
+                  disabled={!ocrResult?.taskList[previewTaskIndex] || ocrResult.taskList[previewTaskIndex].alreadyRegistered || ocrResult.taskList[previewTaskIndex].skipped || exportRecognizing}
+                  onClick={() => ocrResult && applyTaskToForm(ocrResult.taskList[previewTaskIndex], previewTaskIndex, ocrResult.taskList.length)}
                 >
-                  打开当前候选并逐条确认保存
+                  开启登记选中候选{ocrResult?.taskList.length ? `（第 ${previewTaskIndex + 1} 条）` : ''}
                 </Button>
               </div>
               <ChatCandidateList

@@ -1,4 +1,5 @@
-import { Button, Space, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import { Button, Pagination, Space, Tag } from 'antd';
 import type { PrintCandidate } from './chatPrefill';
 import { derivePrintFields } from './printRules';
 
@@ -10,6 +11,7 @@ export default function ChatCandidateList({
   onReprint,
   disabled = false,
   compact = false,
+  selectedFields,
 }: {
   tasks: PrintCandidate[];
   selected: number;
@@ -18,8 +20,18 @@ export default function ChatCandidateList({
   onReprint?: (index: number) => void;
   disabled?: boolean;
   compact?: boolean;
+  selectedFields?: Partial<PrintCandidate>;
 }) {
+  const pageSize = compact ? 4 : 50;
+  const [page, setPage] = useState(Math.floor(selected / pageSize) + 1);
+  useEffect(() => setPage(Math.floor(selected / pageSize) + 1), [selected, pageSize]);
+  const currentPage = Math.max(1, Math.min(page, Math.ceil(tasks.length / pageSize)));
+  const start = (currentPage - 1) * pageSize;
   return (
+    <>
+    {tasks.length > pageSize && <Pagination size="small" simple current={currentPage} pageSize={pageSize}
+      total={tasks.length} showSizeChanger={false} onChange={setPage}
+      style={{marginBottom:8}} />}
     <div
       style={{
         maxHeight: compact ? 108 : 260,
@@ -30,12 +42,15 @@ export default function ChatCandidateList({
         marginBottom: 12,
       }}
     >
-      {tasks.map((task, i) => {
+      {tasks.slice(start, start + pageSize).map((originalTask, offset) => {
+        const i = start + offset;
+        const task = i === selected && selectedFields ? {...originalTask, ...selectedFields} : originalTask;
+        const fields = derivePrintFields(task);
         const isLocked = Boolean(disabled || task.alreadyRegistered || task.skipped);
         const contactLabel = task.sourceConversationName || task.sender;
         const attachmentTag = task.attachment ? (
           <Tag color="blue">已有附件</Tag>
-        ) : task.attachmentStatus === 'ready' && task.attachmentRelativePath ? (
+        ) : ['ready','matched'].includes(task.attachmentStatus || '') && task.attachmentRelativePath ? (
           <Tag color="cyan">已关联导出附件（保存时上传）</Tag>
         ) : task.attachmentStatus === 'failed' ? (
           <Tag color="error">附件上传失败</Tag>
@@ -51,7 +66,7 @@ export default function ChatCandidateList({
             style={{
               textAlign: 'left',
               padding: 8,
-              flex: compact ? '0 0 320px' : undefined,
+              flex: compact ? '1 0 230px' : undefined,
               overflow: compact ? 'auto' : undefined,
               border: `1px solid ${i === selected ? '#1677ff' : '#ddd'}`,
               borderRadius: 6,
@@ -99,7 +114,6 @@ export default function ChatCandidateList({
                     <span style={{ color: '#ad6800' }}>
                       {task.reviewReasons
                         .filter((reason) => {
-                          const fields = derivePrintFields(task);
                           return (
                             !(reason === '单双面未知' && fields.printSide) &&
                             !(reason === '页数未知' && fields.pageCount) &&
@@ -128,5 +142,6 @@ export default function ChatCandidateList({
         );
       })}
     </div>
+    </>
   );
 }

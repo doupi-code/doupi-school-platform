@@ -112,6 +112,14 @@ public final class DocumentPageAnalyzer
             {
                 pages = 0;
             }
+            if (pages <= 0)
+            {
+                String appXml = readZipEntry(data, "docProps/app.xml");
+                if (appXml != null)
+                {
+                    pages = parseDocxAppPages(appXml);
+                }
+            }
             r.setPageCount(pages > 0 ? pages : null);
 
             // 纸张规格：从 word/document.xml 解析 <w:pgSz w:w="..." w:h="..."/>（twips → mm）
@@ -123,6 +131,38 @@ public final class DocumentPageAnalyzer
             r.setMsg(r.getPageCount() != null ? "已识别 Word 页数" : "未能识别页数，请手动填写");
             return r;
         }
+    }
+
+    private static int parseDocxAppPages(String appXml)
+    {
+        try
+        {
+            int start = appXml.indexOf("<Pages>");
+            if (start >= 0)
+            {
+                start += 7;
+            }
+            else
+            {
+                int tagStart = appXml.indexOf("<Pages ");
+                if (tagStart >= 0)
+                {
+                    start = appXml.indexOf('>', tagStart) + 1;
+                }
+            }
+            if (start > 0)
+            {
+                int end = appXml.indexOf("</Pages>", start);
+                if (end > start)
+                {
+                    return Integer.parseInt(appXml.substring(start, end).trim());
+                }
+            }
+        }
+        catch (Exception ignore)
+        {
+        }
+        return 0;
     }
 
     private static DocumentAnalysisResult analyzeXlsx(InputStream in) throws Exception

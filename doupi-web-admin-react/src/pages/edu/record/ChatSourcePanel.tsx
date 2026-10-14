@@ -1,11 +1,11 @@
-import {useEffect,useRef} from 'react';
+import {memo,useEffect,useMemo,useRef} from 'react';
 import {Button} from 'antd';
 import type {PrefillResult,PrintCandidate} from './chatPrefill';
 import {dayKey,messagesForDay} from './chatPrefill';
-export default function ChatSourcePanel({result,task}:{result:PrefillResult;task:PrintCandidate}) {
+function ChatSourcePanel({result,task}:{result:PrefillResult;task:PrintCandidate}) {
   const panel=useRef<HTMLElement>(null);
   const day=dayKey(task.timeSnippet);
-  const messages=messagesForDay(result.messages || [],task);
+  const messages=useMemo(()=>messagesForDay(result.messages || [],task),[result.messages,task.sourceConversationId,day]);
   const related=new Set(task.sourceMessageIds || []);
   const locate=()=>{
     const container=panel.current;
@@ -24,3 +24,5 @@ export default function ChatSourcePanel({result,task}:{result:PrefillResult;task
     {!messages.length && <pre style={{whiteSpace:'pre-wrap'}}>{day?'本次导入中没有该日期的聊天原文。':result.rawText || '本次仅取得附件，没有聊天原文。'}</pre>}
   </aside>;
 }
+
+export default memo(ChatSourcePanel);
