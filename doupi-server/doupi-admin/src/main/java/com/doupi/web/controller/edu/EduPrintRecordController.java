@@ -42,6 +42,9 @@ public class EduPrintRecordController extends BaseController
     @Autowired
     private IEduOcrService eduOcrService;
 
+    @Autowired
+    private com.doupi.edu.service.IPrintLedgerExportService printLedgerExportService;
+
     /**
      * 查询印刷登记列表
      */
@@ -55,16 +58,15 @@ public class EduPrintRecordController extends BaseController
     }
 
     /**
-     * 导出印刷登记列表
+     * 导出印刷登记列表（双Sheet专业台账：总览+明细）
      */
     @PreAuthorize("@ss.hasPermi('edu:record:export')")
     @Log(title = "印刷登记", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, EduPrintRecord eduPrintRecord)
+    public void export(HttpServletResponse response, EduPrintRecord eduPrintRecord) throws java.io.IOException
     {
         List<EduPrintRecord> list = eduPrintRecordService.selectEduPrintRecordList(eduPrintRecord);
-        ExcelUtil<EduPrintRecord> util = new ExcelUtil<EduPrintRecord>(EduPrintRecord.class);
-        util.exportExcel(response, list, "印刷登记数据");
+        printLedgerExportService.exportLedger(response, list);
     }
 
     /**

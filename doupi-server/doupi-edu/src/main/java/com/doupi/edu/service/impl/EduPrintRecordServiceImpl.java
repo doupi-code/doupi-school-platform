@@ -605,6 +605,10 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
         {
             throw new ServiceException("该印刷登记已作废，请勿重复操作！");
         }
+        if (isHistoricalBaselinePrintRecord(record))
+        {
+            throw new ServiceException("该印刷登记属于2026-10-14历史基准数据，实物库存已重新盘点锁定，禁止通过日常接口作废！如需调整请走专项运维核查流程。");
+        }
 
         // 同步作废关联的出库单，库存自动回退
         if (record.getOutId() != null)
@@ -804,6 +808,10 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
     public int deleteEduPrintRecordByPrintId(Long printId)
     {
         EduPrintRecord record = eduPrintRecordMapper.selectEduPrintRecordByPrintId(printId);
+        if (record != null && isHistoricalBaselinePrintRecord(record))
+        {
+            throw new ServiceException("该印刷登记【" + record.getPrintName() + "】属于历史基准锁定数据，禁止直接删除！");
+        }
         if (record != null && record.getOutId() != null)
         {
             try
@@ -817,6 +825,31 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
             }
         }
         return eduPrintRecordMapper.deleteEduPrintRecordByPrintId(printId);
+    }
+
+    /**
+     * 判断是否属于基准锁定范围内的历史文印记录
+     */
+    private boolean isHistoricalBaselinePrintRecord(EduPrintRecord record)
+    {
+        if (record == null || record.getPrintId() == null)
+        {
+            return false;
+        }
+        Long maxPrintId = 1110L;
+        if (configService != null)
+        {
+            String val = configService.selectConfigByKey("edu.stock.baseline.maxPrintId");
+            if (StringUtils.isNotEmpty(val))
+            {
+                try
+                {
+                    maxPrintId = Long.parseLong(val.trim());
+                }
+                catch (Exception ignored) {}
+            }
+        }
+        return record.getPrintId() <= maxPrintId;
     }
 
     /**

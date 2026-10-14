@@ -326,11 +326,14 @@ const StockInPage: React.FC = () => {
       dataIndex: 'totalAmount',
       width: 110,
       align: 'right',
-      render: (_, record) => (
-        <Text strong style={{ color: '#1890FF' }}>
-          ¥{Number(record.totalAmount || 0).toFixed(2)}
-        </Text>
-      ),
+      render: (_, record) => {
+        const amt = record.declaredAmount != null ? record.declaredAmount : record.totalAmount;
+        return (
+          <Text strong style={{ color: '#1890FF' }}>
+            ¥{Number(amt || 0).toFixed(2)}
+          </Text>
+        );
+      },
     },
     {
       title: '单据状态',
@@ -338,15 +341,19 @@ const StockInPage: React.FC = () => {
       width: 90,
       align: 'center',
       valueEnum: {
-        '0': { text: '正常入库', status: 'Success' },
+        '0': { text: '待核实', status: 'Warning' },
+        '1': { text: '正常入库', status: 'Success' },
         '2': { text: '已作废', status: 'Default' },
       },
-      render: (_, record) =>
-        record.status === '2' ? (
-          <Tag color="default">已作废</Tag>
-        ) : (
-          <Tag color="success">正常入库</Tag>
-        ),
+      render: (_, record) => {
+        if (record.status === '0') {
+          return <Tag color="warning">待核实</Tag>;
+        }
+        if (record.status === '2') {
+          return <Tag color="default">已作废</Tag>;
+        }
+        return <Tag color="success">正常入库</Tag>;
+      },
     },
     {
       title: '单据备注',
@@ -371,7 +378,7 @@ const StockInPage: React.FC = () => {
           >
             明细
           </Button>
-          {record.status !== '2' && (
+          {record.status !== '2' && record.status !== '0' && (
             <Popconfirm
               key="cancel"
               title="确认作废该入库单？对应物品库存将联动回退扣减！"
@@ -693,7 +700,9 @@ const StockInPage: React.FC = () => {
               <Descriptions.Item label="经办人">{currentRecord.operatorNickName || currentRecord.operator || '-'}</Descriptions.Item>
               <Descriptions.Item label="入库日期">{currentRecord.inTime}</Descriptions.Item>
               <Descriptions.Item label="单据状态">
-                {currentRecord.status === '2' ? (
+                {currentRecord.status === '0' ? (
+                  <Tag color="warning">待核实</Tag>
+                ) : currentRecord.status === '2' ? (
                   <Tag color="default">已作废</Tag>
                 ) : (
                   <Tag color="success">正常入库</Tag>
@@ -701,8 +710,13 @@ const StockInPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="总金额" span={2}>
                 <Text strong style={{ fontSize: 16, color: '#F5222D' }}>
-                  ¥{Number(currentRecord.totalAmount || 0).toFixed(2)}
+                  ¥{Number(currentRecord.declaredAmount != null ? currentRecord.declaredAmount : (currentRecord.totalAmount || 0)).toFixed(2)}
                 </Text>
+                {currentRecord.status === '0' && currentRecord.declaredPackageCount != null && (
+                  <span style={{ marginLeft: 12, color: '#888' }}>
+                    （确认总箱数：{currentRecord.declaredPackageCount} 箱，纸型待核实）
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="单据备注" span={2}>
                 {currentRecord.remark || '-'}
@@ -710,6 +724,11 @@ const StockInPage: React.FC = () => {
             </Descriptions>
 
             <div style={{ marginTop: 16 }}>
+              {currentRecord.status === '0' && (
+                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#FFFBE6', border: '1px solid #FFE58F', borderRadius: 4, color: '#D46B08' }}>
+                  ℹ️ 本单为历史进货总量确认单（总箱数 21 箱、总金额 ¥8,000.00），8K/16K 纸型分配待后续证据补充核实；本单未生成分纸型物资明细，不产生直接库存增加。
+                </div>
+              )}
               <div style={{ fontWeight: 'bold', marginBottom: 8 }}>📦 入库物资明细：</div>
               <Table
                 dataSource={currentRecord.itemList || []}

@@ -38,6 +38,9 @@ public class StockOutServiceImpl implements IStockOutService
     @Autowired
     private IStockSeqService stockSeqService;
 
+    @org.springframework.beans.factory.annotation.Value("${edu.stock.baseline.maxOutId:1113}")
+    private Long maxBaselineOutId = 1113L;
+
     /**
      * 查询出库单（含明细）
      * 
@@ -236,6 +239,10 @@ public class StockOutServiceImpl implements IStockOutService
         {
             throw new ServiceException("该出库单已作废，请勿重复操作！");
         }
+        if (isHistoricalBaselineStockOut(stockOut))
+        {
+            throw new ServiceException("该出库单属于2026-10-14历史基准数据，实物库存已重新盘点锁定，禁止直接作废退库！如需调整请走专项运维核查流程。");
+        }
         List<StockOutItem> items = stockOutItemMapper.selectItemsByOutId(outId);
         if (items != null)
         {
@@ -305,10 +312,27 @@ public class StockOutServiceImpl implements IStockOutService
     public int deleteEduStockOutByOutId(Long outId)
     {
         StockOut stockOut = stockOutMapper.selectEduStockOutByOutId(outId);
+        if (stockOut != null && isHistoricalBaselineStockOut(stockOut))
+        {
+            throw new ServiceException("该出库单【" + stockOut.getOutNo() + "】属于历史基准锁定数据，禁止直接删除！");
+        }
         if (stockOut != null && !"2".equals(stockOut.getStatus()))
         {
             cancelEduStockOut(outId);
         }
         return stockOutMapper.deleteEduStockOutByOutId(outId);
+    }
+
+    /**
+     * 判断是否属于基准锁定范围内的历史出库单据
+     */
+    private boolean isHistoricalBaselineStockOut(StockOut stockOut)
+    {
+        if (stockOut == null || stockOut.getOutId() == null)
+        {
+            return false;
+        }
+        long threshold = maxBaselineOutId != null ? maxBaselineOutId : 1113L;
+        return stockOut.getOutId() <= threshold;
     }
 }

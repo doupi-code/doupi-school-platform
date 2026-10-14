@@ -64,6 +64,14 @@ public class StockIn extends BaseEntity
     /** 总金额 */
     private java.math.BigDecimal totalAmount;
 
+    /** 历史进货确认的总箱数（纸型分配待核实） */
+    @Excel(name = "确认箱数(待核实)")
+    private Integer declaredPackageCount;
+
+    /** 历史进货确认的总金额 */
+    @Excel(name = "确认总金额(元)")
+    private java.math.BigDecimal declaredAmount;
+
     public String getSupplierName() {
         return supplierName;
     }
@@ -188,6 +196,22 @@ public class StockIn extends BaseEntity
         return delFlag;
     }
 
+    public Integer getDeclaredPackageCount() {
+        return declaredPackageCount;
+    }
+
+    public void setDeclaredPackageCount(Integer declaredPackageCount) {
+        this.declaredPackageCount = declaredPackageCount;
+    }
+
+    public java.math.BigDecimal getDeclaredAmount() {
+        return declaredAmount;
+    }
+
+    public void setDeclaredAmount(java.math.BigDecimal declaredAmount) {
+        this.declaredAmount = declaredAmount;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -199,6 +223,8 @@ public class StockIn extends BaseEntity
             .append("operator", getOperator())
             .append("remark", getRemark())
             .append("status", getStatus())
+            .append("declaredPackageCount", getDeclaredPackageCount())
+            .append("declaredAmount", getDeclaredAmount())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

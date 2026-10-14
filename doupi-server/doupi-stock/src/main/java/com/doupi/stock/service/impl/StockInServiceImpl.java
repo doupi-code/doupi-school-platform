@@ -54,7 +54,7 @@ public class StockInServiceImpl implements IStockInService
             List<StockInItem> items = stockInItemMapper.selectItemsByInId(inId);
             stockIn.setItemList(items);
             BigDecimal total = BigDecimal.ZERO;
-            if (items != null)
+            if (items != null && !items.isEmpty())
             {
                 for (StockInItem item : items)
                 {
@@ -63,6 +63,10 @@ public class StockInServiceImpl implements IStockInService
                         total = total.add(item.getAmount());
                     }
                 }
+            }
+            else if (stockIn.getDeclaredAmount() != null)
+            {
+                total = stockIn.getDeclaredAmount();
             }
             stockIn.setTotalAmount(total);
         }
@@ -191,6 +195,10 @@ public class StockInServiceImpl implements IStockInService
         if ("2".equals(stockIn.getStatus()))
         {
             throw new ServiceException("该入库单已作废，请勿重复操作！");
+        }
+        if ("0".equals(stockIn.getStatus()))
+        {
+            throw new ServiceException("历史进货待核实单据禁止直接作废，如需调整请走专项运维流程！");
         }
         List<StockInItem> items = stockInItemMapper.selectItemsByInId(inId);
         if (items != null)
