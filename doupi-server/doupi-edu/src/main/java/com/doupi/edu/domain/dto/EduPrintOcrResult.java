@@ -352,6 +352,8 @@ public class EduPrintOcrResult implements Serializable
         private String exportMediaUrl;
         public String getExportMediaUrl() { return exportMediaUrl; }
         public void setExportMediaUrl(String value) { this.exportMediaUrl = value; }
+        public String getAttachment() { return exportMediaUrl; }
+        public void setAttachment(String value) { this.exportMediaUrl = value; }
         private String attachmentRelativePath;
         public String getAttachmentRelativePath() { return attachmentRelativePath; }
         public void setAttachmentRelativePath(String value) { this.attachmentRelativePath = value; }

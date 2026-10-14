@@ -52,13 +52,13 @@ public class PrintLedgerExportServiceTest
         r1.setErrorCount(2L);
         r1.setStatus("1"); // 已完成
         r1.setPrintTime(new Date(1728892800000L));
-        r1.setRemark("正常印刷");
+        r1.setAttachment("http://101.43.58.160/profile/upload/2026/10/08/math.docx");
         testData.add(r1);
 
         // 记录2：待打印16K
         EduPrintRecord r2 = new EduPrintRecord();
         r2.setPrintId(102L);
-        r2.setPrintName("高三化学周测试卷");
+        r2.setPrintName("=SUM(A1:A10)"); // 测试防公式注入
         r2.setTeacherId(10L);
         r2.setTeacherName("张三");
         r2.setGrade("高三");
@@ -74,7 +74,7 @@ public class PrintLedgerExportServiceTest
         r2.setErrorCount(0L);
         r2.setStatus("0"); // 待打印
         r2.setPrintTime(new Date(1728896400000L));
-        r2.setRemark("=SUM(A1:A10)"); // 测试防公式注入
+        r2.setAttachment(null);
         testData.add(r2);
 
         // 记录3：缺失教师和班级信息的作废记录
@@ -95,7 +95,6 @@ public class PrintLedgerExportServiceTest
         r3.setTotalPages(10L);
         r3.setStatus("2"); // 已作废
         r3.setPrintTime(null);
-        r3.setRemark("废弃任务，估算数据");
         testData.add(r3);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -119,35 +118,46 @@ public class PrintLedgerExportServiceTest
             assertNotNull(details.getPaneInformation(), "明细Sheet必须配置冻结窗格");
             assertEquals(1, details.getPaneInformation().getHorizontalSplitPosition(), "明细第一行必须冻结");
 
-            // 检查表头中绝不含技术内部ID
+            // 检查明细表头
             Row detailHeader = details.getRow(0);
+            assertEquals(19, detailHeader.getLastCellNum(), "明细表头应恰好包含19列（包含文件下载链接，不包含备注）");
+            assertEquals("文件下载链接", detailHeader.getCell(18).getStringCellValue());
             for (int i = 0; i < detailHeader.getLastCellNum(); i++)
             {
                 String header = detailHeader.getCell(i).getStringCellValue();
                 assertFalse(header.contains("ID"), "明细表头不应包含任何内部ID: " + header);
                 assertFalse(header.contains("出库单号"), "明细表头不应暴露技术出库单号: " + header);
+                assertFalse("备注".equals(header), "明细表头不应包含备注字段");
+                assertTrue(details.getColumnWidth(i) >= 12 * 256, "明细列宽必须根据标题自适应且不低于保底宽: " + header);
             }
 
-            // 检查明细数据行
-            Row row1 = details.getRow(1);
-            assertNotNull(row1);
+            // 检查明细数据行（按时间倒序排列：第1行对应较晚的r2，第2行对应r1）
+            Row r2Row = details.getRow(1);
+            assertNotNull(r2Row);
+            assertEquals("", r2Row.getCell(18).getStringCellValue(), "无附件记录其文件下载链接单元格应为空白");
+
+            Row r1Row = details.getRow(2);
+            assertNotNull(r1Row);
+            assertEquals("http://101.43.58.160/profile/upload/2026/10/08/math.docx", r1Row.getCell(18).getStringCellValue());
+            assertNotNull(r1Row.getCell(18).getHyperlink(), "带有文件URL的记录必须生成有效超链接");
+            assertEquals("http://101.43.58.160/profile/upload/2026/10/08/math.docx", r1Row.getCell(18).getHyperlink().getAddress());
 
             // 检查防公式注入
             boolean formulaEscapedFound = false;
             for (int r = 1; r <= details.getLastRowNum(); r++)
             {
                 Row row = details.getRow(r);
-                if (row != null && row.getCell(18) != null)
+                if (row != null && row.getCell(4) != null)
                 {
-                    String remarkVal = row.getCell(18).getStringCellValue();
-                    if (remarkVal.contains("=SUM"))
+                    String printNameVal = row.getCell(4).getStringCellValue();
+                    if (printNameVal.contains("=SUM"))
                     {
-                        assertTrue(remarkVal.startsWith("'="), "以公式开头的备注必须被单引号转义，防止Excel宏/公式注入");
+                        assertTrue(printNameVal.startsWith("'="), "以公式开头的文本必须被单引号转义，防止Excel宏/公式注入");
                         formulaEscapedFound = true;
                     }
                 }
             }
-            assertTrue(formulaEscapedFound, "必须找到被转义的测试公式备注");
+            assertTrue(formulaEscapedFound, "必须找到被转义的测试公式内容");
 
             // 检查空值兜底不为数字
             boolean missingFallbackFound = false;

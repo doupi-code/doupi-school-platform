@@ -335,6 +335,20 @@ public class EduOcrServiceImpl implements IEduOcrService
                     com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
                 item.setExistingRecordDesc("疑似重复（同联系人已有同名材料）：单据 #" + record.getPrintId() + "，" + time);
                 item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
+                // 同文件复用秒传链接：如果当前任务缺少附件而历史记录已存在原稿附件，直接复用附件链接与规格
+                if (StringUtils.isEmpty(item.getAttachment()) && StringUtils.isNotEmpty(record.getAttachment()))
+                {
+                    item.setAttachment(record.getAttachment());
+                    item.setAttachmentStatus("available");
+                    if (item.getPageCount() == null && record.getPageCount() != null)
+                    {
+                        item.setPageCount(record.getPageCount());
+                    }
+                    if (StringUtils.isEmpty(item.getPaperType()) && StringUtils.isNotEmpty(record.getPaperType()))
+                    {
+                        item.setPaperType(record.getPaperType());
+                    }
+                }
                 matchedSameConv = true;
                 break;
             }
@@ -375,6 +389,20 @@ public class EduOcrServiceImpl implements IEduOcrService
                     com.doupi.common.utils.DateUtils.parseDateToStr("yyyy-MM-dd", record.getPrintTime());
                 item.setExistingRecordDesc("疑似重复（材料名称匹配）：单据 #" + record.getPrintId() + "，" + time);
                 item.getReviewReasons().add("疑似已有同名登记，请确认不是重复登记");
+                // 同文件复用秒传链接：如果当前任务缺少附件而历史记录已存在原稿附件，直接复用附件链接与规格
+                if (StringUtils.isEmpty(item.getAttachment()) && StringUtils.isNotEmpty(record.getAttachment()))
+                {
+                    item.setAttachment(record.getAttachment());
+                    item.setAttachmentStatus("available");
+                    if (item.getPageCount() == null && record.getPageCount() != null)
+                    {
+                        item.setPageCount(record.getPageCount());
+                    }
+                    if (StringUtils.isEmpty(item.getPaperType()) && StringUtils.isNotEmpty(record.getPaperType()))
+                    {
+                        item.setPaperType(record.getPaperType());
+                    }
+                }
                 break;
             }
         }

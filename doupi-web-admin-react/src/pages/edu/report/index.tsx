@@ -61,6 +61,7 @@ import { listTeacher } from '@/api/edu/teacher';
 import { getDicts } from '@/api/system/dict';
 import { downloadExcel } from '@/utils/download';
 import { formatExtraPaperLabel, isLegacyExtraPaperRecord } from '../record/printRules';
+import { useTableMultiSort } from '@/hooks/useTableMultiSort';
 
 const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -70,6 +71,28 @@ const PrintLedgerReportPage: React.FC = () => {
   const navigate = useNavigate();
   const actionRef = useRef<ActionType>(undefined);
   const [filterForm] = Form.useForm();
+
+  // 表格多字段组合排序（默认按照印刷时间倒序）
+  const isFirstSortRender = useRef(true);
+  const {
+    sortList,
+    getSortParams,
+    renderSortHeader,
+    renderSortBar,
+  } = useTableMultiSort({
+    defaultField: 'printTime',
+    defaultOrder: 'descend',
+    defaultLabel: '印刷时间',
+    defaultDbColumn: 'r.print_time',
+  });
+
+  useEffect(() => {
+    if (isFirstSortRender.current) {
+      isFirstSortRender.current = false;
+      return;
+    }
+    actionRef.current?.reload();
+  }, [sortList]);
 
   // 活跃选项卡
   const [activeTab, setActiveTab] = useState<string>('ledger');
@@ -552,13 +575,13 @@ const PrintLedgerReportPage: React.FC = () => {
   // 台账明细流水表格列定义
   const ledgerColumns: ProColumns[] = [
     {
-      title: '台账单号',
+      title: renderSortHeader('台账单号', 'printId', '台账单号', 'r.print_id', 'descend', 'left'),
       dataIndex: 'printId',
       width: 90,
       render: (_, r) => <Text copyable={{ text: String(r.printId) }}>#{r.printId}</Text>,
     },
     {
-      title: '文印资料名称',
+      title: renderSortHeader('文印资料名称', 'printName', '文印资料名称', 'r.print_name', 'ascend', 'left'),
       dataIndex: 'printName',
       ellipsis: true,
       minWidth: 190,
@@ -599,7 +622,7 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '关联出库单',
+      title: renderSortHeader('关联出库单', 'outNo', '关联出库单', 'out_no', 'descend', 'left'),
       dataIndex: 'outNo',
       width: 130,
       render: (_, r) => {
@@ -614,7 +637,7 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '领用年级/班级',
+      title: renderSortHeader('领用年级/班级', 'grade', '领用年级', 'grade', 'ascend', 'left'),
       dataIndex: 'grade',
       width: 120,
       render: (_, r) => (
@@ -625,7 +648,7 @@ const PrintLedgerReportPage: React.FC = () => {
       ),
     },
     {
-      title: '申请教师',
+      title: renderSortHeader('申请教师', 'teacherName', '申请教师', 'teacher_name', 'ascend', 'left'),
       dataIndex: 'teacherName',
       width: 110,
       render: (_, r) => (
@@ -636,13 +659,13 @@ const PrintLedgerReportPage: React.FC = () => {
       ),
     },
     {
-      title: '纸张规格',
+      title: renderSortHeader('纸张规格', 'paperType', '纸张规格', 'r.paper_type', 'ascend', 'left'),
       dataIndex: 'paperType',
       width: 90,
       render: (_, r) => <Tag color="purple">{r.paperType || 'A4'}</Tag>,
     },
     {
-      title: '排版',
+      title: renderSortHeader('排版', 'printSide', '排版', 'r.print_side', 'ascend', 'left'),
       dataIndex: 'printSide',
       width: 90,
       render: (_, r) => (
@@ -652,21 +675,21 @@ const PrintLedgerReportPage: React.FC = () => {
       ),
     },
     {
-      title: '每份页数',
+      title: renderSortHeader('每份页数', 'pageCount', '每份页数', 'r.page_count', 'descend', 'right'),
       dataIndex: 'pageCount',
       width: 80,
       align: 'right',
       render: (_, r) => `${r.pageCount || 1} 页`,
     },
     {
-      title: '印制份数',
+      title: renderSortHeader('印制份数', 'printCount', '印制份数', 'r.print_count', 'descend', 'right'),
       dataIndex: 'printCount',
       width: 90,
       align: 'right',
       render: (_, r) => <strong>{r.printCount} 份</strong>,
     },
     {
-      title: '总耗纸量',
+      title: renderSortHeader('总耗纸量', 'totalPages', '总耗纸量', 'r.total_pages', 'descend', 'right'),
       dataIndex: 'totalPages',
       width: 125,
       align: 'right',
@@ -696,7 +719,7 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '错误损耗',
+      title: renderSortHeader('错误损耗', 'errorCount', '错误损耗', 'r.error_count', 'descend', 'right'),
       dataIndex: 'errorCount',
       width: 100,
       align: 'right',
@@ -713,7 +736,7 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '折合成本',
+      title: renderSortHeader('折合成本', 'cost', '折合成本', 'r.total_pages', 'descend', 'right'),
       dataIndex: 'cost',
       width: 100,
       align: 'right',
@@ -726,13 +749,13 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '印刷时间',
+      title: renderSortHeader('印刷时间', 'printTime', '印刷时间', 'r.print_time', 'descend', 'left'),
       dataIndex: 'printTime',
       valueType: 'date',
       width: 110,
     },
     {
-      title: '台账状态',
+      title: renderSortHeader('台账状态', 'status', '台账状态', 'r.status', 'ascend', 'left'),
       dataIndex: 'status',
       width: 100,
       render: (_, r) => {
@@ -746,7 +769,7 @@ const PrintLedgerReportPage: React.FC = () => {
       },
     },
     {
-      title: '经办人',
+      title: renderSortHeader('经办人', 'operator', '经办人', 'r.operator', 'ascend', 'left'),
       dataIndex: 'operator',
       width: 100,
       ellipsis: true,
@@ -1033,6 +1056,7 @@ const PrintLedgerReportPage: React.FC = () => {
               ),
               children: (
                 <div>
+                  {renderSortBar()}
                   <ProTable
                     actionRef={actionRef}
                     columns={ledgerColumns}
@@ -1091,7 +1115,9 @@ const PrintLedgerReportPage: React.FC = () => {
                     }}
                     request={async (params) => {
                       try {
+                        const sortParams = getSortParams();
                         const reqQuery: any = {
+                          ...sortParams,
                           pageNum: params.current,
                           pageSize: params.pageSize,
                         };
@@ -1147,18 +1173,21 @@ const PrintLedgerReportPage: React.FC = () => {
                       title: '文印批次',
                       dataIndex: 'jobCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.jobCount) || 0) - (Number(b.jobCount) || 0),
                       render: (val) => `${val || 0} 次`,
                     },
                     {
                       title: '印制总份数',
                       dataIndex: 'totalPrintCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPrintCount) || 0) - (Number(b.totalPrintCount) || 0),
                       render: (val) => <strong>{val || 0} 份</strong>,
                     },
                     {
                       title: '总耗纸量',
                       dataIndex: 'totalPages',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (val) => (
                         <strong style={{ color: '#52C41A', fontSize: 15 }}>
                           {Number(val || 0).toLocaleString()} 张
@@ -1169,6 +1198,7 @@ const PrintLedgerReportPage: React.FC = () => {
                       title: '错误损耗',
                       dataIndex: 'totalErrorCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalErrorCount) || 0) - (Number(b.totalErrorCount) || 0),
                       render: (val) => {
                         const cnt = Number(val || 0);
                         return cnt > 0
@@ -1179,11 +1209,13 @@ const PrintLedgerReportPage: React.FC = () => {
                     {
                       title: '折合标准包数',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (_, r) => `${(Number(r.totalPages || 0) / summary.sheetsPerReam).toFixed(1)} 包`,
                     },
                     {
                       title: '折合成本',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (_, r) => (
                         <span style={{ color: '#FA8C16', fontWeight: 'bold' }}>
                           ¥ {(Number(r.totalPages || 0) * summary.unitPrice).toFixed(2)}
@@ -1193,6 +1225,7 @@ const PrintLedgerReportPage: React.FC = () => {
                     {
                       title: '占全校总用量比例',
                       width: 240,
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (_, r) => {
                         const pages = Number(r.totalPages || 0);
                         const pct = totalSchoolPages > 0 ? Number(((pages / totalSchoolPages) * 100).toFixed(1)) : 0;
@@ -1257,18 +1290,21 @@ const PrintLedgerReportPage: React.FC = () => {
                       title: '申请印刷批次',
                       dataIndex: 'jobCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.jobCount) || 0) - (Number(b.jobCount) || 0),
                       render: (val) => `${val || 0} 次`,
                     },
                     {
                       title: '印制总份数',
                       dataIndex: 'totalPrintCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPrintCount) || 0) - (Number(b.totalPrintCount) || 0),
                       render: (val) => <strong>{val || 0} 份</strong>,
                     },
                     {
                       title: '总耗纸张数',
                       dataIndex: 'totalPages',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (val) => (
                         <strong style={{ color: '#52C41A', fontSize: 15 }}>
                           {Number(val || 0).toLocaleString()} 张
@@ -1279,6 +1315,7 @@ const PrintLedgerReportPage: React.FC = () => {
                       title: '错误损耗',
                       dataIndex: 'totalErrorCount',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalErrorCount) || 0) - (Number(b.totalErrorCount) || 0),
                       render: (val) => {
                         const cnt = Number(val || 0);
                         return cnt > 0
@@ -1289,6 +1326,7 @@ const PrintLedgerReportPage: React.FC = () => {
                     {
                       title: '折合成本',
                       align: 'right',
+                      sorter: (a: any, b: any) => (Number(a.totalPages) || 0) - (Number(b.totalPages) || 0),
                       render: (_, r) => (
                         <span style={{ color: '#FA8C16', fontWeight: 'bold' }}>
                           ¥ {(Number(r.totalPages || 0) * summary.unitPrice).toFixed(2)}
@@ -1298,6 +1336,13 @@ const PrintLedgerReportPage: React.FC = () => {
                     {
                       title: '单次平均印量',
                       align: 'right',
+                      sorter: (a: any, b: any) => {
+                        const jA = Number(a.jobCount) || 1;
+                        const jB = Number(b.jobCount) || 1;
+                        const pA = Math.round((Number(a.totalPages) || 0) / jA);
+                        const pB = Math.round((Number(b.totalPages) || 0) / jB);
+                        return pA - pB;
+                      },
                       render: (_, r) => {
                         const j = Number(r.jobCount || 1);
                         const p = Number(r.totalPages || 0);

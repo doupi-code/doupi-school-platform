@@ -2,6 +2,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { recoverChatClipboard, attachmentNameMatches } from '../src/pages/edu/record/chatPrefill.ts';
 import { readChatClipboard, fileCandidates, attachFiles, messagesForDay, mergeSessions } from '../src/pages/edu/record/chatPrefill.ts';
+if (typeof (globalThis as any).File === 'undefined') {
+  (globalThis as any).File = class File {
+    name: string;
+    size: number;
+    type: string;
+    constructor(parts: any[], name: string, options: any = {}) {
+      this.name = name;
+      this.size = parts.reduce((acc, p) => acc + (typeof p === 'string' ? p.length : 0), 0);
+      this.type = options.type || '';
+    }
+  };
+}
 
 test('mixed clipboard keeps text and files', () => {
   const file = new File(['a'], '练习.docx');
@@ -25,17 +37,22 @@ test('file-only candidates keep missing fields empty even when upload fails', ()
   assert.equal(tasks.length, 1); assert.equal(tasks[0].printCount, undefined);
   assert.equal(tasks[0].pageCount, undefined); assert.equal(tasks[0].printSide, undefined);
 });
-test('ambiguous same-name attachments cannot overwrite tasks', () => {
-  const tasks = [{taskId:'a', originalDocName:'同名.pdf'}, {taskId:'b', originalDocName:'同名.pdf'}];
-  const result = attachFiles(tasks, [{name:'同名.pdf', url:'/a', status:'available'}]);
-  assert.equal(result[0].attachment, undefined); assert.equal(result[1].attachmentStatus, 'ambiguous');
+test('repeating tasks in multi-day batches associate the unique matched attachment', () => {
+  const tasks = [{taskId:'a', originalDocName:'比大小学生版.docx'}, {taskId:'b', originalDocName:'比大小学生版.docx'}];
+  const result = attachFiles(tasks, [{name:'比大小学生版.docx', url:'/files/1.docx', status:'available'}]);
+  assert.equal(result[0].attachment, '/files/1.docx');
+  assert.equal(result[0].attachmentStatus, 'available');
+  assert.equal(result[1].attachment, '/files/1.docx');
+  assert.equal(result[1].attachmentStatus, 'available');
 });
-test('Windows duplicate suffix stays associated with the original chat material', () => {
-  assert.ok(attachmentNameMatches('B2U2 重点句型操练（T） (1).docx', 'B2U2 重点句型操练（T）.docx'));
-  const tasks = [{taskId:'a',originalDocName:'B2U2.docx'}, {taskId:'b',originalDocName:'B2U2.docx'}];
-  const result = attachFiles(tasks,[{name:'B2U2.docx',url:'/a',status:'available'},{name:'B2U2 (1).docx',url:'/b',status:'available'}]);
-  assert.equal(result.length,2); assert.equal(result[0].attachmentStatus,'ambiguous');
-  assert.equal(result[1].attachment,undefined);
+test('multiple conflicting attachments without exact match are marked ambiguous', () => {
+  const tasks = [{taskId:'a', originalDocName:'2026综合模拟测试卷'}];
+  const result = attachFiles(tasks, [
+    {name:'2026综合模拟测试卷A.docx', url:'/a', status:'available'},
+    {name:'2026综合模拟测试卷B.docx', url:'/b', status:'available'},
+  ]);
+  assert.equal(result[0].attachment, undefined);
+  assert.equal(result[0].attachmentStatus, 'ambiguous');
 });
 test('day panel includes unrelated messages on the same day', () => {
   const messages = [{id:'1',time:'2026年07月20日 7:49',text:'[文件] a.pdf'}, {id:'2',time:'2026年07月20日 8:00',text:'好的'}, {id:'3',time:'2026年07月21日 7:49',text:'下一天'}];

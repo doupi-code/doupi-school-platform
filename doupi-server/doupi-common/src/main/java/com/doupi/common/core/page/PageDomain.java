@@ -21,16 +21,65 @@ public class PageDomain
     /** 排序的方向desc或者asc */
     private String isAsc = "asc";
 
+    /** 完整自定义排序字符串（优先级高于 orderByColumn/isAsc） */
+    private String orderBy;
+
     /** 分页参数合理化 */
     private Boolean reasonable = true;
 
     public String getOrderBy()
     {
+        if (StringUtils.isNotEmpty(orderBy))
+        {
+            return orderBy;
+        }
         if (StringUtils.isEmpty(orderByColumn))
         {
             return "";
         }
-        return StringUtils.toUnderScoreCase(orderByColumn) + " " + isAsc;
+        // 如果包含逗号或显式指定了排序方向（多字段组合排序），按各字段解析驼峰并保留排序方向
+        if (orderByColumn.contains(",") || orderByColumn.toLowerCase().contains(" asc") || orderByColumn.toLowerCase().contains(" desc"))
+        {
+            StringBuilder sb = new StringBuilder();
+            String[] parts = orderByColumn.split(",");
+            for (String part : parts)
+            {
+                String item = part.trim();
+                if (StringUtils.isNotEmpty(item))
+                {
+                    String[] tokens = item.split("\\s+");
+                    String col = convertColumnNameToUnderscore(tokens[0]);
+                    String dir = tokens.length > 1 ? tokens[1] : isAsc;
+                    if (sb.length() > 0)
+                    {
+                        sb.append(", ");
+                    }
+                    sb.append(col);
+                    if (StringUtils.isNotEmpty(dir))
+                    {
+                        sb.append(" ").append(dir);
+                    }
+                }
+            }
+            return sb.toString();
+        }
+        return convertColumnNameToUnderscore(orderByColumn) + " " + isAsc;
+    }
+
+    private String convertColumnNameToUnderscore(String name)
+    {
+        if (StringUtils.isEmpty(name))
+        {
+            return "";
+        }
+        if (name.contains("."))
+        {
+            int dotIdx = name.indexOf(".");
+            String prefix = name.substring(0, dotIdx + 1);
+            String col = name.substring(dotIdx + 1);
+            return prefix + StringUtils.toUnderScoreCase(col);
+        }
+        return StringUtils.toUnderScoreCase(name);
     }
 
     public Integer getPageNum()
@@ -97,5 +146,15 @@ public class PageDomain
     public void setReasonable(Boolean reasonable)
     {
         this.reasonable = reasonable;
+    }
+
+    public String getOrderByParam()
+    {
+        return orderBy;
+    }
+
+    public void setOrderBy(String orderBy)
+    {
+        this.orderBy = orderBy;
     }
 }

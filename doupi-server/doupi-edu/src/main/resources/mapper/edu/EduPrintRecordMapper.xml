@@ -98,7 +98,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="sourceConversationId != null and sourceConversationId != ''"> and r.source_conversation_id = #{sourceConversationId}</if>
             <if test="sourceMessageId != null and sourceMessageId != ''"> and r.source_message_id = #{sourceMessageId}</if>
         </where>
-        order by r.print_id desc
+        order by r.print_time desc, r.print_id desc
     </select>
     
     <select id="selectEduPrintRecordByPrintId" parameterType="Long" resultMap="EduPrintRecordResult">

@@ -146,16 +146,32 @@ export function attachFiles(tasks: PrintCandidate[], files: UploadedAttachment[]
     const targetName = task.originalDocName || task.printName;
     const matches = files.filter(f => attachmentNameMatches(f.name, targetName));
     if (!matches.length) return task;
-    const sameTargetTasks = tasks.filter(t => {
-      const name = t.originalDocName || t.printName;
-      return name && filenameKey(name) === filenameKey(targetName);
-    });
-    if (matches.length !== 1 || sameTargetTasks.length !== 1) {
-      return { ...task, attachmentStatus: 'ambiguous', reviewReasons: [...(task.reviewReasons || []), '同名附件无法唯一关联，请手动选择'] };
+
+    let matchedFile = matches[0];
+    if (matches.length > 1) {
+      const exact = matches.find(f => {
+        const cleanF = f.name.replace(/\.[^.]+$/, '').trim();
+        const cleanT = (targetName || '').replace(/\.[^.]+$/, '').trim();
+        return f.name === targetName || cleanF === cleanT;
+      });
+      if (exact) {
+        matchedFile = exact;
+      } else {
+        return {
+          ...task,
+          attachmentStatus: 'ambiguous',
+          reviewReasons: [...(task.reviewReasons || []), '存在多个同名附件无法唯一关联，请手动选择'],
+        };
+      }
     }
-    const f = matches[0];
-    return { ...task, attachment: task.attachment || f.url, attachmentStatus: f.status,
-      sourcePageCount: f.pageCount || task.sourcePageCount, sourcePaperType: f.sourcePaperType || task.sourcePaperType };
+
+    return {
+      ...task,
+      attachment: task.attachment || matchedFile.url,
+      attachmentStatus: matchedFile.status,
+      sourcePageCount: matchedFile.pageCount || task.sourcePageCount,
+      sourcePaperType: matchedFile.sourcePaperType || task.sourcePaperType,
+    };
   });
 }
 export function dayKey(time?: string) {

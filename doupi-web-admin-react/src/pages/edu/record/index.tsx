@@ -26,6 +26,7 @@ import {
   type FileLike,
 } from './wechatExportImport';
 import { fastAnalyzeFile } from './documentAnalyzer';
+import { useTableMultiSort } from '@/hooks/useTableMultiSort';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
@@ -173,6 +174,28 @@ const PrintRecordPage: React.FC = () => {
   const { name: currentUserName, nickName: currentNickName } = useUserStore();
   const [form] = Form.useForm();
   const [completeForm] = Form.useForm();
+
+  // 表格多字段组合排序（默认按照印刷时间倒序）
+  const isFirstSortRender = useRef(true);
+  const {
+    sortList,
+    getSortParams,
+    renderSortHeader,
+    renderSortBar,
+  } = useTableMultiSort({
+    defaultField: 'printTime',
+    defaultOrder: 'descend',
+    defaultLabel: '印刷时间',
+    defaultDbColumn: 'r.print_time',
+  });
+
+  useEffect(() => {
+    if (isFirstSortRender.current) {
+      isFirstSortRender.current = false;
+      return;
+    }
+    actionRef.current?.reload();
+  }, [sortList]);
 
   // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false);
@@ -1047,10 +1070,10 @@ const PrintRecordPage: React.FC = () => {
     });
     const nextIdx = findNextPendingTaskIndex(updatedTaskList, currentTaskIndex);
     if (nextIdx !== -1) {
-      message.info({ content: `已跳过【${currentTask.printName || '当前候选'}】，自动载入下一条候选`, key: 'skip-task-msg', duration: 1.5 });
+      message.info(`已跳过【${currentTask.printName || '当前候选'}】，自动载入下一条候选`, 2.5);
       applyTaskToForm(updatedTaskList[nextIdx], nextIdx, updatedTaskList.length, updatedTaskList);
     } else {
-      message.info({ content: `已跳过【${currentTask.printName || '当前候选'}】，队列中已无待登记候选`, key: 'skip-task-msg', duration: 1.5 });
+      message.info(`已跳过【${currentTask.printName || '当前候选'}】，队列中已无待登记候选`, 2.5);
       setModalOpen(false);
     }
   };
@@ -2288,13 +2311,13 @@ const PrintRecordPage: React.FC = () => {
   // 表格列定义 (16列完整还原)
   const columns: ProColumns[] = [
     {
-      title: '登记ID',
+      title: renderSortHeader('登记ID', 'printId', '登记ID', 'r.print_id', 'descend', 'center'),
       dataIndex: 'printId',
       width: 75,
       align: 'center',
     },
     {
-      title: '印刷名称',
+      title: renderSortHeader('印刷名称', 'printName', '印刷名称', 'r.print_name', 'ascend', 'left'),
       dataIndex: 'printName',
       ellipsis: true,
       width: 180,
@@ -2344,19 +2367,19 @@ const PrintRecordPage: React.FC = () => {
       },
     },
     {
-      title: '申请教师',
+      title: renderSortHeader('申请教师', 'teacherName', '申请教师', 'teacher_name', 'ascend', 'center'),
       dataIndex: 'teacherName',
       width: 100,
       align: 'center',
     },
     {
-      title: '经办人',
+      title: renderSortHeader('经办人', 'operator', '经办人', 'r.operator', 'ascend', 'center'),
       dataIndex: 'operator',
       width: 90,
       align: 'center',
     },
     {
-      title: '印刷用纸',
+      title: renderSortHeader('印刷用纸', 'paperType', '印刷用纸', 'r.paper_type', 'ascend', 'center'),
       dataIndex: 'paperType',
       width: 140,
       align: 'center',
@@ -2401,21 +2424,21 @@ const PrintRecordPage: React.FC = () => {
       },
     },
     {
-      title: '印刷份数',
+      title: renderSortHeader('印刷份数', 'printCount', '印刷份数', 'r.print_count', 'descend', 'center'),
       dataIndex: 'printCount',
       width: 90,
       align: 'center',
       render: (_, record) => <Text strong style={{ color: '#1890FF' }}>{record.printCount} 份</Text>,
     },
     {
-      title: '每份页数',
+      title: renderSortHeader('每份页数', 'pageCount', '每份页数', 'r.page_count', 'descend', 'center'),
       dataIndex: 'pageCount',
       width: 85,
       align: 'center',
       render: (_, record) => <span>{record.pageCount || 1} 页</span>,
     },
     {
-      title: '印刷方式',
+      title: renderSortHeader('印刷方式', 'printSide', '印刷方式', 'r.print_side', 'ascend', 'center'),
       dataIndex: 'printSide',
       width: 90,
       align: 'center',
@@ -2430,7 +2453,7 @@ const PrintRecordPage: React.FC = () => {
       ),
     },
     {
-      title: '总耗纸量',
+      title: renderSortHeader('总耗纸量', 'totalPages', '总耗纸量', 'r.total_pages', 'descend', 'center'),
       dataIndex: 'totalPages',
       width: 125,
       align: 'center',
@@ -2497,7 +2520,7 @@ const PrintRecordPage: React.FC = () => {
         ),
     },
     {
-      title: '年级',
+      title: renderSortHeader('年级', 'grade', '年级', 'grade', 'ascend', 'center'),
       dataIndex: 'grade',
       width: 85,
       align: 'center',
@@ -2510,14 +2533,14 @@ const PrintRecordPage: React.FC = () => {
       },
     },
     {
-      title: '班级',
+      title: renderSortHeader('班级', 'className', '班级', 'class_name', 'ascend', 'center'),
       dataIndex: 'className',
       width: 100,
       align: 'center',
       render: (_, record) => record.className || '-',
     },
     {
-      title: '印刷时间',
+      title: renderSortHeader('印刷时间', 'printTime', '印刷时间', 'r.print_time', 'descend', 'center'),
       dataIndex: 'printTime',
       width: 160,
       align: 'center',
@@ -2525,7 +2548,7 @@ const PrintRecordPage: React.FC = () => {
       hideInSearch: true,
     },
     {
-      title: '关联出库单',
+      title: renderSortHeader('关联出库单', 'outNo', '关联出库单', 'out_no', 'descend', 'center'),
       dataIndex: 'outNo',
       width: 150,
       align: 'center',
@@ -2543,7 +2566,7 @@ const PrintRecordPage: React.FC = () => {
         ),
     },
     {
-      title: '状态',
+      title: renderSortHeader('状态', 'status', '状态', 'r.status', 'ascend', 'center'),
       dataIndex: 'status',
       width: 95,
       align: 'center',
@@ -2740,6 +2763,7 @@ const PrintRecordPage: React.FC = () => {
           }
         />
       )}
+      {renderSortBar()}
       <ProTable
         actionRef={actionRef}
         columns={columns}
@@ -2786,8 +2810,10 @@ const PrintRecordPage: React.FC = () => {
         )}
         request={async (params) => {
           try {
+            const sortParams = getSortParams();
             const res: any = await listRecord({
               ...params,
+              ...sortParams,
               pageNum: params.current,
               pageSize: params.pageSize,
             });
@@ -2852,23 +2878,23 @@ const PrintRecordPage: React.FC = () => {
         confirmLoading={savingRecord}
         onCancel={handleModalCancel}
         width={ocrResult ? 'min(1440px, calc(100vw - 32px))' : 'min(980px, calc(100vw - 32px))'}
-        style={{ top: 12, paddingBottom: 12 }}
+        style={{ top: 6, paddingBottom: 6 }}
         destroyOnHidden={false}
         styles={{
           header: {
             flexShrink: 0,
-            marginBottom: 6,
+            marginBottom: 4,
           },
           body: {
-            height: 'calc(100dvh - 145px)',
-            maxHeight: 'calc(100dvh - 145px)',
+            height: 'calc(100dvh - 90px)',
+            maxHeight: 'calc(100dvh - 90px)',
             overflowY: 'auto',
-            padding: '4px 0',
+            padding: '2px 0',
           },
           footer: {
             flexShrink: 0,
             marginTop: 'auto',
-            paddingTop: 10,
+            paddingTop: 6,
             borderTop: '1px solid #f0f0f0',
           },
         }}
@@ -2975,20 +3001,26 @@ const PrintRecordPage: React.FC = () => {
               )}
 
             <Form disabled={savingRecord} form={form} layout="vertical" onValuesChange={handleFormValuesChange}>
-              {currentQueueTask?.existingRecordDesc && <Alert type="warning" title={currentQueueTask.existingRecordDesc} style={{marginBottom:8}} />}
+              {currentQueueTask?.existingRecordDesc && (
+                <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 11 }}>
+                  <span style={{ color: '#d46b08', fontWeight: 600 }}>⚠️ 排重预警：</span>
+                  <span style={{ color: '#8c6b00' }}>{currentQueueTask.existingRecordDesc}</span>
+                </div>
+              )}
               {currentQueueTask?.attachmentUploadError && (
                 <Alert
                   type="error"
                   showIcon
-                  style={{ marginBottom: 8 }}
+                  style={{ marginBottom: 4, padding: '2px 8px' }}
                   title={
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>
+                      <span style={{ fontSize: 11 }}>
                         {currentQueueTask.attachmentUploadError}（未写入登记、未扣库存，可直接点击「确定」重试上传）
                       </span>
                       <Checkbox
                         data-testid="allow-save-without-attachment-checkbox"
                         checked={Boolean(currentQueueTask.allowSaveWithoutAttachment)}
+                        style={{ fontSize: 11 }}
                         onChange={(e) => {
                           if (!ocrResult?.taskList) return;
                           const checked = e.target.checked;
@@ -3008,23 +3040,25 @@ const PrintRecordPage: React.FC = () => {
                 <Alert
                   type="error"
                   showIcon
-                  title={`导出目录缺失对应附件：${currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentPath || '未知附件'}（候选已保留，可手动补传原稿或直接保存登记）`}
-                  style={{ marginBottom: 8 }}
+                  style={{ marginBottom: 4, padding: '2px 8px' }}
+                  title={<span style={{ fontSize: 11 }}>{`导出目录缺失对应附件：${currentQueueTask.originalDocName || currentQueueTask.matchedAttachmentPath || '未知附件'}`}</span>}
                 />
               )}
-              {currentQueueTask?.attachmentStatus==='ambiguous' && <Form.Item label="选择当前材料对应的附件">
-                <Select placeholder="同名附件需要手动关联" options={sessionAttachments.filter(f=>f.url).map((f,i)=>({value:i,label:`${f.name} (${i+1})`}))}
-                  onChange={i=>{
-                    const file=sessionAttachments.filter(f=>f.url)[i];
-                    const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
-                    if(!state) return;
-                    state.task={...state.task,sourcePageCount:file.pageCount,sourcePaperType:file.sourcePaperType};
-                    const fields=derivePrintFields(state.task,form.getFieldsValue(true),state.manual);
-                    form.setFieldsValue({...fields,attachment:file.url,...(!state.manual.has('paperGoodsId')?{paperGoodsId:findGoodsByPaperType(fields.paperType,paperGoodsList)}:{})});
-                    syncSplitDefaults(state.task,fields.pageCount,state.manual);
-                    triggerSaveRecordDraft(form.getFieldsValue(true));
-                  }} />
-              </Form.Item>}
+              {currentQueueTask?.attachmentStatus==='ambiguous' && (
+                <Form.Item label={<span style={{ fontSize: 11, color: '#ad6800' }}>⚠️ 存在同名附件，请指定关联文件</span>} style={{ marginBottom: 4 }}>
+                  <Select size="small" placeholder="同名附件需要手动关联" options={sessionAttachments.filter(f=>f.url).map((f,i)=>({value:i,label:`${f.name} (${i+1})`}))}
+                    onChange={i=>{
+                      const file=sessionAttachments.filter(f=>f.url)[i];
+                      const state=activeTaskIdRef.current ? taskRulesRef.current.get(activeTaskIdRef.current) : undefined;
+                      if(!state) return;
+                      state.task={...state.task,sourcePageCount:file.pageCount,sourcePaperType:file.sourcePaperType};
+                      const fields=derivePrintFields(state.task,form.getFieldsValue(true),state.manual);
+                      form.setFieldsValue({...fields,attachment:file.url,...(!state.manual.has('paperGoodsId')?{paperGoodsId:findGoodsByPaperType(fields.paperType,paperGoodsList)}:{})});
+                      syncSplitDefaults(state.task,fields.pageCount,state.manual);
+                      triggerSaveRecordDraft(form.getFieldsValue(true));
+                    }} />
+                </Form.Item>
+              )}
               <Form.Item name="reviewConfirmed" hidden valuePropName="checked">
                 <Checkbox />
               </Form.Item>
@@ -3052,7 +3086,7 @@ const PrintRecordPage: React.FC = () => {
                       </div>
                     }
                     rules={[{ required: true, message: '请输入印刷材料名称' }]}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                   >
                     <Input
                       placeholder="例：高三年级第一学期期中统一模拟考试数学试卷（理科）"
@@ -3069,7 +3103,7 @@ const PrintRecordPage: React.FC = () => {
                     name="printCount"
                     label={<span style={{ fontWeight: 600 }}>印刷份数</span>}
                     rules={[{ required: true, message: '请输入份数' }]}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                     extra={
                       <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         <span style={{ fontSize: 11, color: '#8c8c8c', lineHeight: '20px' }}>常用:</span>
@@ -3100,7 +3134,7 @@ const PrintRecordPage: React.FC = () => {
                     name="pageCount"
                     label={<span style={{ fontWeight: 600 }}>每份页数</span>}
                     rules={[{ required: true, message: '请输入页数' }]}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                     extra={
                       <div style={{ marginTop: 4, fontSize: 11, color: '#8c8c8c', lineHeight: '20px' }}>
                         {form.getFieldValue('pageCount') > 1 ? '多页文档默认推荐双面印刷' : '单页文档默认推荐单面印刷'}
@@ -3131,7 +3165,7 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="printSide" label={<span style={{ fontWeight: 600 }}>印刷方式</span>} rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                  <Form.Item name="printSide" label={<span style={{ fontWeight: 600 }}>印刷方式</span>} rules={[{ required: true }]} style={{ marginBottom: 6 }}>
                     <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
                       <Radio.Button value="1" style={{ flex: 1, textAlign: 'center' }}>单面印</Radio.Button>
                       <Radio.Button value="2" style={{ flex: 1, textAlign: 'center' }}>双面印</Radio.Button>
@@ -3143,7 +3177,7 @@ const PrintRecordPage: React.FC = () => {
               {/* 第 3 行：纸张规格 (6) + 关联扣减用纸物品 (10) + 耗纸预算徽标 (8) */}
               <Row gutter={12}>
                 <Col span={6}>
-                  <Form.Item name="paperType" label={<span style={{ fontWeight: 600 }}>纸张规格</span>} rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                  <Form.Item name="paperType" label={<span style={{ fontWeight: 600 }}>纸张规格</span>} rules={[{ required: true }]} style={{ marginBottom: 6 }}>
                     <Select placeholder="纸张规格" onChange={handlePaperTypeChange}>
                       <Select.Option value="A4">A4 (标准文印)</Select.Option>
                       <Select.Option value="A3">A3 (大考卷/双拼)</Select.Option>
@@ -3157,7 +3191,7 @@ const PrintRecordPage: React.FC = () => {
                     name="paperGoodsId"
                     label={<span style={{ fontWeight: 600 }}>关联扣减用纸物品（出库联动）</span>}
                     rules={[{ required: true, message: '请选择用纸物品！' }]}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                   >
                     <Select placeholder="选择关联扣减用纸物品" showSearch optionFilterProp="children">
                       {paperGoodsList.map((g) => {
@@ -3192,7 +3226,7 @@ const PrintRecordPage: React.FC = () => {
                         </Tag>
                       </div>
                     }
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                   >
                     <div
                       data-testid="preview-total-sheets-box"
@@ -3244,7 +3278,7 @@ const PrintRecordPage: React.FC = () => {
               {/* 第 4 行：申请教师 (6) + 年级班级 (6) + 文印经办人 (6) + 印刷时间 (6) */}
               <Row gutter={12}>
                 <Col span={6}>
-                  <Form.Item name="teacherId" label={<span style={{ fontWeight: 600 }}>申请教师</span>} rules={[{ required: true, message: '请选择教师' }]} style={{ marginBottom: 12 }}>
+                  <Form.Item name="teacherId" label={<span style={{ fontWeight: 600 }}>申请教师</span>} rules={[{ required: true, message: '请选择教师' }]} style={{ marginBottom: 6 }}>
                     <Select
                       placeholder="选择申请教师"
                       showSearch
@@ -3281,7 +3315,7 @@ const PrintRecordPage: React.FC = () => {
                   <Form.Item name="grade" hidden>
                     <Input />
                   </Form.Item>
-                  <Form.Item name="classId" label={<span style={{ fontWeight: 600 }}>关联班级</span>} style={{ marginBottom: 12 }}>
+                  <Form.Item name="classId" label={<span style={{ fontWeight: 600 }}>关联班级</span>} style={{ marginBottom: 6 }}>
                     <Select
                       placeholder="选择班级"
                       allowClear
@@ -3297,7 +3331,7 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={6}>
-                  <Form.Item name="operator" label={<span style={{ fontWeight: 600 }}>文印经办人</span>} rules={[{ required: true, message: '请选择经办人' }]} style={{ marginBottom: 12 }}>
+                  <Form.Item name="operator" label={<span style={{ fontWeight: 600 }}>文印经办人</span>} rules={[{ required: true, message: '请选择经办人' }]} style={{ marginBottom: 6 }}>
                     <Select
                       placeholder="文印经办人"
                       showSearch
@@ -3307,7 +3341,7 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={6}>
-                  <Form.Item name="printTime" label={<span style={{ fontWeight: 600 }}>印刷时间</span>} rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                  <Form.Item name="printTime" label={<span style={{ fontWeight: 600 }}>印刷时间</span>} rules={[{ required: true }]} style={{ marginBottom: 6 }}>
                     <DatePicker
                       showTime
                       format="YYYY-MM-DD HH:mm:ss"
@@ -3325,7 +3359,7 @@ const PrintRecordPage: React.FC = () => {
                     key={currentQueueTask?.taskId || 'manual'}
                     name="attachment"
                     label={<span style={{ fontWeight: 600 }}>原稿电子文件 / 附件</span>}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                   >
                     {currentQueueTask?.attachmentStatus === 'matched' && currentQueueTask?.matchedAttachmentPath && !isManualReplacingAttachment ? (
                       <div
@@ -3464,7 +3498,7 @@ const PrintRecordPage: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item key={`image-${currentQueueTask?.taskId || "manual"}`} name="resultImg" label={<span style={{ fontWeight: 600 }}>印刷成品效果图留样（可截图Ctrl+V）</span>} style={{ marginBottom: 12 }}>
+                  <Form.Item key={`image-${currentQueueTask?.taskId || "manual"}`} name="resultImg" label={<span style={{ fontWeight: 600 }}>印刷成品效果图留样（可截图Ctrl+V）</span>} style={{ marginBottom: 6 }}>
                     <ImageUpload contextKey={currentQueueTask?.taskId} disabled={savingRecord} placeholder="上传留样或按Ctrl+V粘贴" />
                   </Form.Item>
                 </Col>
@@ -3481,7 +3515,7 @@ const PrintRecordPage: React.FC = () => {
                         <span style={{ fontSize: 11, color: '#8c8c8c' }}>点击下方快捷标签可快速添加装订要求</span>
                       </div>
                     }
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 6 }}
                     extra={
                       <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, color: '#595959', fontWeight: 500 }}>常用工艺:</span>
@@ -3527,12 +3561,12 @@ const PrintRecordPage: React.FC = () => {
                   background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
                   borderRadius: 8,
-                  padding: '12px 14px',
+                  padding: '8px 12px',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                 }}
               >
                 {/* 模块 A：智能查重与状态核验 */}
-                <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px dashed #E2E8F0' }}>
+                <div style={{ marginBottom: 6, paddingBottom: 6, borderBottom: '1px dashed #E2E8F0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                       {currentQueueTask?.existingRecordDesc ? (
