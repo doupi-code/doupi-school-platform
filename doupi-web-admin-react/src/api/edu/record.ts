@@ -101,13 +101,14 @@ export function completeRecord(data: any) {
   });
 }
 
-// 通用文件/截图上传
+// 通用文件/截图上传（支持教材等几十兆大文件流式上传，放宽超时限制至 3 分钟）
 export function uploadFile(formData: FormData) {
   return request({
     url: '/common/upload',
     method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
     data: formData,
+    timeout: 180000,
   });
 }
 
@@ -137,6 +138,21 @@ export async function computeFileHash(file: File): Promise<string> {
 }
 
 /**
+ * 安全截短上传文件名，避免服务端（如 RuoYi 默认 100 字符限制）抛出异常
+ * 无论文件名多长，均保留其真实扩展名，安全控制在 80 字符以内
+ */
+export function sanitizeUploadFileName(name: string, maxLen = 80): string {
+  if (!name || name.length <= maxLen) return name;
+  const lastDot = name.lastIndexOf('.');
+  const ext = lastDot !== -1 ? name.substring(lastDot) : '';
+  const base = lastDot !== -1 ? name.substring(0, lastDot) : name;
+  const maxBaseLen = Math.max(10, maxLen - ext.length - 3);
+  const frontLen = Math.floor(maxBaseLen * 0.6);
+  const backLen = maxBaseLen - frontLen;
+  return `${base.substring(0, frontLen)}...${base.substring(base.length - backLen)}${ext}`;
+}
+
+/**
  * 智能秒传上传工具（全站通用）：
  * 1. 优先通过 SHA-256 进行极速预检，若已存在则 0 流量秒传直接返回链接；
  * 2. 未存在则附带 fileHash 上传，并在服务端存入全局 hash 库以供后续永久秒传。
@@ -144,18 +160,19 @@ export async function computeFileHash(file: File): Promise<string> {
 export async function uploadFileSmart(file: File): Promise<any> {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   const fileHash = await computeFileHash(file);
+  const safeFilename = sanitizeUploadFileName(file.name, 80);
 
   // 1. 预检秒传探测（0流量快速返回）
   if (fileHash && ext) {
     try {
-      const checkRes: any = await checkFileHash(fileHash, ext, file.name);
+      const checkRes: any = await checkFileHash(fileHash, ext, safeFilename);
       if (checkRes && (checkRes.found || checkRes.deduplicated)) {
         return {
           ...checkRes,
           deduplicated: true,
           url: checkRes.url,
           fileName: checkRes.fileName,
-          originalFilename: checkRes.originalFilename || file.name,
+          originalFilename: file.name,
         };
       }
     } catch (ignored) {
@@ -163,13 +180,16 @@ export async function uploadFileSmart(file: File): Promise<any> {
     }
   }
 
-  // 2. 正常流式上传（带哈希用于服务端归档）
+  // 2. 正常流式上传（带哈希用于服务端归档，安全限制文件名长度<=80字符）
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', file, safeFilename);
   if (fileHash) {
     formData.append('fileHash', fileHash);
   }
   const res: any = await uploadFile(formData);
+  if (res && !res.originalFilename) {
+    res.originalFilename = file.name;
+  }
   return res;
 }
 

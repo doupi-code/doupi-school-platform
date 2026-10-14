@@ -24,14 +24,14 @@ import com.doupi.common.utils.uuid.Seq;
 public class FileUploadUtils
 {
     /**
-     * 默认大小 50M
+     * 默认大小 100M
      */
-    public static final long DEFAULT_MAX_SIZE = 50 * 1024 * 1024L;
+    public static final long DEFAULT_MAX_SIZE = 100 * 1024 * 1024L;
 
     /**
-     * 默认的文件名最大长度 100
+     * 默认的文件名最大长度 500
      */
-    public static final int DEFAULT_FILE_NAME_LENGTH = 100;
+    public static final int DEFAULT_FILE_NAME_LENGTH = 500;
 
     /**
      * 默认上传的地址

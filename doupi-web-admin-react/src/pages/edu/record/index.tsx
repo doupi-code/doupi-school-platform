@@ -1435,6 +1435,12 @@ const PrintRecordPage: React.FC = () => {
     try {
       const values = await form.validateFields();
 
+      // 歧义核对前置检查：若当前任务命中推测/指代等歧义理由，必须勾选确定按钮上方的确认复选框
+      if (currentQueueTask?.reviewReasons?.some((r) => /指代|确认|推测|取消|替代/.test(r)) && !values.reviewConfirmed) {
+        message.warning('请先勾选确定按钮上方的「已对照当天聊天，确认当前任务的指代及打印要求」后再登记！');
+        return;
+      }
+
       // 未匹配或未选择申请教师时，禁止提交并提示用户
       const rawTeacherId = values.teacherId;
       if (rawTeacherId === undefined || rawTeacherId === null || rawTeacherId === '' || Number(rawTeacherId) === -999) {
@@ -2653,6 +2659,46 @@ const PrintRecordPage: React.FC = () => {
         style={{ top: 12, paddingBottom: 0 }}
         destroyOnHidden={false}
         styles={{ body: { padding: '8px 0', maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+            <div style={{ fontSize: 12, color: '#8c8c8c', textAlign: 'left' }}>
+              {currentQueueTask?.reviewReasons?.some((r) => /指代|确认|推测|取消|替代/.test(r)) && (
+                <span style={{ color: '#d46b08' }}>⚠️ 本条记录包含推测或指代要求，提交前请对照当天聊天核对</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              {currentQueueTask?.reviewReasons?.some((r) => /指代|确认|推测|取消|替代/.test(r)) && (
+                <Form form={form} component={false}>
+                  <Form.Item
+                    name="reviewConfirmed"
+                    valuePropName="checked"
+                    rules={[{ validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error('请对照当天聊天确认有歧义的内容'))) }]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox data-testid="review-confirm-checkbox" style={{ color: '#0958d9', fontWeight: 500 }}>
+                      已对照当天聊天，确认当前任务的指代及打印要求
+                    </Checkbox>
+                  </Form.Item>
+                </Form>
+              )}
+              <Space>
+                <Button
+                  disabled={savingRecord}
+                  onClick={() => {
+                    if (saveLockRef.current) return;
+                    if (activeTaskIdRef.current) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
+                    setModalOpen(false);
+                  }}
+                >
+                  取消
+                </Button>
+                <Button type="primary" loading={savingRecord} onClick={handleSaveRecord}>
+                  确定
+                </Button>
+              </Space>
+            </div>
+          </div>
+        }
       >
         <DraftNoticeAlert
           visible={!!draftNotice?.visible}
@@ -2762,10 +2808,9 @@ const PrintRecordPage: React.FC = () => {
                     triggerSaveRecordDraft(form.getFieldsValue(true));
                   }} />
               </Form.Item>}
-              {currentQueueTask?.reviewReasons?.some(r=>/指代|确认|推测|取消|替代/.test(r)) &&
-                <Form.Item name="reviewConfirmed" valuePropName="checked" rules={[{validator:(_,value)=>value?Promise.resolve():Promise.reject(new Error('请对照当天聊天确认有歧义的内容'))}]}>
-                  <Checkbox>已对照当天聊天，确认当前任务的指代及打印要求</Checkbox>
-                </Form.Item>}
+              <Form.Item name="reviewConfirmed" hidden valuePropName="checked">
+                <Checkbox />
+              </Form.Item>
 
               <Form.Item name="teacherName" hidden>
                 <Input />
@@ -2835,9 +2880,9 @@ const PrintRecordPage: React.FC = () => {
                 </Col>
               </Row>
 
-              {/* 第 2 行：纸张规格 (4) + 关联扣减用纸物品 (11) + 耗纸预算徽标 (9) */}
+              {/* 第 2 行：纸张规格 (3) + 关联扣减用纸物品 (10) + 耗纸预算徽标 (11) */}
               <Row gutter={10}>
-                <Col span={4}>
+                <Col span={3}>
                   <Form.Item name="paperType" label="纸张规格" rules={[{ required: true }]} style={{ marginBottom: 10 }}>
                     <Select placeholder="纸张规格" onChange={handlePaperTypeChange}>
                       <Select.Option value="A4">A4</Select.Option>
@@ -2847,7 +2892,7 @@ const PrintRecordPage: React.FC = () => {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={11}>
+                <Col span={10}>
                   <Form.Item
                     name="paperGoodsId"
                     label="关联扣减用纸物品（出库联动）"
@@ -2870,19 +2915,22 @@ const PrintRecordPage: React.FC = () => {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={9}>
+                <Col span={11}>
                   <Form.Item
                     label={
-                      <Space size={4}>
-                        <span>实际出库耗纸预算（自动折算）</span>
-                        <Tag color={isEdit && isLegacyExtraPaperRecord(currentEditRecord) ? 'default' : 'blue'} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 22, lineHeight: '22px', whiteSpace: 'nowrap' }}>
+                        <span style={{ whiteSpace: 'nowrap' }}>实际出库耗纸预算（自动折算）</span>
+                        <Tag
+                          color={isEdit && isLegacyExtraPaperRecord(currentEditRecord) ? 'default' : 'blue'}
+                          style={{ margin: 0, fontSize: 10, lineHeight: '18px', padding: '0 4px', whiteSpace: 'nowrap' }}
+                        >
                           {isEdit
                             ? formatExtraPaperLabel(currentEditRecord, false)
                             : splitAnswer
-                            ? '试卷/答案各加: 模板1+预览1(共+4张)'
+                            ? '试卷/答案各加: 模板1+预览1'
                             : '固定加: 模板1张+预览1张'}
                         </Tag>
-                      </Space>
+                      </div>
                     }
                     style={{ marginBottom: 10 }}
                   >
