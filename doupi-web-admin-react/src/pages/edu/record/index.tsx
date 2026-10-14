@@ -1,3 +1,4 @@
+import { createClientId } from '@/utils/clientId';
 import ChatSourcePanel from './ChatSourcePanel';
 import {
   derivePrintFields,
@@ -204,7 +205,7 @@ const PrintRecordPage: React.FC = () => {
   const [debugSelected, setDebugSelected] = useState('');
   const updateDebug = (id:string, patch:Partial<ChatDebugEntry>) => setDebugEntries(entries=>entries.map(e=>e.id===id?{...e,...patch}:e));
   const startDebug = (source:string, snapshot:ReturnType<typeof readChatClipboard>) => {
-    const id=crypto.randomUUID();
+    const id=createClientId();
     setDebugEntries(entries=>[...entries,{id,time:new Date().toLocaleTimeString(),source,status:'读取中',
       types:snapshot.types,items:snapshot.items,plain:snapshot.plain,html:snapshot.html,eventText:snapshot.text,
       files:snapshot.files.map(f=>({name:f.name,type:f.type,size:f.size}))}].slice(-10));
@@ -796,6 +797,11 @@ const PrintRecordPage: React.FC = () => {
   const [exportSearchKeyword, setExportSearchKeyword] = useState('');
   const [exportRegisteredFilter, setExportRegisteredFilter] = useState<'all' | 'registered' | 'unregistered'>('all');
   const [exportHideEmpty, setExportHideEmpty] = useState(false);
+  const [exportHideBusiness, setExportHideBusiness] = useState(true);
+  const [exportOnlySelected, setExportOnlySelected] = useState(false);
+  const eligibleExportSelectedIds = React.useMemo(() => filterManifestConversations(
+    exportSession?.conversations || [], { hideBusiness: exportHideBusiness, selectedIds: exportSelectedIds }
+  ).map(c => c.id), [exportSession, exportHideBusiness, exportSelectedIds]);
   const [exportDateRange, setExportDateRange] = useState<[any, any] | null>(null);
   const [exportLoadingManifest, setExportLoadingManifest] = useState(false);
   const [exportRecognizing, setExportRecognizing] = useState(false);
@@ -858,7 +864,7 @@ const PrintRecordPage: React.FC = () => {
       message.warning('请先选择微信导出目录文件夹');
       return;
     }
-    if (exportSelectedIds.length === 0) {
+    if (eligibleExportSelectedIds.length === 0) {
       message.warning('请先勾选至少 1 个需要识别的联系人会话');
       return;
     }
@@ -866,7 +872,7 @@ const PrintRecordPage: React.FC = () => {
     try {
       const startDate = exportDateRange?.[0] ? dayjs(exportDateRange[0]).format('YYYY-MM-DD') : undefined;
       const endDate = exportDateRange?.[1] ? dayjs(exportDateRange[1]).format('YYYY-MM-DD') : undefined;
-      const readRes = await readSelectedConversationsMessages(exportSession, exportSelectedIds, {
+      const readRes = await readSelectedConversationsMessages(exportSession, eligibleExportSelectedIds, {
         startDate,
         endDate,
       });
@@ -880,7 +886,7 @@ const PrintRecordPage: React.FC = () => {
         return;
       }
 
-      const batchId = crypto.randomUUID();
+      const batchId = createClientId();
       const res: any = await structuredParse({
         conversations: readRes.conversations,
         startDate,
@@ -1860,7 +1866,7 @@ const PrintRecordPage: React.FC = () => {
   // 智能解析数据统一入口（处理纯文本解析，支持跨天与多次任务队列）
   const handleParsedResult = (data: PrefillResult) => {
     if (!data?.taskList?.length) { message.info('未发现打印需求或材料，请手动填写'); return; }
-    const incoming = namespaceResult(data, crypto.randomUUID());
+    const incoming = namespaceResult(data, createClientId());
     if (activeTaskIdRef.current && modalOpen) taskDraftsRef.current.set(activeTaskIdRef.current, form.getFieldsValue(true));
     setOcrResult(previous => mergeSessions(previous, incoming));
     setPreviewTaskIndex(0);
@@ -1906,10 +1912,10 @@ const PrintRecordPage: React.FC = () => {
         if(debugId) updateDebug(debugId,{result:JSON.parse(JSON.stringify(result)) as PrefillResult,status:'后端解析已返回'});
       }
       const docs = files.filter(isDocument);
-      if (!text.trim()) result.taskList = fileCandidates(docs, crypto.randomUUID());
+      if (!text.trim()) result.taskList = fileCandidates(docs, createClientId());
       else {
         // Actual documents not mentioned in the text must also remain reviewable.
-        result.taskList.push(...fileCandidates(docs.filter(f=>!result.taskList.some(t=>attachmentNameMatches(f.name,t.originalDocName))), crypto.randomUUID()));
+        result.taskList.push(...fileCandidates(docs.filter(f=>!result.taskList.some(t=>attachmentNameMatches(f.name,t.originalDocName))), createClientId()));
       }
       const uploads = await uploadPastedDocs(docs);
       result.taskList = attachFiles(result.taskList, uploads);
@@ -1917,7 +1923,7 @@ const PrintRecordPage: React.FC = () => {
     } catch (error) {
       if(debugId) updateDebug(debugId,{status:'解析失败',error:error instanceof Error?error.message:'请求失败'});
       message.error(error instanceof Error ? error.message : '解析失败，原文已保留，请重试');
-      if (files.some(isDocument)) handleParsedResult({taskList:fileCandidates(files,crypto.randomUUID()),rawText:text,messages:[]});
+      if (files.some(isDocument)) handleParsedResult({taskList:fileCandidates(files,createClientId()),rawText:text,messages:[]});
     } finally { setParsingText(false); }
   };
   const enqueueImport = (work: () => Promise<void>) => {
@@ -2417,8 +2423,10 @@ const PrintRecordPage: React.FC = () => {
       keyword: exportSearchKeyword,
       registeredFilter: exportRegisteredFilter,
       hideEmpty: exportHideEmpty,
+      hideBusiness: exportHideBusiness,
+      selectedIds: exportOnlySelected ? exportSelectedIds : undefined,
     });
-  }, [exportSession, exportSearchKeyword, exportRegisteredFilter, exportHideEmpty]);
+  }, [exportSession, exportSearchKeyword, exportRegisteredFilter, exportHideEmpty, exportHideBusiness, exportOnlySelected, exportSelectedIds]);
 
   return (
     <PageContainer header={{ title: '文印智能登记管理' }}>
@@ -3151,7 +3159,7 @@ const PrintRecordPage: React.FC = () => {
       <Modal
         title="导入微信导出目录（先选联系人，再生成登记候选）"
         open={exportModalOpen}
-        width={1060}
+        width="min(1480px, 96vw)"
         style={{ top: 12, paddingBottom: 0 }}
         styles={{ body: { maxHeight: 'calc(100dvh - 110px)', overflowY: 'auto' } }}
         onCancel={() => setExportModalOpen(false)}
@@ -3201,15 +3209,23 @@ const PrintRecordPage: React.FC = () => {
               type="primary"
               data-testid="start-wechat-recognize-btn"
               loading={exportRecognizing}
-              disabled={!exportSession || exportSelectedIds.length === 0}
+              disabled={!exportSession || eligibleExportSelectedIds.length === 0}
               onClick={handleStartExportRecognize}
             >
-              开始识别选中联系人 ({exportSelectedIds.length})
+              开始识别选中联系人 ({eligibleExportSelectedIds.length})
             </Button>
           </div>
 
           {exportSession && (
             <Card size="small" style={{ marginBottom: 12 }} title="第一步：勾选需要识别的联系人会话（按当前登录用户自动记忆勾选）">
+              {exportSession.classificationWarning && <Alert type="warning" showIcon title={exportSession.classificationWarning} style={{marginBottom:8}} />}
+              <div style={{marginBottom:8}}>
+                <Text type="secondary">
+                  当前显示 {filteredExportConversations.length} 个会话；已识别公众号 {exportSession.conversations.filter(c=>c.accountType==='official').length} 个、企业号 {exportSession.conversations.filter(c=>c.accountType==='enterprise').length} 个。
+                  {exportSession.conversations.some(c=>!c.accountType || c.accountType==='unknown') && '未确认类型的账号保留显示；可在导出目录补充联系人分类文件。'}
+                  {eligibleExportSelectedIds.length < exportSelectedIds.length && ` 本次跳过已勾选但被账号类型筛选隐藏的 ${exportSelectedIds.length - eligibleExportSelectedIds.length} 个账号。`}
+                </Text>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                 <Input.Search
                   allowClear
@@ -3227,6 +3243,12 @@ const PrintRecordPage: React.FC = () => {
                   <Radio.Button value="unregistered">未登记</Radio.Button>
                   <Radio.Button value="registered">已登记</Radio.Button>
                 </Radio.Group>
+                <Checkbox checked={exportHideBusiness} onChange={(e) => setExportHideBusiness(e.target.checked)}>
+                  隐藏公众号、企业号
+                </Checkbox>
+                <Checkbox checked={exportOnlySelected} onChange={(e) => setExportOnlySelected(e.target.checked)}>
+                  只看已勾选
+                </Checkbox>
                 <Checkbox checked={exportHideEmpty} onChange={(e) => setExportHideEmpty(e.target.checked)}>
                   隐藏 0 消息会话
                 </Checkbox>
@@ -3264,8 +3286,8 @@ const PrintRecordPage: React.FC = () => {
                 size="small"
                 rowKey="id"
                 dataSource={filteredExportConversations}
-                pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
-                scroll={{ y: 240 }}
+                pagination={{ defaultPageSize: 50, showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (total) => `共 ${total} 个会话` }}
+                scroll={{ y: 'max(180px, calc(100dvh - 440px))', x: 780 }}
                 rowSelection={{
                   selectedRowKeys: exportSelectedIds,
                   preserveSelectedRowKeys: true,
@@ -3276,13 +3298,16 @@ const PrintRecordPage: React.FC = () => {
                     title: '联系人名称',
                     dataIndex: 'name',
                     render: (name: string, record: any) => (
-                      <Space size={6}>
-                        <Text strong>{name}</Text>
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          ({record.id})
-                        </Text>
-                      </Space>
+                      <Tooltip title={`${name} · ${record.id}`}>
+                        <Text strong ellipsis style={{maxWidth:'100%'}}>{name}</Text>
+                      </Tooltip>
                     ),
+                  },
+                  {
+                    title: '账号类型',
+                    dataIndex: 'accountType',
+                    width: 100,
+                    render: (kind: string) => ({official:'公众号',enterprise:'企业号',personal:'联系人',group:'群聊'}[kind] || '未确认'),
                   },
                   {
                     title: '消息数',
@@ -3297,7 +3322,7 @@ const PrintRecordPage: React.FC = () => {
                     width: 110,
                     align: 'center',
                     render: (status: string) => (
-                      <Tag color={status === '成功' || status === 'ok' ? 'success' : 'warning'}>{status}</Tag>
+                      <Tag color={['成功','ok','completed'].includes(status) ? 'success' : 'warning'}>{status === 'completed' ? '已导出' : status}</Tag>
                     ),
                   },
                   {

@@ -350,3 +350,24 @@ test('date-filtered message reading preserves originalIndex-based fallback IDs a
   assert.equal(res2.attachmentFilesByPath.has('001_陈老师/files/卷A.pdf'), false);
 });
 
+
+
+test('business filters use explicit account types, preserve unknown contacts, and can show all', async () => {
+  const session = await loadWechatExportManifest([makeMockFile('root/导出清单.json', JSON.stringify({conversations:[
+    {id:'teacher', name:'某企业小学张老师', type:'user', messageCount:10},
+    {id:'official', name:'公众号', type:'official', messageCount:10},
+    {id:'enterprise', name:'企业号', accountType:'enterprise', messageCount:10},
+    {id:'group', name:'教师群', type:'group', messageCount:10},
+  ]}))]);
+  assert.deepEqual(filterManifestConversations(session.conversations, {hideBusiness:true}).map(c=>c.id), ['teacher','group']);
+  assert.equal(filterManifestConversations(session.conversations, {hideBusiness:false}).length, 4);
+  assert.deepEqual(filterManifestConversations(session.conversations, {hideBusiness:true, selectedIds:['teacher','official']}).map(c=>c.id), ['teacher']);
+});
+
+test('optional contact classification metadata matches IDs, never matching duplicate names', async () => {
+  const session = await loadWechatExportManifest([
+    makeMockFile('root/导出清单.json', JSON.stringify({conversations:[{id:'a',name:'同名',type:'user'},{id:'b',name:'同名',type:'user'}]})),
+    makeMockFile('root/联系人分类.json', JSON.stringify({version:1, accounts:{a:'official'}})),
+  ]);
+  assert.deepEqual(filterManifestConversations(session.conversations, {hideBusiness:true}).map(c=>c.id), ['b']);
+});

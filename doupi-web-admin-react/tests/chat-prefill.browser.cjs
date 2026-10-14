@@ -100,6 +100,8 @@ const { chromium } = requireBrowser('playwright');
     if(body) return route.fulfill({json:body});
     return route.continue();
   });
+  // Reproduce LAN HTTP environments where randomUUID is unavailable.
+  await page.addInitScript(() => Object.defineProperty(globalThis.crypto, 'randomUUID', { configurable: true, value: undefined }));
   let lastSavedPayload = null;
   try {
     await page.goto((process.env.TEST_URL || 'http://127.0.0.1:5186')+'/admin/tests/chat-prefill.html');
@@ -396,8 +398,54 @@ const { chromium } = requireBrowser('playwright');
     await expDialog.getByTestId('start-wechat-recognize-btn').click();
     await expDialog.getByText('附件缺失').first().waitFor();
 
+    // Default 50 rows and account classification filtering under the same no-randomUUID environment.
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByTestId('open-wechat-export-modal').click();
+    await page.evaluate(() => {
+      const dt = new DataTransfer();
+      const conversations = Array.from({length:55}, (_,i)=>({id:`p_${i}`,name:`教师${i}`,type:'user',messageCount:1,folder:`p_${i}`}));
+      conversations.push({id:'biz_1',name:'测试公众号',type:'user',messageCount:1,folder:'biz_1'}, {id:'biz_2',name:'测试企业号',type:'user',messageCount:1,folder:'biz_2'});
+      for (const [name, data] of [['导出清单.json',{conversations}],['联系人分类.json',{version:1,accounts:{biz_1:'official',biz_2:'enterprise'}}]]) {
+        const file=new File([JSON.stringify(data)],name,{type:'application/json'});
+        Object.defineProperty(file,'webkitRelativePath',{value:`导出/${name}`});
+        dt.items.add(file);
+      }
+      for (const c of conversations) {
+        const file=new File(['window.__WECHAT_EXPORT__ = '+JSON.stringify({messages:[{id:'1',type:'普通文本',content:'请印10份',datetime:'2026-10-01 09:00:00'}]})+';'],'messages.js');
+        Object.defineProperty(file,'webkitRelativePath',{value:`导出/${c.folder}/data/messages.js`});
+        dt.items.add(file);
+      }
+      const input=document.querySelector('[data-testid="wechat-export-dir-input"]');
+      Object.defineProperty(input,'files',{configurable:true,value:dt.files});
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    await expDialog.getByRole('button',{name:'全选当前筛选 (55)',exact:true}).waitFor();
+    assert.equal(await expDialog.locator('tbody tr.ant-table-row').count(),50);
+    assert.equal(await expDialog.getByText('测试公众号',{exact:true}).count(),0);
+    await expDialog.getByRole('checkbox',{name:'隐藏公众号、企业号',exact:true}).uncheck();
+    await expDialog.getByRole('button',{name:'全选当前筛选 (57)',exact:true}).click();
+    await expDialog.getByRole('checkbox',{name:'隐藏公众号、企业号',exact:true}).check();
+    await expDialog.getByRole('button',{name:'开始识别选中联系人 (55)',exact:true}).waitFor();
+    let actualConversationIds;
+    await page.route('**/edu/record/structured-parse', async route => {
+      actualConversationIds=route.request().postDataJSON().conversations.map(c=>c.conversationId);
+      await route.fulfill({json:{code:200,data:{taskList:[],messages:[]}}});
+    });
+    const parseRequest=page.waitForResponse(r=>r.url().endsWith('/edu/record/structured-parse'));
+    await expDialog.getByRole('button',{name:'开始识别选中联系人 (55)',exact:true}).click();
+    await parseRequest;
+    assert.equal(actualConversationIds.length,55);
+    assert.ok(actualConversationIds.every(id=>id.startsWith('p_')));
+    await expDialog.getByRole('checkbox',{name:'只看已勾选',exact:true}).check();
+    await expDialog.getByRole('button',{name:'清空选择',exact:true}).click();
+    await expDialog.getByRole('button',{name:'全选当前筛选 (0)',exact:true}).waitFor();
+    await expDialog.getByRole('checkbox',{name:'只看已勾选',exact:true}).uncheck();
+    await expDialog.getByRole('button',{name:'全选当前筛选 (55)',exact:true}).waitFor();
+    await page.screenshot({path:require('node:path').join(require('node:os').tmpdir(),'doupi-wechat-import-review.png'),fullPage:true});
+
     assert.deepEqual(errors,[]);
-    console.log('PASS: HTML paste, full-day chat, unknown fields, extra paper 122/82, split +4 paper, per-task drafts, teacher propagation by conversationId, upload-fail block & explicit override, reprintConfirmed, batch-isolated attachment cache');
+    console.log('PASS: no randomUUID, account filters, 50 rows/page, HTML paste, full-day chat, unknown fields, extra paper 122/82, split +4 paper, per-task drafts, teacher propagation by conversationId, upload-fail block & explicit override, reprintConfirmed, batch-isolated attachment cache');
   } catch(error) { await page.screenshot({path:'../browser-failure.png',fullPage:true}); throw error; } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
 

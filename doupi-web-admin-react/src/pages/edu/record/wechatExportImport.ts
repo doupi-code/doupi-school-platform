@@ -1,3 +1,5 @@
+export type WechatAccountType = 'official' | 'enterprise' | 'personal' | 'group' | 'unknown';
+
 export interface FileLike {
   name: string;
   webkitRelativePath?: string;
@@ -14,6 +16,7 @@ export interface WechatManifestConversation {
   folder: string;
   messageCount: number;
   status: string;
+  accountType?: WechatAccountType;
   registeredCount?: number;
   hasRegistered?: boolean;
 }
@@ -26,6 +29,7 @@ export interface WechatExportDirectorySession {
   rootFolderName: string;
   conversations: WechatManifestConversation[];
   fileIndex: Map<string, FileLike>;
+  classificationWarning?: string;
 }
 
 export interface StructuredMessagePayload {
@@ -78,6 +82,16 @@ export interface ReadSelectedConversationsResult {
   emptyConversations: { conversationId: string; conversationName: string }[];
   damagedConversations: DamagedConversationNotice[];
   totalMessagesRead: number;
+}
+
+export function normalizeAccountType(value: unknown): WechatAccountType {
+  const type = String(value ?? '').toLowerCase();
+  if (['official', 'official_account', '公众号'].includes(type)) return 'official';
+  if (['enterprise', 'work', 'openim', '企业号', '企业微信'].includes(type)) return 'enterprise';
+  if (['group', 'chatroom'].includes(type)) return 'group';
+  if (type === 'personal') return 'personal';
+  // TraceMemo exports some official accounts as "user". This is not proof of a personal account.
+  return 'unknown';
 }
 
 const SELECTION_STORAGE_PREFIX = 'doupi_wechat_export_selected_contacts_';
@@ -157,10 +171,25 @@ export async function loadWechatExportManifest(files: Iterable<FileLike>): Promi
     throw new Error('「导出清单.json」缺少有效的 conversations 会话列表');
   }
 
+  let accountTypes: Record<string, unknown> = {};
+  let classificationWarning: string | undefined;
+  const classificationFile = fileIndex.get('联系人分类.json');
+  if (classificationFile) {
+    try {
+      const metadata = JSON.parse((await classificationFile.text()).replace(/^\uFEFF/, ''));
+      if (metadata.version !== 1 || !metadata.accounts || typeof metadata.accounts !== 'object' || Array.isArray(metadata.accounts))
+        throw new Error('无效分类文件');
+      accountTypes = metadata.accounts;
+    } catch {
+      classificationWarning = '联系人分类文件无法读取，未确认类型的账号会保留显示。';
+    }
+  }
+
   const conversations: WechatManifestConversation[] = parsed.conversations.map((c: any, idx: number) => ({
     id: String(c?.id || `conv-${idx}`),
     name: String(c?.name ?? c?.id ?? `未命名联系人-${idx + 1}`),
     type: String(c?.type || 'user'),
+    accountType: normalizeAccountType(Object.prototype.hasOwnProperty.call(accountTypes, String(c?.id)) ? accountTypes[String(c?.id)] : (c?.accountType ?? c?.type)),
     folder: normalizeRelativePath(String(c?.folder || `联系人/${c?.name || idx}`)),
     messageCount: Math.max(0, Number(c?.messageCount ?? 0)),
     status: String(c?.status || 'completed'),
@@ -176,6 +205,7 @@ export async function loadWechatExportManifest(files: Iterable<FileLike>): Promi
     rootFolderName,
     conversations,
     fileIndex,
+    classificationWarning,
   };
 }
 
@@ -280,13 +310,19 @@ export function filterManifestConversations(
     keyword?: string;
     registeredFilter?: 'all' | 'registered' | 'unregistered';
     hideEmpty?: boolean;
+    hideBusiness?: boolean;
+    selectedIds?: readonly string[];
   } = {}
 ): WechatManifestConversation[] {
   const kw = (options.keyword || '').trim().toLowerCase();
   const regFilter = options.registeredFilter || 'all';
   const hideEmpty = Boolean(options.hideEmpty);
+  const selected = options.selectedIds ? new Set(options.selectedIds) : null;
 
   return conversations.filter((c) => {
+    const kind = c.accountType ?? normalizeAccountType(c.type);
+    if (options.hideBusiness && (kind === 'official' || kind === 'enterprise')) return false;
+    if (selected && !selected.has(c.id)) return false;
     if (hideEmpty && c.messageCount <= 0) return false;
     if (regFilter === 'registered' && !c.hasRegistered) return false;
     if (regFilter === 'unregistered' && c.hasRegistered) return false;
