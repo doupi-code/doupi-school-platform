@@ -1018,10 +1018,10 @@ const PrintRecordPage: React.FC = () => {
     });
     const nextIdx = findNextPendingTaskIndex(updatedTaskList, currentTaskIndex);
     if (nextIdx !== -1) {
-      message.info(`已跳过【${currentTask.printName || '当前候选'}】，自动载入下一条候选`);
+      message.info({ content: `已跳过【${currentTask.printName || '当前候选'}】，自动载入下一条候选`, key: 'skip-task-msg', duration: 1.5 });
       applyTaskToForm(updatedTaskList[nextIdx], nextIdx, updatedTaskList.length, updatedTaskList);
     } else {
-      message.info(`已跳过【${currentTask.printName || '当前候选'}】，队列中已无待登记候选`);
+      message.info({ content: `已跳过【${currentTask.printName || '当前候选'}】，队列中已无待登记候选`, key: 'skip-task-msg', duration: 1.5 });
       setModalOpen(false);
     }
   };
@@ -2644,11 +2644,6 @@ const PrintRecordPage: React.FC = () => {
             <Button size="small" onClick={() => setDebugOpen(true)}>
               查看解析调试
             </Button>
-            {ocrResult && currentQueueTask && !isEdit && (
-              <Button size="small" danger onClick={handleSkipCurrentTaskInModal}>
-                跳过此条 / 不登记
-              </Button>
-            )}
           </Space>
         }
         open={modalOpen && !textModalOpen && !exportModalOpen}
@@ -2682,6 +2677,16 @@ const PrintRecordPage: React.FC = () => {
                 </Form>
               )}
               <Space>
+                {ocrResult && currentQueueTask && !isEdit && (
+                  <Button
+                    danger
+                    disabled={savingRecord}
+                    data-testid="skip-current-task-footer-btn"
+                    onClick={handleSkipCurrentTaskInModal}
+                  >
+                    跳过此条 / 不登记
+                  </Button>
+                )}
                 <Button
                   disabled={savingRecord}
                   onClick={() => {
