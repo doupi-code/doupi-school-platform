@@ -2070,8 +2070,22 @@ const PrintRecordPage: React.FC = () => {
         if(debugId) updateDebug(debugId,{result:JSON.parse(JSON.stringify(result)) as PrefillResult,status:'后端解析已返回'});
       }
       const docs = files.filter(isDocument);
-      if (!text.trim()) result.taskList = fileCandidates(docs, createClientId());
-      else {
+      if (!text.trim()) {
+        if (ocrResult?.taskList && ocrResult.taskList.length > 0) {
+          const uploads = await uploadPastedDocs(docs);
+          const updatedTaskList = attachFiles(ocrResult.taskList, uploads);
+          const unassignedDocs = docs.filter(f => !updatedTaskList.some(t => attachmentNameMatches(f.name, t.originalDocName || t.printName)));
+          const extraCandidates = unassignedDocs.length > 0 ? attachFiles(fileCandidates(unassignedDocs, createClientId()), uploads) : [];
+          setOcrResult({
+            ...ocrResult,
+            taskList: [...updatedTaskList, ...extraCandidates],
+          });
+          message.success(`已为现有候选智能关联附件！${extraCandidates.length > 0 ? `新增 ${extraCandidates.length} 条未匹配文件候选` : ''}`);
+          return;
+        } else {
+          result.taskList = fileCandidates(docs, createClientId());
+        }
+      } else {
         // Actual documents not mentioned in the text must also remain reviewable.
         result.taskList.push(...fileCandidates(docs.filter(f=>!result.taskList.some(t=>attachmentNameMatches(f.name,t.originalDocName))), createClientId()));
       }
@@ -2118,66 +2132,73 @@ const PrintRecordPage: React.FC = () => {
     });
   };
 
-  // 登记弹窗全局快捷粘贴：根据文件后缀自动分流并处理
+  // 登记弹窗全局快捷粘贴：根据文件后缀自动分流并处理，绝不跳出中断逐条登记
   const handleSmartRegisterModalPaste = async (e: React.ClipboardEvent) => {
     const target = e.target as HTMLElement;
     const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
-    if (target.closest('[data-attachment-upload], [data-image-upload]')) return;
-    const snapshot = readChatClipboard(e.clipboardData);
-    if (snapshot.files.some(isDocument) || (snapshot.text.trim() && !isTextInput)) {
-      handleModalPaste(e); return;
-    }
+    if (target.closest('[data-attachment-upload], [data-image-upload], .ant-upload, input[type="file"]')) return;
 
-
-    let pastedFile: File | null = null;
+    let pastedFiles: File[] = [];
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-      pastedFile = e.clipboardData.files[0];
+      pastedFiles = Array.from(e.clipboardData.files);
     } else if (e.clipboardData.items) {
       for (let i = 0; i < e.clipboardData.items.length; i++) {
         const item = e.clipboardData.items[i];
         if (item.kind === 'file') {
-          pastedFile = item.getAsFile();
-          if (pastedFile) break;
+          const f = item.getAsFile();
+          if (f) pastedFiles.push(f);
         }
       }
     }
 
-    // 纯文本（微信聊天记录文本）→ 自动提取并预填
-    let text = '';
-    try { text = e.clipboardData.getData('text/plain') || ''; } catch { text = ''; }
-    if (!pastedFile && text.trim() && !isTextInput) {
-      e.preventDefault();
-      message.loading({ content: '检测到粘贴微信聊天文字，正在智能提取预填...', key: 'smart-paste-text' });
-      await parseAndHandleText(text);
+    const docFiles = pastedFiles.filter(isDocument);
+    const imgFiles = pastedFiles.filter(f => f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(f.name));
+
+    const snapshot = readChatClipboard(e.clipboardData);
+    const hasChatText = Boolean(snapshot.text.trim()) && !isTextInput;
+    // 如果剪贴板中同时包含大量微信聊天文字与文件（整段微信消息复制）：交由聊天解析器处理
+    if (hasChatText && docFiles.length > 0) {
+      handleModalPaste(e);
       return;
     }
 
-    if (!pastedFile) return;
-
-    // 如果焦点已经在具体的文件/图片上传内部，交给各自的 onPaste 处理
-    if (target && target.closest('.ant-upload, input[type="file"]')) {
-      return;
-    }
-
-    const ext = pastedFile.name.split('.').pop()?.toLowerCase() || '';
-    const isDoc = ['doc', 'docx', 'docm', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z'].includes(ext);
-    const isImg = pastedFile.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext);
-
-    if (isDoc) {
+    // 1. 单个文档文件：直接作为当前任务的原稿附件上传，绝不跳回文字预填弹窗！
+    if (docFiles.length === 1 && !isTextInput) {
       e.preventDefault();
-      message.loading({ content: `智能识别：检测到粘贴【.${ext}】原稿文档（${pastedFile.name}），正在上传...`, key: 'smart-paste' });
-      const imageTaskId = activeTaskIdRef.current;
+      e.stopPropagation();
+      const file = docFiles[0];
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      message.loading({ content: `智能识别：检测到粘贴【.${ext}】原稿文档（${file.name}），正在上传...`, key: 'smart-paste' });
+      const currentTaskId = activeTaskIdRef.current;
       try {
-        const res: any = await uploadFileSmart(pastedFile);
-        if (activeTaskIdRef.current !== imageTaskId) return;
+        const res: any = await uploadFileSmart(file);
+        if (activeTaskIdRef.current !== currentTaskId) return;
         const url = res.url || res.fileName || '';
-        const uploadedName = res.originalFilename || pastedFile.name;
+        const uploadedName = res.originalFilename || file.name;
+
+        // 设置当前表单字段
         form.setFieldsValue({ attachment: url });
         const curPrintName = form.getFieldValue('printName');
         if (!curPrintName && uploadedName) {
           form.setFieldsValue({ printName: uploadedName.replace(/\.[^/.]+$/, '') });
         }
-        analyzeAndFillDocument(pastedFile);
+        analyzeAndFillDocument(file);
+
+        // 同步当前任务状态与草稿
+        const updatedValues = { ...form.getFieldsValue(true), attachment: url };
+        triggerSaveRecordDraft(updatedValues);
+        if (currentTaskId) {
+          taskDraftsRef.current.set(currentTaskId, updatedValues);
+        }
+        if (ocrResult?.taskList && currentTaskIndex >= 0) {
+          const updatedList = ocrResult.taskList.map((item, idx) =>
+            idx === currentTaskIndex
+              ? { ...item, attachment: url, attachmentStatus: 'available', originalDocName: item.originalDocName || uploadedName }
+              : item
+          );
+          setOcrResult({ ...ocrResult, taskList: updatedList });
+        }
+
         if (res.deduplicated) {
           message.success({ content: `⚡ 检测到相同原稿文档，已直接复用（秒传成功）！`, key: 'smart-paste' });
         } else {
@@ -2186,20 +2207,31 @@ const PrintRecordPage: React.FC = () => {
       } catch (err: any) {
         message.error({ content: err.message || '文档上传失败', key: 'smart-paste' });
       }
-    } else if (isImg && !isTextInput) {
+      return;
+    }
+
+    // 2. 单个图片：上传为留样图或原稿图片
+    if (imgFiles.length === 1 && docFiles.length === 0 && !isTextInput) {
       e.preventDefault();
-      // 如果原稿已有，则填入留样图；如果原稿为空，优先填入原稿电子文件（试卷原件截图常见场景）
+      e.stopPropagation();
+      const file = imgFiles[0];
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
       const curAttachment = form.getFieldValue('attachment');
       const targetField = curAttachment ? 'resultImg' : 'attachment';
       const targetDesc = targetField === 'resultImg' ? '印刷效果图 / 拍照留样' : '原稿电子文件';
 
       message.loading({ content: `智能识别：检测到粘贴图片（.${ext}），正在上传至【${targetDesc}】...`, key: 'smart-paste' });
-      const imageTaskId = activeTaskIdRef.current;
+      const currentTaskId = activeTaskIdRef.current;
       try {
-        const res: any = await uploadFileSmart(pastedFile);
-        if (activeTaskIdRef.current !== imageTaskId) return;
+        const res: any = await uploadFileSmart(file);
+        if (activeTaskIdRef.current !== currentTaskId) return;
         const url = res.url || res.fileName || '';
         form.setFieldsValue({ [targetField]: url });
+        const updatedValues = { ...form.getFieldsValue(true), [targetField]: url };
+        triggerSaveRecordDraft(updatedValues);
+        if (currentTaskId) {
+          taskDraftsRef.current.set(currentTaskId, updatedValues);
+        }
         if (res.deduplicated) {
           message.success({ content: `⚡ 检测到相同图片，已直接复用至【${targetDesc}】（秒传成功）！`, key: 'smart-paste' });
         } else {
@@ -2208,6 +2240,48 @@ const PrintRecordPage: React.FC = () => {
       } catch (err: any) {
         message.error({ content: err.message || '图片上传失败', key: 'smart-paste' });
       }
+      return;
+    }
+
+    // 3. 批量多个文件：自动批量上传并智能补齐各候选任务缺失的附件
+    if (docFiles.length > 1 && !isTextInput) {
+      e.preventDefault();
+      e.stopPropagation();
+      message.loading({ content: `检测到批量粘贴 ${docFiles.length} 个原稿文档，正在上传并智能关联...`, key: 'smart-paste-batch' });
+      try {
+        const uploads = await uploadPastedDocs(docFiles);
+        if (ocrResult?.taskList && ocrResult.taskList.length > 0) {
+          const updatedTaskList = attachFiles(ocrResult.taskList, uploads);
+          setOcrResult({ ...ocrResult, taskList: updatedTaskList });
+          // 如果当前任务匹配上了新附件，立即同步填入当前表单
+          const currentUpdated = updatedTaskList[currentTaskIndex];
+          if (currentUpdated?.attachment && !form.getFieldValue('attachment')) {
+            form.setFieldsValue({ attachment: currentUpdated.attachment });
+            if (currentUpdated.sourcePageCount) {
+              form.setFieldsValue({ pageCount: currentUpdated.sourcePageCount });
+            }
+            const updatedValues = { ...form.getFieldsValue(true), attachment: currentUpdated.attachment };
+            triggerSaveRecordDraft(updatedValues);
+            if (activeTaskIdRef.current) {
+              taskDraftsRef.current.set(activeTaskIdRef.current, updatedValues);
+            }
+          }
+          message.success({ content: `✅ 批量文件上传完成，已智能补齐各任务附件！`, key: 'smart-paste-batch' });
+        }
+      } catch (err: any) {
+        message.error({ content: err.message || '批量文件上传失败', key: 'smart-paste-batch' });
+      }
+      return;
+    }
+
+    // 4. 纯文本（微信聊天记录文本）：仅当非输入框且含有文本时才触发文字解析
+    let text = '';
+    try { text = e.clipboardData.getData('text/plain') || ''; } catch { text = ''; }
+    if (!pastedFiles.length && text.trim() && !isTextInput) {
+      e.preventDefault();
+      message.loading({ content: '检测到粘贴微信聊天文字，正在智能提取预填...', key: 'smart-paste-text' });
+      await parseAndHandleText(text);
+      return;
     }
   };
 

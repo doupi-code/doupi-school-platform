@@ -45,3 +45,18 @@ test('new paste appends candidates rather than replacing edits', () => {
   const result = mergeSessions({taskList:[{taskId:'old',printCount:33}], messages:[], rawText:'old'}, {taskList:[{taskId:'new'}],messages:[],rawText:'new'});
   assert.equal(result.taskList.length, 2); assert.equal(result.taskList[0].printCount, 33);
 });
+
+test('attachmentNameMatches handles WeChat ellipsis truncation and omitted extensions', () => {
+  // 微信长文件名截断为 ... 或 …
+  assert.ok(attachmentNameMatches('数学卷-2610高三强基联盟10月月考.docx', '数学卷-2610高三强基联盟...'));
+  assert.ok(attachmentNameMatches('杭州二中2027届高三上学期10月月考数学试题.pdf', '杭州二中2027届高三上学期10月月考数学试题…'));
+  // 聊天文字中省略扩展名
+  assert.ok(attachmentNameMatches('数学试题及参考答案.docx', '数学试题及参考答案'));
+  assert.ok(attachmentNameMatches('数学(4).docx', '数学(4)'));
+  // attachFiles 成功关联
+  const tasks = [{ taskId: 't1', originalDocName: '数学卷-2610高三强基联盟...' }];
+  const attached = attachFiles(tasks, [{ name: '数学卷-2610高三强基联盟10月月考.docx', url: '/files/math.docx', status: 'available' }]);
+  assert.equal(attached[0].attachment, '/files/math.docx');
+  assert.equal(attached[0].attachmentStatus, 'available');
+});
+

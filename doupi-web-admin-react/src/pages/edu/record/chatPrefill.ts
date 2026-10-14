@@ -87,20 +87,75 @@ export function fileCandidates(files: File[], batch: string): PrintCandidate[] {
   }));
 }
 const filenameKey = (s?: string) => (s || '').trim().normalize('NFC');
-export function attachmentNameMatches(uploaded: string, original?: string) {
-  const key = (s?: string) => filenameKey(s).replace(/\s*(\.[^.]+)$/, '$1');
-  return key(uploaded) === key(original) || key(uploaded).replace(/\s*\(\d+\)(\.[^.]+)$/, '$1') === key(original);
+
+function extractBaseAndExt(name?: string) {
+  const norm = filenameKey(name);
+  const match = norm.match(/^(.*?)(\.[a-zA-Z0-9]+)?$/);
+  const base = match ? match[1].trim() : norm;
+  const ext = match && match[2] ? match[2].toLowerCase() : '';
+  return { base, ext };
 }
+
+function cleanBaseName(base: string) {
+  let s = base.replace(/[\s_]*[(（]\d+[)）]$/, '');
+  const hasEllipsis = /[.]{2,}|…$/.test(s);
+  s = s.replace(/[.]{2,}|…+$/, '').trim();
+  const simplified = s
+    .replace(/[（【［]/g, '(')
+    .replace(/[）】］]/g, ')')
+    .replace(/[\s_\-—]+/g, '')
+    .toLowerCase();
+  return { clean: s, simplified, hasEllipsis };
+}
+
+export function attachmentNameMatches(uploaded: string, original?: string): boolean {
+  if (!uploaded || !original) return false;
+  const key = (s?: string) => filenameKey(s).replace(/\s*(\.[^.]+)$/, '$1');
+  if (key(uploaded) === key(original) || key(uploaded).replace(/\s*\(\d+\)(\.[^.]+)$/, '$1') === key(original)) {
+    return true;
+  }
+
+  const upParts = extractBaseAndExt(uploaded);
+  const origParts = extractBaseAndExt(original);
+  const upBase = cleanBaseName(upParts.base);
+  const origBase = cleanBaseName(origParts.base);
+
+  if (upBase.simplified === origBase.simplified && upBase.simplified.length > 0) {
+    if (!origParts.ext || upParts.ext === origParts.ext) return true;
+  }
+
+  if (origBase.hasEllipsis && origBase.simplified.length >= 4) {
+    if (upBase.simplified.startsWith(origBase.simplified)) return true;
+  }
+  if (upBase.hasEllipsis && upBase.simplified.length >= 4) {
+    if (origBase.simplified.startsWith(upBase.simplified)) return true;
+  }
+
+  if (origBase.simplified.length >= 6 && upBase.simplified.startsWith(origBase.simplified)) {
+    if (!origParts.ext || upParts.ext === origParts.ext) return true;
+  }
+
+  return false;
+}
+
 export function attachFiles(tasks: PrintCandidate[], files: UploadedAttachment[]): PrintCandidate[] {
   return tasks.map(task => {
-    const matches = files.filter(f => attachmentNameMatches(f.name, task.originalDocName));
+    if (task.attachment && task.attachmentStatus !== 'failed' && task.attachmentStatus !== 'missing') {
+      return task;
+    }
+    const targetName = task.originalDocName || task.printName;
+    const matches = files.filter(f => attachmentNameMatches(f.name, targetName));
     if (!matches.length) return task;
-    if (matches.length !== 1 || tasks.filter(t => filenameKey(t.originalDocName) === filenameKey(task.originalDocName)).length !== 1) {
+    const sameTargetTasks = tasks.filter(t => {
+      const name = t.originalDocName || t.printName;
+      return name && filenameKey(name) === filenameKey(targetName);
+    });
+    if (matches.length !== 1 || sameTargetTasks.length !== 1) {
       return { ...task, attachmentStatus: 'ambiguous', reviewReasons: [...(task.reviewReasons || []), '同名附件无法唯一关联，请手动选择'] };
     }
     const f = matches[0];
     return { ...task, attachment: task.attachment || f.url, attachmentStatus: f.status,
-      sourcePageCount:f.pageCount, sourcePaperType:f.sourcePaperType };
+      sourcePageCount: f.pageCount || task.sourcePageCount, sourcePaperType: f.sourcePaperType || task.sourcePaperType };
   });
 }
 export function dayKey(time?: string) {
