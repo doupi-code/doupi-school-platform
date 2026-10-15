@@ -9,6 +9,7 @@ export interface PrintCandidate {
   timeSnippet?: string; time?: string; teacherId?: number | string; teacherName?: string;
   teacherMatched?: boolean; grade?: string; subject?: string; classId?: number | string; className?: string;
   printCount?: number | null; pageCount?: number | null; printSide?: string | null;
+  colorCategory?: string; printPurpose?: string; purpose?: string;
   sourcePageCount?: number; sourcePaperType?: string;
   paperType?: string; paperGoodsId?: number | string; paperGoodsName?: string;
   remark?: string; attachment?: string; resultImg?: string; attachmentStatus?: string;

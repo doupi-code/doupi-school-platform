@@ -354,15 +354,26 @@ const UserPage: React.FC = () => {
     },
     {
       title: '角色身份',
-      dataIndex: 'roles',
       hideInSearch: true,
       render: (_, record) => {
-        const roles = record.roles || [];
-        if (!roles || roles.length === 0) return '-';
+        // 兼容后端 selectUserList 返回的 roleNames（逗号分隔字符串，如"任课老师"）及 roles 数组
+        let roleNameList: string[] = [];
+        if (record.roleNames) {
+          roleNameList = String(record.roleNames)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        } else if (Array.isArray(record.roles) && record.roles.length > 0) {
+          roleNameList = record.roles.map((r: any) => r.roleName).filter(Boolean);
+        }
+
+        if (roleNameList.length === 0) return '-';
         return (
           <Space size={4} wrap>
-            {roles.map((r: any) => (
-              <Tag key={r.roleId || r.roleName} color="blue">{r.roleName}</Tag>
+            {roleNameList.map((name: string) => (
+              <Tag key={name} color="blue">
+                {name}
+              </Tag>
             ))}
           </Space>
         );

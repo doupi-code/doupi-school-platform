@@ -53,7 +53,7 @@ public class EduPrintExtraPaperAndWechatImportTest
         final Map<Long, StockOut> outMap = new HashMap<>();
         final Map<Long, EduPrintRecord> recordMap = new HashMap<>();
         final AtomicLong outIdSeq = new AtomicLong(1000L);
-        final AtomicLong printIdSeq = new AtomicLong(1L);
+        final AtomicLong printIdSeq = new AtomicLong(2000L);
         final EduPrintRecordServiceImpl service = new EduPrintRecordServiceImpl();
 
         InMemoryPrintTestHarness(long initialPaperSheets) throws Exception
@@ -179,6 +179,8 @@ public class EduPrintExtraPaperAndWechatImportTest
                             if (patch.getPrintCount() != null) target.setPrintCount(patch.getPrintCount());
                             if (patch.getPageCount() != null) target.setPageCount(patch.getPageCount());
                             if (patch.getPrintSide() != null) target.setPrintSide(patch.getPrintSide());
+                            if (patch.getColorCategory() != null) target.setColorCategory(patch.getColorCategory());
+                            if (patch.getPrintPurpose() != null) target.setPrintPurpose(patch.getPrintPurpose());
                             if (patch.getTemplatePaperCount() != null) target.setTemplatePaperCount(patch.getTemplatePaperCount());
                             if (patch.getPreviewPaperCount() != null) target.setPreviewPaperCount(patch.getPreviewPaperCount());
                             if (patch.getTotalPages() != null) target.setTotalPages(patch.getTotalPages());
@@ -255,6 +257,8 @@ public class EduPrintExtraPaperAndWechatImportTest
             dst.setPrintCount(src.getPrintCount());
             dst.setPageCount(src.getPageCount());
             dst.setPrintSide(src.getPrintSide());
+            dst.setColorCategory(src.getColorCategory());
+            dst.setPrintPurpose(src.getPrintPurpose());
             dst.setTemplatePaperCount(src.getTemplatePaperCount());
             dst.setPreviewPaperCount(src.getPreviewPaperCount());
             dst.setTotalPages(src.getTotalPages());
@@ -431,7 +435,7 @@ public class EduPrintExtraPaperAndWechatImportTest
         assertEquals(380L, harness.availableSheets()); // 500 - 120 = 380
 
         EduPrintRecord histRec = new EduPrintRecord();
-        histRec.setPrintId(99L);
+        histRec.setPrintId(1299L);
         histRec.setPrintName("历史旧规则记录");
         histRec.setPaperGoodsId(8L);
         histRec.setPaperType("8K");
@@ -443,21 +447,21 @@ public class EduPrintExtraPaperAndWechatImportTest
         histRec.setTotalPages(120L);
         histRec.setOutId(histOut.getOutId());
         histRec.setStatus("0");
-        harness.recordMap.put(99L, histRec);
+        harness.recordMap.put(1299L, histRec);
 
         // 编辑历史待印刷记录为双面：应保留 0+0 旧规则，重新计算为 80 张（而非 82 张），不暗中补扣
         EduPrintRecord editHist = new EduPrintRecord();
-        editHist.setPrintId(99L);
+        editHist.setPrintId(1299L);
         editHist.setPrintSide("2");
         harness.service.updateEduPrintRecord(editHist);
-        EduPrintRecord afterEditHist = harness.service.selectEduPrintRecordByPrintId(99L);
+        EduPrintRecord afterEditHist = harness.service.selectEduPrintRecordByPrintId(1299L);
         assertEquals(0L, afterEditHist.getTemplatePaperCount(), "历史记录编辑后仍保持 templatePaperCount=0");
         assertEquals(0L, afterEditHist.getPreviewPaperCount(), "历史记录编辑后仍保持 previewPaperCount=0");
         assertEquals(80L, afterEditHist.getTotalPages(), "历史记录改为双面后应为 80 张，不补扣 2 张额外用纸");
         assertEquals(420L, harness.availableSheets()); // 500 - 80 = 420
 
         // 删除历史记录：退回实际出库数量 80 张
-        harness.service.deleteEduPrintRecordByPrintIds(new Long[]{99L});
+        harness.service.deleteEduPrintRecordByPrintIds(new Long[]{1299L});
         assertEquals(500L, harness.availableSheets());
     }
 
@@ -823,6 +827,8 @@ public class EduPrintExtraPaperAndWechatImportTest
                         print_count BIGINT,
                         page_count BIGINT,
                         print_side VARCHAR(8),
+                        color_category VARCHAR(20) DEFAULT '黑白',
+                        print_purpose VARCHAR(500) DEFAULT '',
                         template_paper_count BIGINT,
                         preview_paper_count BIGINT,
                         total_pages BIGINT,

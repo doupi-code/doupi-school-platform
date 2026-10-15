@@ -83,6 +83,12 @@ public class EduPrintOcrResult implements Serializable
     /** 印刷方式（1单页印刷 2双页印刷） */
     private String printSide;
 
+    /** 颜色类别（黑白 / 彩色） */
+    private String colorCategory = "黑白";
+
+    /** 文印用途 */
+    private String printPurpose;
+
     /** 预计消耗总纸张数 */
     private Long totalPages;
 
@@ -253,6 +259,30 @@ public class EduPrintOcrResult implements Serializable
         this.printName = printName;
     }
 
+    public String getColorCategory() {
+        return colorCategory != null ? colorCategory : "黑白";
+    }
+
+    public void setColorCategory(String colorCategory) {
+        this.colorCategory = colorCategory;
+    }
+
+    public String getPrintPurpose() {
+        return printPurpose;
+    }
+
+    public void setPrintPurpose(String printPurpose) {
+        this.printPurpose = printPurpose;
+    }
+
+    public String getPurpose() {
+        return printPurpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.printPurpose = purpose;
+    }
+
     public String getRemark() {
         return remark;
     }
@@ -404,6 +434,12 @@ public class EduPrintOcrResult implements Serializable
 
         /** 印刷方式（1单页印刷 2双页印刷） */
         private String printSide;
+
+        /** 颜色类别（黑白 / 彩色） */
+        private String colorCategory = "黑白";
+
+        /** 文印用途 */
+        private String printPurpose;
 
         /** 纸张类型 */
         private String paperType;
@@ -584,6 +620,30 @@ public class EduPrintOcrResult implements Serializable
 
         public void setExistingRecordDesc(String existingRecordDesc) {
             this.existingRecordDesc = existingRecordDesc;
+        }
+
+        public String getColorCategory() {
+            return colorCategory != null ? colorCategory : "黑白";
+        }
+
+        public void setColorCategory(String colorCategory) {
+            this.colorCategory = colorCategory;
+        }
+
+        public String getPrintPurpose() {
+            return printPurpose;
+        }
+
+        public void setPrintPurpose(String printPurpose) {
+            this.printPurpose = printPurpose;
+        }
+
+        public String getPurpose() {
+            return printPurpose;
+        }
+
+        public void setPurpose(String purpose) {
+            this.printPurpose = purpose;
         }
     }
 }

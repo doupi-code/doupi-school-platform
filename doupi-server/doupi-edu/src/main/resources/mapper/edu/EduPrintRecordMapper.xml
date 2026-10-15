@@ -12,6 +12,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="printCount"    column="print_count"    />
         <result property="pageCount"    column="page_count"    />
         <result property="printSide"    column="print_side"    />
+        <result property="colorCategory" column="color_category" />
+        <result property="printPurpose" column="print_purpose" />
         <result property="templatePaperCount"    column="template_paper_count"    />
         <result property="previewPaperCount"    column="preview_paper_count"    />
         <result property="totalPages"    column="total_pages"    />
@@ -56,7 +58,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <sql id="selectEduPrintRecordVo">
-        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.template_paper_count, r.preview_paper_count, r.total_pages, r.teacher_id, COALESCE(NULLIF(r.grade, ''), u.grade, t.grade, c.grade) as grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
+        select r.print_id, r.print_name, r.paper_goods_id, r.paper_type, r.print_count, r.page_count, r.print_side, r.color_category, r.print_purpose, r.template_paper_count, r.preview_paper_count, r.total_pages, r.teacher_id, COALESCE(NULLIF(r.grade, ''), u.grade, t.grade, c.grade) as grade, r.class_id, IFNULL(NULLIF(r.class_name, ''), c.class_name) as class_name, r.operator, r.print_time, r.remark, r.status, r.out_id, r.attachment, r.result_img, r.create_by, r.create_time, r.update_by, r.update_time, r.del_flag,
                coalesce(u.nick_name, t.teacher_name) as teacher_name,
                g.goods_name as paper_goods_name,
                o.out_no as out_no,
@@ -80,6 +82,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="paperGoodsId != null "> and r.paper_goods_id = #{paperGoodsId}</if>
             <if test="paperType != null  and paperType != ''"> and r.paper_type = #{paperType}</if>
             <if test="printSide != null  and printSide != ''"> and r.print_side = #{printSide}</if>
+            <if test="colorCategory != null  and colorCategory != ''"> and (r.color_category = #{colorCategory} or (r.color_category = '黑白' and #{colorCategory} = '1') or (r.color_category = '彩色' and #{colorCategory} = '2'))</if>
+            <if test="printPurpose != null  and printPurpose != ''"> and r.print_purpose like concat('%', #{printPurpose}, '%')</if>
             <if test="teacherId != null "> and r.teacher_id = #{teacherId}</if>
             <if test="grade != null and grade != ''"> and r.grade = #{grade}</if>
             <if test="classId != null "> and r.class_id = #{classId}</if>
@@ -121,6 +125,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">print_count,</if>
             <if test="pageCount != null">page_count,</if>
             <if test="printSide != null and printSide != ''">print_side,</if>
+            <if test="colorCategory != null and colorCategory != ''">color_category,</if>
+            <if test="printPurpose != null and printPurpose != ''">print_purpose,</if>
             <if test="templatePaperCount != null">template_paper_count,</if>
             <if test="previewPaperCount != null">preview_paper_count,</if>
             <if test="totalPages != null">total_pages,</if>
@@ -153,6 +159,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">#{printCount},</if>
             <if test="pageCount != null">#{pageCount},</if>
             <if test="printSide != null and printSide != ''">#{printSide},</if>
+            <if test="colorCategory != null and colorCategory != ''">#{colorCategory},</if>
+            <if test="printPurpose != null and printPurpose != ''">#{printPurpose},</if>
             <if test="templatePaperCount != null">#{templatePaperCount},</if>
             <if test="previewPaperCount != null">#{previewPaperCount},</if>
             <if test="totalPages != null">#{totalPages},</if>
@@ -189,6 +197,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="printCount != null">print_count = #{printCount},</if>
             <if test="pageCount != null">page_count = #{pageCount},</if>
             <if test="printSide != null and printSide != ''">print_side = #{printSide},</if>
+            <if test="colorCategory != null and colorCategory != ''">color_category = #{colorCategory},</if>
+            <if test="printPurpose != null">print_purpose = #{printPurpose},</if>
             <if test="templatePaperCount != null">template_paper_count = #{templatePaperCount},</if>
             <if test="previewPaperCount != null">preview_paper_count = #{previewPaperCount},</if>
             <if test="totalPages != null">total_pages = #{totalPages},</if>

@@ -1118,6 +1118,8 @@ CREATE TABLE `edu_print_record` (
   `print_count` int NOT NULL COMMENT '印刷份数',
   `page_count` int DEFAULT '1' COMMENT '每份页数/张数',
   `print_side` char(1) DEFAULT '1' COMMENT '印刷方式(1单页印刷 2双页印刷)',
+  `color_category` varchar(20) NOT NULL DEFAULT '黑白' COMMENT '颜色类别(黑白/彩色)',
+  `print_purpose` varchar(500) DEFAULT '' COMMENT '文印用途(≤20份必填，300字内)',
   `total_pages` int DEFAULT NULL COMMENT '消耗总张数(份数*页数)',
   `teacher_id` bigint DEFAULT NULL COMMENT '申请教师ID，关联edu_teacher',
   `grade` varchar(20) DEFAULT '' COMMENT '年级',

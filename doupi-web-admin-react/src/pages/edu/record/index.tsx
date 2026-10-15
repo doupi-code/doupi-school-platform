@@ -1131,6 +1131,8 @@ const PrintRecordPage: React.FC = () => {
       const defaultGoodsId = findGoodsByPaperType(defaultPaperType, currentPaperList);
       form.setFieldsValue({
         printSide: '1',
+        colorCategory: '黑白',
+        printPurpose: '',
         paperType: defaultPaperType,
         paperGoodsId: defaultGoodsId,
         printCount: 1,
@@ -1238,6 +1240,8 @@ const PrintRecordPage: React.FC = () => {
         form.resetFields();
         form.setFieldsValue({
           printSide: '1',
+          colorCategory: '黑白',
+          printPurpose: '',
           paperType: defaultPaperType,
           paperGoodsId: defaultGoodsId,
           printCount: 1,
@@ -1370,6 +1374,8 @@ const PrintRecordPage: React.FC = () => {
     const values:Record<string,unknown> = task.taskId && taskDraftsRef.current.get(task.taskId) || {
       printName: task.printName, teacherId: task.teacherId, teacherName: task.teacherName,
       grade: task.grade, classId: task.classId, className: task.className,
+      colorCategory: task.colorCategory || '黑白',
+      printPurpose: task.printPurpose || task.purpose || '',
       printCount: task.printCount ?? undefined, ...computed,
       paperGoodsId: task.paperGoodsId || findGoodsByPaperType(computed.paperType,paperGoodsList), remark: task.remark, attachment: task.attachment,
       resultImg: task.resultImg, splitAnswer: false,
@@ -1971,6 +1977,8 @@ const PrintRecordPage: React.FC = () => {
       printCount: record.printCount,
       pageCount: record.pageCount,
       printSide: record.printSide,
+      colorCategory: record.colorCategory || '黑白',
+      printPurpose: record.printPurpose || record.purpose || '',
       teacherId: record.teacherId,
       grade: record.grade,
       classId: record.classId,
@@ -2453,6 +2461,24 @@ const PrintRecordPage: React.FC = () => {
       ),
     },
     {
+      title: renderSortHeader('颜色类别', 'colorCategory', '颜色类别', 'r.color_category', 'ascend', 'center'),
+      dataIndex: 'colorCategory',
+      width: 95,
+      align: 'center',
+      valueEnum: {
+        黑白: { text: '黑白' },
+        彩色: { text: '彩色' },
+      },
+      render: (_, record) => {
+        const isColor = record.colorCategory === '彩色' || record.colorCategory === '2';
+        return (
+          <Tag color={isColor ? 'magenta' : 'default'} style={{ margin: 0, fontWeight: 500 }}>
+            {isColor ? '彩色' : '黑白'}
+          </Tag>
+        );
+      },
+    },
+    {
       title: renderSortHeader('总耗纸量', 'totalPages', '总耗纸量', 'r.total_pages', 'descend', 'center'),
       dataIndex: 'totalPages',
       width: 125,
@@ -2538,6 +2564,21 @@ const PrintRecordPage: React.FC = () => {
       width: 100,
       align: 'center',
       render: (_, record) => record.className || '-',
+    },
+    {
+      title: '用途',
+      dataIndex: 'printPurpose',
+      width: 140,
+      ellipsis: true,
+      render: (_, record) => {
+        const p: string = record.printPurpose || record.purpose || '';
+        if (!p) return <Text type="secondary">-</Text>;
+        return (
+          <Tooltip title={p} placement="topLeft">
+            <span style={{ cursor: 'pointer' }}>{p}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: renderSortHeader('印刷时间', 'printTime', '印刷时间', 'r.print_time', 'descend', 'center'),
@@ -3096,9 +3137,9 @@ const PrintRecordPage: React.FC = () => {
                 </Col>
               </Row>
 
-              {/* 第 2 行：印刷份数 (8) + 每份页数 (8) + 印刷方式 (8) */}
+              {/* 第 2 行：印刷份数 (6) + 每份页数 (6) + 印刷方式 (6) + 颜色类别 (6) */}
               <Row gutter={12}>
-                <Col span={8}>
+                <Col span={6}>
                   <Form.Item
                     name="printCount"
                     label={<span style={{ fontWeight: 600 }}>印刷份数</span>}
@@ -3129,7 +3170,7 @@ const PrintRecordPage: React.FC = () => {
                     <InputNumber min={1} max={50000} style={{ width: '100%' }} addonAfter="份" />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col span={6}>
                   <Form.Item
                     name="pageCount"
                     label={<span style={{ fontWeight: 600 }}>每份页数</span>}
@@ -3164,11 +3205,25 @@ const PrintRecordPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col span={6}>
                   <Form.Item name="printSide" label={<span style={{ fontWeight: 600 }}>印刷方式</span>} rules={[{ required: true }]} style={{ marginBottom: 6 }}>
                     <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
                       <Radio.Button value="1" style={{ flex: 1, textAlign: 'center' }}>单面印</Radio.Button>
                       <Radio.Button value="2" style={{ flex: 1, textAlign: 'center' }}>双面印</Radio.Button>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item
+                    name="colorCategory"
+                    label={<span style={{ fontWeight: 600 }}>颜色类别</span>}
+                    rules={[{ required: true, message: '请选择颜色类别' }]}
+                    initialValue="黑白"
+                    style={{ marginBottom: 6 }}
+                  >
+                    <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
+                      <Radio.Button value="黑白" style={{ flex: 1, textAlign: 'center' }}>黑白</Radio.Button>
+                      <Radio.Button value="彩色" style={{ flex: 1, textAlign: 'center' }}>彩色</Radio.Button>
                     </Radio.Group>
                   </Form.Item>
                 </Col>
@@ -3315,7 +3370,12 @@ const PrintRecordPage: React.FC = () => {
                   <Form.Item name="grade" hidden>
                     <Input />
                   </Form.Item>
-                  <Form.Item name="classId" label={<span style={{ fontWeight: 600 }}>关联班级</span>} style={{ marginBottom: 6 }}>
+                  <Form.Item
+                    name="classId"
+                    label={<span style={{ fontWeight: 600 }}>关联班级</span>}
+                    rules={[{ required: true, message: '请选择关联班级' }]}
+                    style={{ marginBottom: 6 }}
+                  >
                     <Select
                       placeholder="选择班级"
                       allowClear
@@ -3352,7 +3412,45 @@ const PrintRecordPage: React.FC = () => {
                 </Col>
               </Row>
 
-              {/* 第 5 行：原稿电子附件 (12) + 印刷成品留样 (12) 宽敞并排，各占一半 */}
+              {/* 第 5 行：文印用途（根据份数动态必填：<=20份必填，>20份选填，上限300字） */}
+              <Row gutter={10}>
+                <Col span={24}>
+                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.printCount !== cur.printCount}>
+                    {({ getFieldValue }) => {
+                      const count = Number(getFieldValue('printCount') || 0);
+                      const isPurposeRequired = count <= 20;
+                      return (
+                        <Form.Item
+                          name="printPurpose"
+                          label={
+                            <Space size={4}>
+                              <span style={{ fontWeight: 600 }}>文印用途</span>
+                              <Typography.Text type={isPurposeRequired ? "danger" : "secondary"} style={{ fontSize: 12 }}>
+                                {isPurposeRequired ? '（20份及以下必填）' : '（20份以上选填）'}
+                              </Typography.Text>
+                            </Space>
+                          }
+                          rules={[
+                            { required: isPurposeRequired, message: '印刷份数在20份及以下时，文印用途为必填项' },
+                            { max: 300, message: '用途描述不能超过300字' },
+                          ]}
+                          style={{ marginBottom: 6 }}
+                        >
+                          <Input.TextArea
+                            rows={2}
+                            maxLength={300}
+                            showCount
+                            placeholder="请输入文印用途说明（如：教学测试卷、班级周报、课后作业等，不超过300字）"
+                            allowClear
+                          />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* 第 6 行：原稿电子附件 (12) + 印刷成品留样 (12) 宽敞并排，各占一半 */}
               <Row gutter={12}>
                 <Col span={12}>
                   <Form.Item
@@ -4203,7 +4301,7 @@ const PrintRecordPage: React.FC = () => {
           </Row>
 
           <Row gutter={10}>
-            <Col span={14}>
+            <Col span={10}>
               <Form.Item
                 name="paperGoodsId"
                 label="用纸物品（联动出库）"
@@ -4221,7 +4319,21 @@ const PrintRecordPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col span={6}>
+              <Form.Item
+                name="colorCategory"
+                label="颜色类别"
+                rules={[{ required: true, message: '请选择颜色类别' }]}
+                initialValue="黑白"
+                style={{ marginBottom: 10 }}
+              >
+                <Radio.Group buttonStyle="solid" style={{ width: '100%', display: 'flex' }}>
+                  <Radio.Button value="黑白" style={{ flex: 1, textAlign: 'center' }}>黑白</Radio.Button>
+                  <Radio.Button value="彩色" style={{ flex: 1, textAlign: 'center' }}>彩色</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
               <Form.Item name="teacherId" label="申请教师" style={{ marginBottom: 10 }}>
                 <Select
                   placeholder="选择教师"
@@ -4238,8 +4350,50 @@ const PrintRecordPage: React.FC = () => {
           </Row>
 
           <Row gutter={10}>
+            <Col span={24}>
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.printCount !== cur.printCount}>
+                {({ getFieldValue }) => {
+                  const count = Number(getFieldValue('printCount') || 0);
+                  const isPurposeRequired = count <= 20;
+                  return (
+                    <Form.Item
+                      name="printPurpose"
+                      label={
+                        <Space size={4}>
+                          <span>文印用途</span>
+                          <Typography.Text type={isPurposeRequired ? "danger" : "secondary"} style={{ fontSize: 12 }}>
+                            {isPurposeRequired ? '（20份及以下必填）' : '（20份以上选填）'}
+                          </Typography.Text>
+                        </Space>
+                      }
+                      rules={[
+                        { required: isPurposeRequired, message: '印刷份数在20份及以下时，文印用途为必填项' },
+                        { max: 300, message: '用途描述不能超过300字' },
+                      ]}
+                      style={{ marginBottom: 10 }}
+                    >
+                      <Input.TextArea
+                        rows={2}
+                        maxLength={300}
+                        showCount
+                        placeholder="请输入文印用途说明（如：教学测试卷、班级周报等，不超过300字）"
+                        allowClear
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={10}>
             <Col span={6}>
-              <Form.Item name="classId" label="班级" style={{ marginBottom: 8 }}>
+              <Form.Item
+                name="classId"
+                label="班级"
+                rules={[{ required: true, message: '请选择班级' }]}
+                style={{ marginBottom: 8 }}
+              >
                 <Select
                   placeholder="选择班级"
                   showSearch
@@ -4359,10 +4513,15 @@ const PrintRecordPage: React.FC = () => {
             <Descriptions.Item label="年级/班级">
               {currentRecord.grade || ''} {currentRecord.className || ''}
             </Descriptions.Item>
-            <Descriptions.Item label="印刷用纸">{currentRecord.paperType || 'A4'}</Descriptions.Item>
+            <Descriptions.Item label="颜色类别">
+              <Tag color={currentRecord.colorCategory === '彩色' ? 'magenta' : 'default'}>
+                {currentRecord.colorCategory || '黑白'}
+              </Tag>
+            </Descriptions.Item>
             <Descriptions.Item label="单双面">
               {currentRecord.printSide === '2' ? '双面' : '单面'}
             </Descriptions.Item>
+            <Descriptions.Item label="印刷用纸">{currentRecord.paperType || 'A4'}</Descriptions.Item>
             <Descriptions.Item label="印刷份数">{currentRecord.printCount} 份</Descriptions.Item>
             <Descriptions.Item label="每份页数">{currentRecord.pageCount || 1} 页</Descriptions.Item>
             <Descriptions.Item label="模板用纸">
@@ -4401,6 +4560,9 @@ const PrintRecordPage: React.FC = () => {
               ) : (
                 <Text type="secondary">未生成出库单</Text>
               )}
+            </Descriptions.Item>
+            <Descriptions.Item label="文印用途" span={2}>
+              {currentRecord.printPurpose || currentRecord.purpose || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="原稿附件" span={2}>
               {currentRecord.attachment ? (

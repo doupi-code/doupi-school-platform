@@ -115,6 +115,11 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
         // 保存时校验重复来源（防止两个页面并发或先后保存同一条聊天消息候选，绕过“选择重印”确认并重复扣库存）
         assertSourceNotDuplicate(eduPrintRecord, currentBatchPrintIds);
 
+        if (StringUtils.isEmpty(eduPrintRecord.getColorCategory()))
+        {
+            eduPrintRecord.setColorCategory("黑白");
+        }
+
         if (eduPrintRecord.getPaperGoodsId() == null && StringUtils.isNotEmpty(eduPrintRecord.getPaperType()))
         {
             StockGoods query = new StockGoods();
@@ -476,6 +481,11 @@ public class EduPrintRecordServiceImpl implements IEduPrintRecordService
         long savedExtraSheets = savedTemplatePaper + savedPreviewPaper;
         eduPrintRecord.setTemplatePaperCount(savedTemplatePaper);
         eduPrintRecord.setPreviewPaperCount(savedPreviewPaper);
+
+        if (StringUtils.isEmpty(eduPrintRecord.getColorCategory()) && old != null)
+        {
+            eduPrintRecord.setColorCategory(old.getColorCategory());
+        }
 
         // 只有待印刷状态下的编辑才允许修改库存相关字段；完成印刷(status='1')或已作废(status='2')不再次扣纸或碰库存
         boolean isCompletingOrCancelling = "1".equals(eduPrintRecord.getStatus()) || "2".equals(eduPrintRecord.getStatus());

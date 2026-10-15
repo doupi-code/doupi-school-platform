@@ -44,6 +44,14 @@ public class EduPrintRecord extends BaseEntity
     @Excel(name = "印刷方式", readConverterExp = "1=单页印刷,2=双页印刷")
     private String printSide;
 
+    /** 颜色类别（黑白 / 彩色） */
+    @Excel(name = "颜色类别")
+    private String colorCategory;
+
+    /** 用途 */
+    @Excel(name = "用途")
+    private String printPurpose;
+
     /** 模板用纸张数（新规则固定1张，历史记录为0表示旧规则未计入） */
     @Excel(name = "模板用纸(张)")
     private Long templatePaperCount;
@@ -422,6 +430,38 @@ public class EduPrintRecord extends BaseEntity
         this.className = className;
     }
 
+    public String getColorCategory() {
+        return colorCategory != null ? colorCategory : "黑白";
+    }
+
+    public void setColorCategory(String colorCategory) {
+        if ("1".equals(colorCategory)) {
+            this.colorCategory = "黑白";
+        } else if ("2".equals(colorCategory)) {
+            this.colorCategory = "彩色";
+        } else {
+            this.colorCategory = colorCategory;
+        }
+    }
+
+    public String getPrintPurpose() {
+        return printPurpose;
+    }
+
+    public void setPrintPurpose(String printPurpose) {
+        this.printPurpose = printPurpose;
+    }
+
+    public String getPurpose() {
+        return printPurpose;
+    }
+
+    public void setPurpose(String purpose) {
+        if (this.printPurpose == null || this.printPurpose.isEmpty()) {
+            this.printPurpose = purpose;
+        }
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -432,6 +472,8 @@ public class EduPrintRecord extends BaseEntity
             .append("printCount", getPrintCount())
             .append("pageCount", getPageCount())
             .append("printSide", getPrintSide())
+            .append("colorCategory", getColorCategory())
+            .append("printPurpose", getPrintPurpose())
             .append("templatePaperCount", getTemplatePaperCount())
             .append("previewPaperCount", getPreviewPaperCount())
             .append("totalPages", getTotalPages())
