@@ -64,7 +64,7 @@ export function RouteErrorBoundary() {
           重新加载
         </button>
         <Link
-          to="/"
+          to="/index"
           style={{
             padding: "9px 20px",
             background: "#f1f5f9",

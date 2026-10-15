@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@ant-design/pro-components';
-import { getClientBaseUrl } from '@/utils/env';
+import { getClientBaseUrl, getClientPageUrl } from '@/utils/env';
 import {
   Card,
   Row,
@@ -413,7 +413,7 @@ const PageBuilderPage: React.FC = () => {
           <Button
             key="preview-web"
             icon={<GlobalOutlined />}
-            onClick={() => window.open(`${getClientBaseUrl()}${currentSlug}`, '_blank')}
+            onClick={() => window.open(getClientPageUrl(currentSlug), '_blank')}
           >
             新窗口打开官网
           </Button>,
@@ -487,7 +487,7 @@ const PageBuilderPage: React.FC = () => {
                     <Button
                       size="small"
                       icon={<GlobalOutlined />}
-                      onClick={() => window.open(`${getClientBaseUrl()}${r.pageSlug}`, '_blank')}
+                      onClick={() => window.open(getClientPageUrl(r.pageSlug), '_blank')}
                     >
                       访问
                     </Button>
@@ -918,7 +918,7 @@ const PageBuilderPage: React.FC = () => {
                     icon={<ReloadOutlined />}
                     onClick={() => {
                       if (iframeRef.current) {
-                        iframeRef.current.src = `${getClientBaseUrl()}${currentSlug}?preview=true&t=${Date.now()}`;
+                        iframeRef.current.src = `${getClientPageUrl(currentSlug)}?preview=true&t=${Date.now()}`;
                       }
                     }}
                   >
@@ -948,7 +948,8 @@ const PageBuilderPage: React.FC = () => {
                 >
                   <iframe
                     ref={iframeRef}
-                    src={`${getClientBaseUrl()}${currentSlug}?preview=true`}
+                    key={currentSlug}
+                    src={`${getClientPageUrl(currentSlug)}?preview=true`}
                     style={{
                       width: '100%',
                       height: '100%',

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@ant-design/pro-components';
-import { getClientBaseUrl } from '@/utils/env';
+import { getClientBaseUrl, getClientPageUrl } from '@/utils/env';
 import {
   Card,
   Row,
@@ -37,7 +37,7 @@ const DEFAULT_HEADER = {
     mark: '华',
   },
   nav: [
-    { title: '首页', slug: '', path: '/' },
+    { title: '首页', slug: '', path: '/index' },
     {
       title: '关于华襄',
       slug: 'about',
@@ -259,7 +259,7 @@ const GlobalLayoutPage: React.FC = () => {
           <Button
             key="preview-btn"
             icon={<GlobalOutlined />}
-            onClick={() => window.open(getClientBaseUrl(), '_blank')}
+            onClick={() => window.open(getClientPageUrl('/'), '_blank')}
           >
             新窗口打开官网
           </Button>,
@@ -491,7 +491,7 @@ const GlobalLayoutPage: React.FC = () => {
                 icon={<ReloadOutlined />}
                 onClick={() => {
                   if (iframeRef.current) {
-                    iframeRef.current.src = `${getClientBaseUrl()}/?preview=true&t=${Date.now()}`;
+                    iframeRef.current.src = `${getClientPageUrl('/')}?preview=true&t=${Date.now()}`;
                   }
                 }}
               >
@@ -521,7 +521,7 @@ const GlobalLayoutPage: React.FC = () => {
             >
               <iframe
                 ref={iframeRef}
-                src={`${getClientBaseUrl()}/?preview=true`}
+                src={`${getClientPageUrl('/')}?preview=true`}
                 style={{
                   width: '100%',
                   height: '100%',

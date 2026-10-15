@@ -11,7 +11,7 @@ const PHONE = "027-81777887";
 export function Crumbs({ items }: { items: { t: string; to?: string }[] }) {
   return (
     <div className="crumb crumbs">
-      <Link to="/">首页</Link>
+      <Link to="/index">首页</Link>
       {items.map((i) => (
         <span key={i.t}>
           <span> / </span>

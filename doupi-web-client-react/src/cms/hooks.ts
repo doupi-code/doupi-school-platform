@@ -396,7 +396,8 @@ export function usePageRender(slug: string = "/"): {
       try {
         if (event.data && event.data.type === "CMS_PAGE_PREVIEW_UPDATE") {
           const { pageSlug: targetSlug, sections: draftSections } = event.data.payload || {};
-          if (!targetSlug || targetSlug === slug) {
+          const norm = (s?: string) => (!s || s === "/" || s === "/index" || s === "/index.html" ? "/" : s.startsWith("/") ? s : `/${s}`);
+          if (!targetSlug || norm(targetSlug) === norm(slug)) {
             if (Array.isArray(draftSections)) {
               setSections(
                 draftSections.map((s: any) => {

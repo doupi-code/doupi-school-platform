@@ -54,7 +54,7 @@ export default function Appointment() {
           }
           extra={[
             <Button type="primary" key="query" href="/query">去查询</Button>,
-            <Button key="home" href="/">返回首页</Button>,
+            <Button key="home" href="/index">返回首页</Button>,
           ]}
         />
       </div>

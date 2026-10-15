@@ -12,7 +12,7 @@ export default function NotFound() {
       </h1>
       <p>你要找的页面可能已调整位置或正在建设中。</p>
       <div className="hero-actions">
-        <Link className="primary-btn" to="/">
+        <Link className="primary-btn" to="/index">
           返回首页 <Arrow />
         </Link>
         <Link className="line-link" to="/admissions/consultation">

@@ -212,6 +212,10 @@ public class CmsPageBuilderServiceImpl implements ICmsPageBuilderService
         {
             pageSlug = "/" + pageSlug;
         }
+        if ("/index".equals(pageSlug) || "/index.html".equals(pageSlug))
+        {
+            pageSlug = "/";
+        }
 
         String cacheKey = CACHE_RENDER_PREFIX + pageSlug;
         Map<String, Object> cached = redisCache.getCacheObject(cacheKey);
@@ -248,6 +252,12 @@ public class CmsPageBuilderServiceImpl implements ICmsPageBuilderService
         if (pageSlug == null) return;
         if (!pageSlug.startsWith("/")) pageSlug = "/" + pageSlug;
         redisCache.deleteObject(CACHE_RENDER_PREFIX + pageSlug);
+        if ("/".equals(pageSlug) || "/index".equals(pageSlug) || "/index.html".equals(pageSlug))
+        {
+            redisCache.deleteObject(CACHE_RENDER_PREFIX + "/");
+            redisCache.deleteObject(CACHE_RENDER_PREFIX + "/index");
+            redisCache.deleteObject(CACHE_RENDER_PREFIX + "/index.html");
+        }
     }
 
     private void evictPageCacheByPageId(Long pageId)

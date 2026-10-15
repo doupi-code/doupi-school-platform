@@ -15,3 +15,13 @@ export const getClientBaseUrl = (): string => {
   }
   return '';
 };
+
+/**
+ * 获取 Web 用户门户（官网客户端）具体页面完整访问/预览 URL
+ * 注意：根路径 '/' 对应 Client 首页访问地址为 '/index'（因为不带 index 的根路径为个人作品集）
+ */
+export const getClientPageUrl = (slug: string = '/'): string => {
+  const base = getClientBaseUrl();
+  const cleanSlug = !slug || slug === '/' ? '/index' : slug.startsWith('/') ? slug : `/${slug}`;
+  return `${base}${cleanSlug}`;
+};

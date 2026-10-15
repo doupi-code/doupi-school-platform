@@ -140,7 +140,7 @@ export function SiteLayout() {
       )}
 
       <header className="site-head">
-        <Link className="brand" to="/">
+        <Link className="brand" to="/index">
           <span className="brand-mark">{brandMark}</span>
           <span>
             <b>{siteName}</b>
@@ -149,7 +149,7 @@ export function SiteLayout() {
         </Link>
 
         <nav className="main-nav">
-          <NavLink end to="/">
+          <NavLink end to="/index">
             首页
           </NavLink>
           {navList.map((n: any) => (

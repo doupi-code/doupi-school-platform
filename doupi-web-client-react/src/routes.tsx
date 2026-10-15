@@ -10,6 +10,8 @@ export const router = createBrowserRouter([
     ErrorBoundary: RouteErrorBoundary,
     children: [
       { index: true, Component: Home },
+      { path: "index", Component: Home },
+      { path: "index.html", Component: Home },
       { path: ":section", Component: SectionPage },
       { path: ":section/:page/:id", Component: ThirdLevel },
       { path: ":section/:page", Component: DetailPage },
