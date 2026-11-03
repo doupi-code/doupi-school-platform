@@ -1,6 +1,6 @@
 {
   "miniprogramRoot": "./",
-  "projectname": "doupi-miniApp",
+  "projectname": "SchoolRecruitBooking",
   "setting": {
     "urlCheck": true,
     "es6": true,
@@ -50,7 +50,6 @@
     "disableSWC": true
   },
   "appid": "wx1729c5f3cd6c0891",
-  "projectname": "SchoolRecruitBooking",
   "libVersion": "3.15.0",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "cloudbaseUid": null,

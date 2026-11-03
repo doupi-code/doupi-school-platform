@@ -27,6 +27,8 @@ import {
   SendOutlined,
 } from '@ant-design/icons';
 import { getGlobalConfig, saveGlobalConfig } from '@/api/cms/builder';
+import { DEFAULT_SITE_FILINGS, SITE_FILINGS_UPDATED } from '@/utils/siteFilings';
+import FilingFields from './FilingFields';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -121,7 +123,7 @@ const DEFAULT_FOOTER = {
     officeHours: '周一至周日 8:30 — 17:30',
   },
   copyright: '© 2026 汉外华襄复读中心 · 版权所有',
-  icp: '鄂ICP备2026055716号-1',
+  ...DEFAULT_SITE_FILINGS,
 };
 
 const GlobalLayoutPage: React.FC = () => {
@@ -171,7 +173,8 @@ const GlobalLayoutPage: React.FC = () => {
 
       const fRes: any = await getGlobalConfig('footer');
       if (fRes && fRes.data && fRes.data.configContent) {
-        const parsed = typeof fRes.data.configContent === 'string' ? JSON.parse(fRes.data.configContent) : fRes.data.configContent;
+        const content = typeof fRes.data.configContent === 'string' ? JSON.parse(fRes.data.configContent) : fRes.data.configContent;
+        const parsed = { ...DEFAULT_SITE_FILINGS, ...content };
         setFooterData(parsed);
         footerForm.setFieldsValue({
           ctaTitle: parsed.cta?.title,
@@ -182,6 +185,9 @@ const GlobalLayoutPage: React.FC = () => {
           admissionsLine: parsed.brand?.admissionsLine,
           officeHours: parsed.brand?.officeHours,
           icp: parsed.icp,
+          icpUrl: parsed.icpUrl,
+          policeBeian: parsed.policeBeian,
+          policeBeianUrl: parsed.policeBeianUrl,
           copyright: parsed.copyright,
         });
       } else {
@@ -194,6 +200,9 @@ const GlobalLayoutPage: React.FC = () => {
           admissionsLine: DEFAULT_FOOTER.brand.admissionsLine,
           officeHours: DEFAULT_FOOTER.brand.officeHours,
           icp: DEFAULT_FOOTER.icp,
+          icpUrl: DEFAULT_FOOTER.icpUrl,
+          policeBeian: DEFAULT_FOOTER.policeBeian,
+          policeBeianUrl: DEFAULT_FOOTER.policeBeianUrl,
           copyright: DEFAULT_FOOTER.copyright,
         });
       }
@@ -225,6 +234,12 @@ const GlobalLayoutPage: React.FC = () => {
 
   // 保存 Footer
   const handleSaveFooter = async () => {
+    try {
+      await footerForm.validateFields();
+    } catch {
+      message.error('请检查备案号和备案查询链接');
+      return;
+    }
     setSaving(true);
     try {
       await saveGlobalConfig({
@@ -232,6 +247,7 @@ const GlobalLayoutPage: React.FC = () => {
         configContent: JSON.stringify(footerData),
         remark: '官网全站底部页脚与联系信息配置',
       });
+      window.dispatchEvent(new CustomEvent(SITE_FILINGS_UPDATED, { detail: footerData }));
       message.success('全站底部页脚配置已成功保存并同步！');
     } catch (e: any) {
       message.error(e.message || '保存失败');
@@ -399,6 +415,9 @@ const GlobalLayoutPage: React.FC = () => {
                               officeHours: all.officeHours ?? footerData.brand?.officeHours,
                             },
                             icp: all.icp ?? footerData.icp,
+                            icpUrl: all.icpUrl ?? footerData.icpUrl,
+                            policeBeian: all.policeBeian ?? footerData.policeBeian,
+                            policeBeianUrl: all.policeBeianUrl ?? footerData.policeBeianUrl,
                             copyright: all.copyright ?? footerData.copyright,
                           };
                           setFooterData(next);
@@ -440,12 +459,9 @@ const GlobalLayoutPage: React.FC = () => {
                               <Input />
                             </Form.Item>
                           </Col>
-                          <Col span={12}>
-                            <Form.Item name="icp" label="工信部 ICP 备案号">
-                              <Input />
-                            </Form.Item>
-                          </Col>
                         </Row>
+                        <Divider />
+                        <FilingFields />
                         <Form.Item name="copyright" label="全站版权声明">
                           <Input />
                         </Form.Item>

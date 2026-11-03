@@ -389,21 +389,23 @@ const StockInPage: React.FC = () => {
               </Button>
             </Popconfirm>
           )}
-          <Authorized key="del" permission="stock:in:remove">
-            <Popconfirm
-              key="del"
-              title="确认彻底删除该入库单？"
-              onConfirm={async () => {
-                await delIn(record.inId);
-                message.success('删除成功');
-                actionRef.current?.reload();
-              }}
-            >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
-          </Authorized>
+          {record.status !== '0' && (
+            <Authorized key="del" permission="stock:in:remove">
+              <Popconfirm
+                key="del"
+                title={record.status === '2' ? '确认删除该已作废入库单？' : '确认删除该入库单？对应入库数量将自动扣减回退！'}
+                onConfirm={async () => {
+                  await delIn(record.inId);
+                  message.success(record.status === '2' ? '删除成功' : '入库单已删除，对应入库数量已自动扣减回退');
+                  actionRef.current?.reload();
+                }}
+              >
+                <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                  删除
+                </Button>
+              </Popconfirm>
+            </Authorized>
+          )}
         </Space>
       ),
     },

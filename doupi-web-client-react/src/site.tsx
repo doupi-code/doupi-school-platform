@@ -269,6 +269,9 @@ function SiteFooter({
   const address = brand?.address || config.address || "武汉市江夏区武汉海淀外国语实验学校（北门）";
   const admissionsLine = brand?.admissionsLine || config.admissionsLine || "400-0000-000";
   const icp = footerConfig?.icp || config.icp || "鄂ICP备2026055716号-1";
+  const icpUrl = footerConfig?.icpUrl ?? "https://beian.miit.gov.cn/";
+  const policeBeian = footerConfig?.policeBeian ?? "鄂公网安备42011102006651号";
+  const policeBeianUrl = footerConfig?.policeBeianUrl ?? "https://beian.mps.gov.cn/#/query/webSearch?code=42011102006651";
   const copyright = footerConfig?.copyright || `© 2026 ${siteName} · 版权所有`;
 
   return (
@@ -370,10 +373,12 @@ function SiteFooter({
           {(siteNameEn || "HUAXIANG").split(" ")[0]}
         </span>
         <span className="hx-foot-filings">
-          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icp}</a>
+          <a href={/^https?:\/\//i.test(icpUrl) ? icpUrl : undefined} target="_blank" rel="noopener noreferrer">{icp}</a>
           <i aria-hidden="true" />
-          {/* 公安备案号：审核中（审核通过后替换为真实号码并补链接） */}
-          <span>公安备案号：审核中</span>
+          <a href={/^https?:\/\//i.test(policeBeianUrl) ? policeBeianUrl : undefined} target="_blank" rel="noopener noreferrer">
+            <img src={`${import.meta.env.BASE_URL}images/police-beian.png`} alt="" width={18} height={20} />
+            {policeBeian}
+          </a>
         </span>
       </div>
     </footer>

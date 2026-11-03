@@ -58,6 +58,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where i.in_id = #{inId}
     </select>
 
+    <select id="selectEduStockInByInIdForUpdate" parameterType="Long" resultMap="StockInResult">
+        select * from edu_stock_in
+        where in_id = #{inId} and del_flag = '0'
+        for update
+    </select>
+
     <select id="selectMaxInNo" parameterType="String" resultType="String">
         select max(in_no) from edu_stock_in where in_no like concat(#{prefix}, '%')
     </select>

@@ -187,7 +187,7 @@ public class StockInServiceImpl implements IStockInService
     @Transactional(rollbackFor = Exception.class)
     public int cancelEduStockIn(Long inId)
     {
-        StockIn stockIn = stockInMapper.selectEduStockInByInId(inId);
+        StockIn stockIn = stockInMapper.selectEduStockInByInIdForUpdate(inId);
         if (stockIn == null)
         {
             throw new ServiceException("入库单不存在！");
@@ -230,26 +230,45 @@ public class StockInServiceImpl implements IStockInService
     }
 
     /**
-     * 批量删除入库单
+     * 批量删除入库单（事务内先回退正常单据的库存，再逻辑删除）
      * 
      * @param inIds 需要删除的入库单主键
      * @return 结果
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteEduStockInByInIds(Long[] inIds)
     {
-        return stockInMapper.deleteEduStockInByInIds(inIds);
+        int rows = 0;
+        if (inIds != null)
+        {
+            for (Long inId : inIds)
+            {
+                rows += deleteEduStockInByInId(inId);
+            }
+        }
+        return rows;
     }
 
     /**
-     * 删除入库单信息
+     * 删除入库单信息（已作废单据不重复扣减，保留原始明细供追溯）
      * 
      * @param inId 入库单主键
      * @return 结果
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteEduStockInByInId(Long inId)
     {
+        StockIn stockIn = stockInMapper.selectEduStockInByInIdForUpdate(inId);
+        if (stockIn == null)
+        {
+            return 0;
+        }
+        if (!"2".equals(stockIn.getStatus()))
+        {
+            cancelEduStockIn(inId);
+        }
         return stockInMapper.deleteEduStockInByInId(inId);
     }
 

@@ -19,6 +19,9 @@ public interface StockInMapper
      */
     public StockIn selectEduStockInByInId(Long inId);
 
+    /** 查询未删除入库单并锁定，防止并发作废或删除重复回退库存。 */
+    public StockIn selectEduStockInByInIdForUpdate(Long inId);
+
     /**
      * 查询入库单列表
      * 
