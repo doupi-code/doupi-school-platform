@@ -5,6 +5,7 @@ Page({
   data: {
     version: 'v1.0.0',
     showProfileEditModal: false,
+    externalSession: false,
     userInfo: {
       nickname: '用户',
       phone: ''
@@ -31,6 +32,13 @@ Page({
 
   async loadProfile() {
     try {
+      const cached = this._getCachedUserInfo();
+      const externalSession = /^[1-9]\d*$/.test(String(cached.identityId));
+      this.setData({ externalSession });
+      if (externalSession) {
+        this.applyUserInfo(cached);
+        return;
+      }
       if (!auth.isLoggedIn()) {
         const cached = this._getCachedUserInfo();
         this.applyUserInfo(cached);
@@ -57,7 +65,7 @@ Page({
   },
 
   goToEdit() {
-    if (!auth.isLoggedIn()) return;
+    if (!auth.isLoggedIn() || this.data.externalSession) return;
     this.setData({ showProfileEditModal: true });
   },
 

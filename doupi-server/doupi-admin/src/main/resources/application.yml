@@ -35,6 +35,7 @@ server:
 logging:
   level:
     com.doupi: debug
+    com.doupi.recruit.mapper.MiniIdentityMapper: WARN
     org.springframework: warn
 
 # 用户配置
@@ -101,14 +102,20 @@ token:
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
-# MyBatis配置
-mybatis:
+# MyBatis-Plus配置
+mybatis-plus:
   # 搜索指定包别名
-  typeAliasesPackage: com.doupi.**.domain
+  type-aliases-package: com.doupi.**.domain
   # 配置mapper的扫描，找到所有的mapper.xml映射文件
-  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
   # 加载全局的配置文件
-  configLocation: classpath:mybatis/mybatis-config.xml
+  config-location: classpath:mybatis/mybatis-config.xml
+
+plan:
+  wechat:
+    app-id: ${PLAN_WECHAT_APP_ID:}
+    secret: ${PLAN_WECHAT_SECRET:}
+    trusted-proxies: ${PLAN_WECHAT_TRUSTED_PROXIES:}
 
 # PageHelper分页插件
 pagehelper:

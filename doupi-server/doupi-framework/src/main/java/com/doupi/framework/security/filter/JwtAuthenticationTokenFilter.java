@@ -39,7 +39,12 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter
         try
         {
             loginUser = tokenService.getLoginUser(request);
-            if (loginUser != null && SecurityUtils.getAuthentication() == null)
+            if (loginUser != null && loginUser.getExternalIdentityId() != null
+                    && !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"))
+            {
+                loginUser = null;
+            }
+            if (loginUser != null && loginUser.getExternalIdentityId() == null && SecurityUtils.getAuthentication() == null)
             {
                 tokenService.verifyToken(loginUser);
             }

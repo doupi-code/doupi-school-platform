@@ -5,11 +5,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import javax.sql.DataSource;
-import org.apache.ibatis.io.VFS;
+import com.baomidou.mybatisplus.autoconfigure.SpringBootVFS;
+import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
+import com.github.pagehelper.PageInterceptor;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.SqlSessionFactoryBean;
-import org.mybatis.spring.boot.autoconfigure.SpringBootVFS;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -116,17 +117,29 @@ public class MyBatisConfig
     @Bean
     public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception
     {
-        String typeAliasesPackage = env.getProperty("mybatis.typeAliasesPackage");
-        String mapperLocations = env.getProperty("mybatis.mapperLocations");
-        String configLocation = env.getProperty("mybatis.configLocation");
+        String typeAliasesPackage = env.getRequiredProperty("mybatis-plus.type-aliases-package");
+        String mapperLocations = env.getRequiredProperty("mybatis-plus.mapper-locations");
+        String configLocation = env.getRequiredProperty("mybatis-plus.config-location");
         typeAliasesPackage = setTypeAliasesPackage(typeAliasesPackage);
-        VFS.addImplClass(SpringBootVFS.class);
 
-        final SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
+        final MybatisSqlSessionFactoryBean sessionFactory = new MybatisSqlSessionFactoryBean();
         sessionFactory.setDataSource(dataSource);
+        sessionFactory.setVfs(SpringBootVFS.class);
         sessionFactory.setTypeAliasesPackage(typeAliasesPackage);
         sessionFactory.setMapperLocations(resolveMapperLocations(StringUtils.split(mapperLocations, ",")));
         sessionFactory.setConfigLocation(new DefaultResourceLoader().getResource(configLocation));
+        sessionFactory.setPlugins(pageInterceptor());
         return sessionFactory.getObject();
+    }
+
+    private PageInterceptor pageInterceptor()
+    {
+        Properties properties = new Properties();
+        properties.setProperty("helperDialect", env.getProperty("pagehelper.helperDialect", "mysql"));
+        properties.setProperty("supportMethodsArguments", env.getProperty("pagehelper.supportMethodsArguments", "true"));
+        properties.setProperty("params", env.getProperty("pagehelper.params", "count=countSql"));
+        PageInterceptor interceptor = new PageInterceptor();
+        interceptor.setProperties(properties);
+        return interceptor;
     }
 }

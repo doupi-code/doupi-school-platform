@@ -5,6 +5,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Radio, Tag, Space } fr
 
 import { PlusOutlined, DeleteOutlined, EditOutlined, QrcodeOutlined } from '@ant-design/icons';
 import Authorized from '@/components/Authorized';
+import EmployeeBindingReview from './EmployeeBindingReview';
 import {
   listTeacherBinding,
   getTeacherBinding,
@@ -139,6 +140,9 @@ const BindingPage: React.FC = () => {
 
   return (
     <PageContainer header={{ title: '教师微信绑定与招生码' }}>
+      <Authorized permission="identity:binding:approve">
+        <EmployeeBindingReview />
+      </Authorized>
       <ProTable
         actionRef={actionRef}
         columns={columns}

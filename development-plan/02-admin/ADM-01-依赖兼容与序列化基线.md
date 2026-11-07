@@ -8,9 +8,9 @@
 
 优先级：P0；工期：3个单人工作日；依赖：MINI-06。按1名Java开发+AI辅助估算，工期包括页面、接口、自测和联调。
 
-包含现有后端/管理端工程依赖兼容、统一响应、认证入口、异常日志与API前缀。保留Java17/Boot4/MyBatis4和React19/TS6/Vite8/AntD6；不重写框架，不引入微服务或Docker集群。
+包含现有后端/管理端工程依赖兼容、统一响应、认证入口、异常日志与API前缀。沿用 Java17、Boot4、MyBatis-Plus 3.5.17 和 React19/TS6/Vite8/AntD6。
 
-- [ ] 第1日：在隔离工作副本核查`doupi-server/pom.xml`、分页starter及Jackson2自定义扩展；PageHelper4.1.0作为候选验证；迁移HTTP序列化到Jackson3，Redis旧会话单独兼容或受控失效。
+- [ ] 第1日：核查 `doupi-server/pom.xml`、MyBatis-Plus 会话工厂中 PageHelper 6.1.1 分页和 Jackson2 自定义扩展。迁移 HTTP 序列化到 Jackson3，Redis 旧会话单独兼容或受控失效。
 - [ ] 第2日：在`doupi-web-admin-react/package.json`及锁文件替换旧Pro独立子包导入为兼容AntD6的Pro3聚合包，先验证具体发布版本及peer契约再锁定；跑登录、布局、表格、表单与弹窗最小切片。若候选未通过不得强装，登记问题使用阶段缓冲。
 - [ ] 第3日：接入`src/api/office.ts`、Security新路径、Nginx保留`/api/v1`前缀；验证大ID、UTC日期、错误返回与会话撤销。第5节为已内嵌参考代码，不表示生产依赖已升级。
 

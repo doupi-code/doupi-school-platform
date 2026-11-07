@@ -737,3 +737,53 @@
 .cancel-modal__btn--danger:active {
   background-color: #F03E40;
 }
+
+.wechat-account {
+  margin: 28rpx;
+  padding: 32rpx;
+  background: #fff;
+  border-radius: 20rpx;
+}
+
+.wechat-account__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wechat-account__title {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.wechat-account__settings {
+  color: #1769be;
+}
+
+.wechat-account__status,
+.wechat-account__label,
+.wechat-account__error {
+  display: block;
+  margin: 18rpx 0;
+}
+
+.wechat-account__input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 16rpx 0;
+  padding: 16rpx;
+  border: 1rpx solid #d6dce5;
+  border-radius: 12rpx;
+}
+
+.wechat-account__reason {
+  height: 148rpx;
+}
+
+.wechat-account__error {
+  color: #b42318;
+}
+
+.wechat-account button {
+  margin-top: 20rpx;
+}

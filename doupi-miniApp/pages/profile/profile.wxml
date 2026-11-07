@@ -1,4 +1,26 @@
 <view class="mine-page">
+  <view wx:if="{{wechatAccount}}" class="wechat-account">
+    <view class="wechat-account__header">
+      <text class="wechat-account__title">{{wechatAccount.nickname}}</text>
+      <text class="wechat-account__settings" bindtap="onNavigateToSettings">账号设置</text>
+    </view>
+    <text class="wechat-account__status">{{wechatAccount.kind === 'STAFF' ? '学校员工 · 已核实' : '微信访客'}}</text>
+    <text wx:if="{{wechatAccount.kind === 'VISITOR' && wechatAccount.bindingStatus === 'PENDING'}}">员工绑定申请待学校核实。</text>
+    <text class="wechat-account__label" wx:if="{{wechatAccount.bindingRequestId && wechatAccount.bindingStatus === 'PENDING'}}">申请编号 {{wechatAccount.bindingRequestId}}，请通过学校认可的渠道与核实员核对编号及账号。</text>
+    <text wx:if="{{wechatAccount.kind === 'VISITOR' && wechatAccount.bindingStatus === 'VERIFIED'}}">绑定已核实，请重新微信登录以获取员工身份。</text>
+    <text wx:if="{{wechatAccount.bindingStatus === 'VISITOR' && wechatAccount.lastBindingStatus === 'REJECTED'}}">上次申请未通过，可核对学校账号后重新提交。</text>
+    <text wx:if="{{wechatAccount.bindingStatus === 'REVOKED'}}">员工绑定已撤销，可重新提交申请。</text>
+    <view wx:if="{{wechatAccount.kind === 'VISITOR' && (bindingPending || wechatAccount.bindingStatus === 'VISITOR' || wechatAccount.bindingStatus === 'REVOKED')}}">
+      <text class="wechat-account__label">申请员工绑定</text>
+      <input class="wechat-account__input" placeholder="学校账号" maxlength="30" value="{{bindingUsername}}" disabled="{{bindingBusy || bindingPending}}" bindinput="editBindingUsername" />
+      <textarea class="wechat-account__input wechat-account__reason" placeholder="核实说明，请勿填写密码或证件号码" maxlength="300" value="{{bindingReason}}" disabled="{{bindingBusy || bindingPending}}" bindinput="editBindingReason" />
+      <button type="primary" loading="{{bindingBusy}}" disabled="{{bindingBusy}}" bindtap="submitEmployeeBinding">{{bindingPending ? '重试原申请' : '提交申请'}}</button>
+    </view>
+    <text wx:if="{{bindingError}}" class="wechat-account__error">{{bindingError}}</text>
+    <button size="mini" bindtap="refreshWechatAccount">刷新状态</button>
+    <button wx:if="{{wechatAccount.kind === 'VISITOR' && wechatAccount.bindingStatus === 'VERIFIED'}}" size="mini" bindtap="reloginWechat">重新微信登录</button>
+  </view>
+  <block wx:else>
   <view class="impersonation-banner" wx:if="{{impersonating}}">
     <text class="impersonation-banner__text">{{impersonateHint}}</text>
     <view class="impersonation-banner__btn" bindtap="onExitImpersonation">退出并登出</view>
@@ -179,4 +201,5 @@
       </view>
     </view>
   </view>
+  </block>
 </view>

@@ -16,6 +16,7 @@
 - [ ] `doupi-miniApp/pages/staff/`：工作台、授权详情、现场核销、重复／取消／日期无效提示；不让客户端选role获得入口。
 - [ ] `miniapp/pages/home/index.js`：staffDetail/staffAction；核销使用家长现场出示凭证，不从员工接口返回核销明码。
 - [ ] `backend/src/main/java/com/doupi/planref/recruit/BookingPolicy.java`及JUnit：取消与核销状态边界。
+- [ ] 将旧 `appointment.adminList`、`appointment.globalList`、`appointment.adminDetail` 切换到同一行权限检查或停用旧入口。验收同岗位、不同授权校区或接待分派的员工，列表不泄露范围外记录，详情及动作也无法越权，员工视图不返回核销明码。
 
 依赖：MINI-02 VERIFIED员工身份；MINI-04统一预约事实；管理后台维护sys_role权限、recruit_campus_scope校区部门映射。
 

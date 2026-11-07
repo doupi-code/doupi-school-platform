@@ -7,4 +7,6 @@
 - [字段、索引与约束差异](../docs/engineering/05-数据库结构差异.md)：模块归属、处理结论与数据前提。
 - [历史SQL清单](history/manifest.json)：11份脚本原路径、现路径及SHA256，不能按顺序全部执行。
 
-没有增量迁移脚本，没有执行线上DDL/DML或导出业务数据。后端已有sql目录保留历史兼容，最新结构事实以baseline为准，未来设计以target为准。模块第四节与target同步维护。在项目根目录运行只读检查：`python scripts/check-project-docs.py`。
+- [MINI-02 微信身份增量迁移](migrations/2026-11-07-mini-02-wechat-identity.sql) 新建身份、绑定和幂等三张表，增加账号会话版本与版本触发器，并登记后台核实权限。上线前在隔离 MySQL 8.4 验证 DDL、触发器权限和账号停用再启用，再备份正式库并按授权窗口执行。MySQL DDL 自动提交，部分失败后先核对实际结构。应用回退时停用新入口并保留已写入记录。角色授权由学校管理员按部门范围配置。
+
+后端已有 sql 目录保留历史兼容，最新结构事实以 baseline 为准，未来设计以 target 为准。模块第四节与 target 同步维护。

@@ -352,30 +352,23 @@ function setUserInfo(userInfo, options) {
 /**
  * 微信登录封装
  *
- * 调用 auth.login 云函数，完成微信授权登录流程，
- * 并缓存返回的用户信息。
+ * 用微信登录凭证换取服务端会话，再读取并缓存本人会话信息。
  *
  * @param {string} code wx.login 获取的 code
- * @returns {Promise<object>} 用户信息对象 { userId, openid, phone, nickname, avatar, role, status }
+ * @returns {Promise<object>} 当前用户的会话信息
  */
 async function login(code) {
+    const result = await http.request('/auth/wechat', { method: 'POST', auth: false, body: { code } });
+    const token = http.normalizeToken(result && result.token);
+    if (!token || !/^[1-9]\d*$/.test(String(result.identityId))) {
+        throw new Error('服务端未签发有效微信会话');
+    }
+    clearAuth();
+    wx.setStorageSync('token', token);
     try {
-        var result = await cloudClient.callApi("auth.login", { code: code });
-
-        if (!result.ok) {
-            throw new Error(result.errMsg || "登录失败");
-        }
-
-        var userInfo = result.data && result.data.user_info;
-        if (userInfo) {
-            setUserInfo(userInfo);
-        }
-
-        return userInfo;
-
+        return await refreshToken();
     } catch (err) {
-        console.error("[AUTH] login failed", err);
-        clearAuth();
+        http.clearSession(token);
         throw err;
     }
 }
@@ -486,9 +479,14 @@ async function refreshToken() {
     const role = permissions.includes('*:*:*') || permissions.includes('wx:admin') ? 1
         : permissions.includes('wx:teacher') ? 3 : 4;
     clearAdminInfo();
-    const sameUser = cached && String(cached.userId) === session.userId;
+    const sameUser = cached && String(cached.userId) === session.userId
+        && String(cached.identityId || '0') === session.identityId;
     setUserInfo(Object.assign({}, sameUser ? cached : {}, {
-        userId: session.userId, identityId: session.identityId, role
+        userId: session.userId, identityId: session.identityId, role,
+        kind: session.kind, bindingStatus: session.bindingStatus,
+        bindingRequestId: session.bindingRequestId || '',
+        lastBindingStatus: session.lastBindingStatus || '',
+        nickname: session.nickname || (sameUser && cached.nickname) || (session.kind === 'VISITOR' ? '微信访客' : '学校员工')
     }));
     getApp().globalData.session = session;
     return session;

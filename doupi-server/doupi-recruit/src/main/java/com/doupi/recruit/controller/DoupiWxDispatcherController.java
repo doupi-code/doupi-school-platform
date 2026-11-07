@@ -114,6 +114,14 @@ public class DoupiWxDispatcherController
             LoginUser actor = null;
             if (!PUBLIC_ACTIONS.contains(action) || handler.isAuthRequired())
             {
+                LoginUser principal = sessions.principal();
+                if (principal != null && principal.getExternalIdentityId() != null)
+                {
+                    boolean valid = Long.valueOf(0).equals(principal.getUserId())
+                            ? sessions.externalIdentity() != null : sessions.current() != null;
+                    return valid ? Result.error(403, "此旧版功能等待身份和数据范围接入")
+                            : Result.error(401, "登录会话已失效");
+                }
                 actor = sessions.current();
                 if (actor == null)
                 {

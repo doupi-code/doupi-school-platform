@@ -30,6 +30,42 @@ public class LoginUser implements UserDetails
      */
     private Long deptId;
 
+    private Long externalIdentityId;
+
+    private Long externalBindingId;
+
+    private Long externalAuthVersion;
+
+    public Long getExternalAuthVersion()
+    {
+        return externalAuthVersion;
+    }
+
+    public void setExternalAuthVersion(Long externalAuthVersion)
+    {
+        this.externalAuthVersion = externalAuthVersion;
+    }
+
+    public Long getExternalIdentityId()
+    {
+        return externalIdentityId;
+    }
+
+    public void setExternalIdentityId(Long externalIdentityId)
+    {
+        this.externalIdentityId = externalIdentityId;
+    }
+
+    public Long getExternalBindingId()
+    {
+        return externalBindingId;
+    }
+
+    public void setExternalBindingId(Long externalBindingId)
+    {
+        this.externalBindingId = externalBindingId;
+    }
+
     /**
      * 用户唯一标识
      */

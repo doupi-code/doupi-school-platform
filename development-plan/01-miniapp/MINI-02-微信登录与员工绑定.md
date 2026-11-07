@@ -4,7 +4,7 @@
 
 进度与完成记录：以[根开发计划的唯一状态主表](../../开发计划.md#mini-02)为准；本节复选框只记录模块内任务，不另建模块状态。全部验收通过后，须在主表填写完成日期（YYYY-MM-DD）和可核查的验收证据链接，再勾选模块。已有基础、文档整理或参考验证均不代表业务验收完成。
 
-实施路径与公共约定：下列路径是待实施文件或第5节已内嵌代码的逻辑位置；公共Java组件、认证及命令边界见[公共契约](../00-shared/公共契约.md)。本轮不创建独立工程或实现源码。
+实施沿用现有 Java、小程序和管理后台工程。登录、申请、核实及撤销已接通。代码规范见 [AGENTS.md](../../AGENTS.md)，公共认证及命令边界见[公共契约](../00-shared/公共契约.md)。
 
 **优先级与工期：P0，4个工作日。** 以一名单人Java开发者结合AI完成后端、原生小程序或React页面、联调及自测估算，不假设另有前端或QA人员；工期含约半天人工场景核对，外部微信审核等待不算有效开发日。App完整交付仍为P1。
 
@@ -12,11 +12,20 @@
 
 文件路径与实施任务：
 
-- [ ] `backend/src/main/java/com/doupi/planref/auth/{AuthController,AuthService,AuthRepository,ExternalCommands}.java`：真实官方交换、绑定事务、独立幂等。
-- [ ] `doupi-miniApp/pages/login/`、员工绑定页：wx.login、绑定进度、重新登录；`utils/http.js`接入统一会话。
-- [ ] `miniapp/pages/home/index.js`：signIn、applyBinding及身份展示；学校核实界面复用管理后台授权入口。
+- [x] 微信交换客户端及身份、绑定、幂等 Mapper 已按 MyBatis-Plus 工程约定编写。SQL 集中在 Mapper XML。
+- [x] 在 `doupi-server/doupi-recruit/` 接通登录、绑定、审核和撤销，验证审核权限、事务回滚及原键重放。
+- [x] 小程序登录页使用 `wx.login`。在「我的」提交员工绑定、查看进度及重新登录，复用统一 HTTP 会话。
+- [x] 学校核实界面位于管理后台「招生管理 → 教师绑定」，通过 `identity:binding:approve` 和部门范围授权。申请人和核实员通过学校认可的渠道核对同一个申请编号及学校账号。
+- [ ] 签发真实员工会话后回补 MINI-01 真机验收，核对本人查询、退出和原令牌返回 401，再分别更新两模块状态。[MINI-01 补测步骤](MINI-01-工程与HTTP.md#线上复测与待补测)
 
-依赖：MINI-01 HTTP；sys_user/sys_role授权与部门数据范围；plan.wechat.app-id、plan.wechat.secret环境配置；学校核实人账号及核实依据。官方接口发布前复核[code2Session](https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html)，本次工具无法抓取该官方页，不宣称已验证最新微信审核规则。
+依赖为 MINI-01 HTTP、系统员工与岗位权限、学校小程序 AppID 和 AppSecret，以及学校指定核实账号。[微信 code2Session](https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html)
+
+### 本地验证与上线补测
+
+- Maven 后端打包和 76 项测试通过。测试覆盖微信异常、原访客会话保持访客、自审及跨部门拒绝、同键重放、实际 Mapper 事务回滚、账号停用及撤销后旧绑定失效。一个既有 OCR 用例缺少本地图片样本，本次排除。管理后台构建和小程序登录、个人中心、设置页面的 WXML/WXSS 编译通过。
+- 在隔离 MySQL 8.4 演练[增量迁移](../../database/migrations/2026-11-07-mini-02-wechat-identity.sql)，验证账号状态、部门、密码和角色分配变更触发会话版本递增。部署环境配置 `PLAN_WECHAT_APP_ID` 和 `PLAN_WECHAT_SECRET`。为核实角色配置 `identity:binding:approve`、教师绑定页权限及可核实部门范围。
+- 反代部署由 Nginx 覆盖 `X-Real-IP` 为 `$remote_addr`，并用 `PLAN_WECHAT_TRUSTED_PROXIES` 填写 Java 服务直接连接的可信代理 IP，多个值以逗号分隔。确认两台客户端的限流桶独立，再进行弱网联调。
+- 使用学校 AppID 真机验证微信登录、访客申请、其他员工核实、重新登录、撤销，以及 MINI-01 的退出后旧令牌 401。新增微信会话可用公开访校接口，受保护的旧预约接口由 MINI-04 和 MINI-05 按本人及岗位范围接续。
 
 验收：缺配置503且无身份/会话写入；无效code401；访客填写任何手机号/角色都无员工权限；同键同正文重放；同键跨绑定目标409；自核实403；范围外核实403；通过后重新登录得到实时岗位范围，停用和撤销立即阻止旧员工会话。
 
@@ -29,7 +38,9 @@
 | 微信身份登录 | POST | `/api/v1/auth/wechat` | body.code:string(1..128)／是／wx.login一次性code；不接受openid、phone、role授权 | token:string（服务端签发会话，不含微信secret/session_key）；kind:string（STAFF或VISITOR）；userId:string（员工ID，访客为0）；identityId:string（经微信验证的外部身份ID） | 匿名登录，限流 |
 | 申请员工身份绑定 | POST | `/api/v1/auth/employee-bindings` | Authorization:string／是；Idempotency-Key:string(8..64)／是；body.username:string(1..30)／是／学校账号；reason:string(5..300)／是／核实依据 | bindingRequestId:string（学校核实申请ID）；status:string（PENDING待核实）；version:int（初始为0） | 已认证WECHAT外部身份，未VERIFIED |
 | 学校核实员工绑定 | POST | `/api/v1/staff/employee-bindings/{id}/review` | id:long路径／是／绑定申请；Authorization:string／是／Bearer会话；Idempotency-Key:string(8..64)／是／本次命令键；expectedVersion:int>=0／是；decision:`APPROVE或REJECT`／是；remark:string(1..300)／是 | bindingRequestId:string（核实申请ID）；status:string（VERIFIED通过/REJECTED拒绝）；version:int（本次处理后版本）；loginAgainRequired:boolean（true表示需重新登录才可取得新身份） | STAFF且identity:binding:approve；部门范围内；不得核实自己 |
-| 本人会话信息 | GET | `/api/v1/auth/me` | Authorization:string／是 | userId:string（员工ID，访客为0）；identityId:string（外部身份ID，纯密码员工可为0）；deptId:string（学校部门ID，访客为0）；kind:string（STAFF员工/VISITOR访客）；permissions:string[]（实时动作权限）；scopeDeptIds:string[]（实时部门数据范围）；bindingStatus:string或null（外部身份VISITOR/PENDING/VERIFIED/REVOKED，纯密码会话为空） | 已认证本人 |
+| 核实队列 | GET | `/api/v1/staff/employee-bindings` | Authorization:string／是；before:long／否／上一页的下一页游标 | items:object[]（申请ID、账号、姓名、说明、状态、版本和本人标记）；nextBefore:string（分页游标，空字符串表示末页） | 学校后台会话，核实权限和部门范围 |
+| 撤销员工绑定 | POST | `/api/v1/staff/employee-bindings/{id}/revoke` | id:long／是／申请ID；Authorization:string／是；Idempotency-Key:string／是；expectedVersion:long／是／申请版本 | bindingRequestId:string；status:string（REVOKED）；version:long；loginAgainRequired:boolean | 学校后台会话，核实权限和部门范围，不得撤销本人 |
+| 本人会话信息 | GET | `/api/v1/auth/me` | Authorization:string／是 | userId:string（员工ID，访客为0）；identityId:string（外部身份ID，纯密码员工可为0）；deptId:string（学校部门ID，访客为0）；kind:string（STAFF员工/VISITOR访客）；permissions:string[]（实时动作权限）；scopeDeptIds:string[]（实时部门数据范围）；bindingStatus:string或null（外部身份状态）；nickname:string或null（员工显示名）；bindingRequestId:string、lastBindingStatus:string（访客存在申请时的最新申请编号和状态） | 已认证本人 |
 
 
 
@@ -40,7 +51,8 @@
 | `/auth/wechat` | code+服务端appId/secret→HTTPS官方jscode2session→openid；provider=`WECHAT`/app_id/subject_id→sys_external_identity身份唯一键；user_id/link_status→有效sys_user及授权或VISITOR→token/kind | 外部交换成功才写库；超时503，无伪身份。外部身份UPSERT依唯一键并发收敛；微信session信息不持久化不日志输出。Redis签会话，角色每次重载 |
 | `/auth/employee-bindings` | username→sys_user.user_name/user_id/status；reason→auth_binding_request.reason；服务端identity_id/staff_user_id/status=PENDING/version=0/created_at；sys_external_identity.link_status=PENDING→申请ID/状态 | channel_idempotency以IDENTITY、固定BINDING_APPLY、key/hash占键；锁identity；单pending唯一约束；申请、状态、真实响应同事务，无成功前占位提交 |
 | `/staff/employee-bindings/{id}/review` | id和完整body入hash；expectedVersion→binding.version；decision/remark→status/review_remark/reviewed_by/reviewed_at/version+1；APPROVE写identity.user_id/link_status/verified_by/verified_at，REJECT恢复VISITOR→version/loginAgainRequired | 固定BINDING_APPROVE不拼ID后缀；锁申请及外部身份；检查真实核实人、目标staff有效与部门范围；事务失败全回滚。现有VISITOR会话不自动升级 |
-| `/auth/me` | 当前actor.identity_id→identity.link_status；员工角色与部门范围→返回bindingStatus/permissions/scopeDeptIds | 只读、不缓存客户端选择的角色 |
+| 核实队列与撤销 | 队列由审核岗位数据范围过滤 `sys_user.dept_id`，读取有效申请；撤销匹配当前身份对应的已核实申请ID与版本，将 `sys_external_identity.user_id` 置空，`link_status` 设为 REVOKED | 撤销和 `BINDING_REVOKE` 幂等归档同事务。保留核实历史，既有员工令牌对不上当前绑定，重新核实后也无法重用 |
+| `/auth/me` | 当前会话的 identityId→identity.link_status；员工对比 `sys_user.auth_version` 和当前核实申请 ID；访客读取本人最近的申请编号和状态 → 返回 bindingStatus/permissions/scopeDeptIds | 只读，角色与范围实时重载。旧员工会话在版本变化后持续失效，微信会话按签发 TTL 到期 |
 
 ## 4. 数据库补充设计
 
@@ -357,350 +369,31 @@ COMMENT='学校核实微信员工绑定，不按手机号自动授员工权限';
 
 ## 5. 代码实现骨架
 
-下面是文档内的完整分层代码，可在Java17、Spring Boot4.0.3、MyBatis4.0.1下编译。Db/Inputs/Json/Actor/SessionTokens等公共依赖见[公共契约](../00-shared/公共契约.md)与文档内公共实现；所有SQL值使用参数绑定。客户端代码为同一契约的运行示例，正式接入时按第1节路径迁移，不宣称已修改生产工程。
+运行时使用 Java 17、Spring Boot 4.0.3 和 MyBatis-Plus 3.5.17。以下链接指向仓库中的完整类定义及 SQL 映射。
 
+| 分层 | 源码 | 职责 |
+|---|---|---|
+| Controller | [MiniWechatController](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/MiniWechatController.java) · [MiniSessionController](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/MiniSessionController.java) | 微信登录、绑定申请、审核、撤销、会话查询与退出 |
+| Service | [MiniWechatService](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/MiniWechatService.java) · [WechatIdentityClient](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/WechatIdentityClient.java) · [MiniSessionService](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/MiniSessionService.java) | 服务端交换身份，校验学校账号与绑定。业务 Service 负责参数、授权、事务和幂等审计 |
+| Mapper | [MiniIdentityMapper.java](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/mapper/MiniIdentityMapper.java) · [MiniIdentityMapper.xml](../../doupi-server/doupi-recruit/src/main/resources/mapper/recruit/MiniIdentityMapper.xml) | 管理身份、绑定、核实队列和命令幂等记录，使用 `@Param` 与 `#{...}` 绑定参数 |
+| 小程序 | [统一 HTTP 层](../../doupi-miniApp/utils/http.js) | 登录页接入 `wx.login` 与 `http.request`，绑定申请复用 `http.command` 保留原键及正文 |
 
+### Mapper 调用与事务边界
 
-**backend/src/main/java/com/doupi/planref/auth/AuthController.java**
+| 操作 | Service 调用顺序 | Mapper 约束 |
+|---|---|---|
+| 微信身份查建 | 微信交换成功 → `upsertIdentity` → `findIdentity` → 根据有效账号、当前绑定签发会话 | 以 provider、appId 和微信返回的 subjectId 唯一键收敛并发，保留已有绑定 |
+| 提交员工绑定 | 校验访客和目标账号 → `upsertCommand` → `lockCommand` → `selectIdentity(id, true)` → `insertBinding` → `updateIdentity` → `selectPendingBinding` → `finishCommand` | 占键、身份锁、申请写入及响应归档使用同一事务；相同键不同请求正文返回 409 |
+| 员工核实 | 校验实时权限 → 锁幂等命令 → 先锁身份，再锁申请 → 核对版本、本人禁审和部门范围 → `reviewBinding` → `updateIdentity` → `finishCommand` | 服务端确定审核人与数据范围；跨范围及冲突失败时回滚事务 |
+| 核实队列与会话读取 | 服务端解析当前角色及部门 → `selectQueue` 或 `selectIdentity` → 返回本人或岗位授权字段 | 队列在 SQL 内过滤部门范围再分页，会话读取核对当前绑定申请 ID，访客会话保持访客 |
 
-```java
-package com.doupi.planref.auth;
-
-import com.doupi.planref.*;
-import java.util.Map;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-@RestController
-@RequestMapping("/api/v1")
-public class AuthController {
-    private final AuthService service;
-    public AuthController(AuthService service) {this.service=service;}
-    @PostMapping("/auth/login") public ResponseEntity<Map<String,Object>> login(@RequestBody Map<String,Object> body) {return ApiReply.of(service.password(body),200);}
-    @PostMapping("/auth/visitor") public ResponseEntity<Map<String,Object>> visitor() {return ApiReply.of(service.visitor(),201);}
-    @PostMapping("/auth/wechat") public ResponseEntity<Map<String,Object>> wechat(@RequestBody Map<String,Object> body) {return ApiReply.of(service.wechat(body),200);}
-    @GetMapping("/auth/me") public ResponseEntity<Map<String,Object>> me() {return ApiReply.of(service.me(),200);}
-    @PostMapping("/auth/logout") public ResponseEntity<Map<String,Object>> logout(@RequestHeader("Authorization") String token) {return ApiReply.of(service.logout(token),200);}
-    @PostMapping("/auth/employee-bindings") public ResponseEntity<Map<String,Object>> binding(@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key") String key) {return ApiReply.of(service.applyBinding(body,key),201);}
-    @PostMapping("/staff/employee-bindings/{id}/review") public ResponseEntity<Map<String,Object>> approve(@PathVariable long id,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key") String key) {return ApiReply.of(service.approveBinding(id,body,key),200);}
-}
-```
-
-**backend/src/main/java/com/doupi/planref/auth/AuthService.java**
-
-```java
-package com.doupi.planref.auth;
-
-import com.doupi.planref.*;
-import java.net.*;
-import java.net.http.*;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.*;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-@Service
-public class AuthService {
-    private final Db db; private final AuthRepository repo; private final SessionTokens sessions; private final ExternalCommands commands;
-    private final String appId,secret;
-    private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-    public AuthService(Db db,AuthRepository repo,SessionTokens sessions,ExternalCommands commands,
-        @Value("${plan.wechat.app-id:}") String appId,@Value("${plan.wechat.secret:}") String secret) {
-        this.db=db;this.repo=repo;this.sessions=sessions;this.commands=commands;this.appId=appId;this.secret=secret;
-    }
-    public Map<String,Object> password(Map<String,Object> b) {
-        String name=Inputs.text(b,"username",1,30),password=Inputs.text(b,"password",8,128);
-        Map<String,Object> u=repo.username(name);
-        boolean matches=false;
-        if(!u.isEmpty()) try { matches=new BCryptPasswordEncoder().matches(password,String.valueOf(u.get("password"))); } catch(IllegalArgumentException ignored) { matches=false; }
-        if(!matches) throw new Problem(401,"LOGIN_FAILED","Invalid account or password");
-        return issued(repo.staff(Inputs.number(u.get("user_id")),0));
-    }
-    @Transactional
-    public Map<String,Object> visitor() {
-        long id=repo.external("WEB","PUBLIC_WEB",UUID.randomUUID().toString());
-        return issued(visitorActor(id));
-    }
-    @Transactional
-    public Map<String,Object> wechat(Map<String,Object> b) {
-        String code=Inputs.text(b,"code",1,128);
-        if(appId.isBlank()||secret.isBlank()) throw new Problem(503,"WX_NOT_CONFIGURED","WeChat identity exchange is not configured");
-        Map<String,Object> wx;
-        try {
-            String url="https://api.weixin.qq.com/sns/jscode2session?appid="+enc(appId)+"&secret="+enc(secret)+"&js_code="+enc(code)+"&grant_type=authorization_code";
-            HttpRequest req=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).GET().build();
-            HttpResponse<String> res=http.send(req,HttpResponse.BodyHandlers.ofString());
-            if(res.statusCode()!=200) throw new Problem(503,"WX_UNAVAILABLE","WeChat exchange unavailable");
-            wx=Json.readMap(res.body());
-        } catch(InterruptedException ex) { Thread.currentThread().interrupt();throw new Problem(503,"WX_UNAVAILABLE","WeChat exchange interrupted"); }
-          catch(java.io.IOException ex) { throw new Problem(503,"WX_UNAVAILABLE","WeChat exchange unavailable"); }
-          catch(Problem ex) { if(ex.http()==503) throw ex;throw new Problem(503,"WX_INVALID_RESPONSE","WeChat returned invalid identity data"); }
-        if(wx.get("errcode")!=null) {
-            long error;try {error=Inputs.number(wx.get("errcode"));}catch(Problem ex){throw new Problem(503,"WX_INVALID_RESPONSE","WeChat returned invalid identity data");}
-            if(error!=0) throw new Problem(401,"WX_CODE_REJECTED","WeChat login code is invalid or expired");
-        }
-        String openid=wx.get("openid")==null?"":wx.get("openid").toString();
-        if(openid.isBlank()||openid.length()>128) throw new Problem(503,"WX_INVALID_RESPONSE","WeChat identity was not returned");
-        long id=repo.external("WECHAT",appId,openid); Map<String,Object> identity=repo.identity(id,false);
-        Actor actor="VERIFIED".equals(identity.get("link_status")) && identity.get("user_id")!=null
-            ?repo.staff(Inputs.number(identity.get("user_id")),id):visitorActor(id);
-        return issued(actor);
-    }
-    private static String enc(String s) {return URLEncoder.encode(s,StandardCharsets.UTF_8);}
-    private Actor visitorActor(long id) {return new Actor(0,0,id,"VISITOR",Set.of(),Set.of(),false);}
-    private Map<String,Object> issued(Actor a) { return P.of("token",sessions.issue(a),"kind",a.kind(),"userId",Long.toString(a.userId()),"identityId",Long.toString(a.identityId())); }
-    public Map<String,Object> me() {
-        Actor a=Actors.current();
-        Map<String,Object> identity=a.identityId()>0?repo.identity(a.identityId(),false):Map.of();
-        return P.of("userId",Long.toString(a.userId()),"identityId",Long.toString(a.identityId()),"deptId",Long.toString(a.deptId()),"kind",a.kind(),"permissions",a.permissions(),"scopeDeptIds",a.scopeDeptIds().stream().map(String::valueOf).toList(),"bindingStatus",identity.get("link_status"));
-    }
-    public Map<String,Object> logout(String token) {
-        sessions.revoke(token.startsWith("Bearer ")?token.substring(7):token);
-        return P.of("revoked",true);
-    }
-    public Map<String,Object> applyBinding(Map<String,Object> b,String key) {
-        Actor a=Actors.current(); if(a.identityId()<=0) throw Problem.forbidden("External identity required");
-        String username=Inputs.text(b,"username",1,30),reason=Inputs.text(b,"reason",5,300);
-        return commands.run("IDENTITY:"+a.identityId(),"BINDING_APPLY",key,b,201,()->{
-            Map<String,Object> identity=repo.identity(a.identityId(),true);
-            if(!"WECHAT".equals(identity.get("provider"))) throw Problem.forbidden("WeChat identity required");
-            if("VERIFIED".equals(identity.get("link_status"))) throw Problem.conflict("Identity already verified");
-            Map<String,Object> u=repo.username(username); if(u.isEmpty()) throw Problem.notFound("School account not found");
-            long staffId=Inputs.number(u.get("user_id"));repo.staff(staffId,0);
-            if(!db.one("SELECT binding_request_id FROM auth_binding_request WHERE identity_id=#{p.id} AND status='PENDING'",P.of("id",a.identityId())).isEmpty()) throw Problem.conflict("A binding request is already pending");
-            long id=db.insert("INSERT INTO auth_binding_request(identity_id,staff_user_id,status,reason,version,created_at) "
-                + "VALUES(#{p.identity},#{p.user},'PENDING',#{p.reason},0,CURRENT_TIMESTAMP(3))",P.of("identity",a.identityId(),"user",staffId,"reason",reason));
-            db.write("UPDATE sys_external_identity SET link_status='PENDING' WHERE identity_id=#{p.id}",P.of("id",a.identityId()));
-            return P.of("bindingRequestId",Long.toString(id),"status","PENDING","version",0);
-        });
-    }
-    public Map<String,Object> approveBinding(long id,Map<String,Object> b,String key) {
-        Actor a=Actors.current();a.requireStaff();a.require("identity:binding:approve");
-        return commands.run("STAFF:"+a.userId(),"BINDING_APPROVE",key,P.of("bindingRequestId",id,"body",b),200,()->{
-            Map<String,Object> row=db.required("SELECT * FROM auth_binding_request WHERE binding_request_id=#{p.id} FOR UPDATE",P.of("id",id));
-            long version=Inputs.nonNegative(b,"expectedVersion"),target=Inputs.number(row.get("staff_user_id"));
-            if(version!=Inputs.number(row.get("version"))) throw Problem.conflict("Binding version changed");
-            if(!"PENDING".equals(row.get("status"))) throw Problem.conflict("Binding is no longer pending");
-            if(a.userId()==target) throw Problem.forbidden("Binding must be verified by a different school officer");
-            Actor targetActor=repo.staff(target,0);
-            if(!a.allData()&&!a.scopeDeptIds().contains(targetActor.deptId())) throw Problem.forbidden("Account outside binding approval scope");
-            String decision=Inputs.text(b,"decision",6,8),remark=Inputs.text(b,"remark",1,300);
-            if(!Set.of("APPROVE","REJECT").contains(decision)) throw Problem.bad("Invalid binding decision");
-            long identity=Inputs.number(row.get("identity_id"));Map<String,Object> external=repo.identity(identity,true);
-            if(!"PENDING".equals(external.get("link_status"))) throw Problem.conflict("External identity binding state changed");
-            String status=decision.equals("APPROVE")?"VERIFIED":"REJECTED";
-            db.write("UPDATE auth_binding_request SET status=#{p.status},reviewed_by=#{p.by},review_remark=#{p.remark},reviewed_at=CURRENT_TIMESTAMP(3),version=version+1 WHERE binding_request_id=#{p.id}",P.of("status",status,"by",a.userId(),"remark",remark,"id",id));
-            db.write("UPDATE sys_external_identity SET user_id=#{p.user},link_status=#{p.status},verified_by=#{p.by},verified_at=CURRENT_TIMESTAMP(3) WHERE identity_id=#{p.id}",P.of("user",decision.equals("APPROVE")?target:null,"status",decision.equals("APPROVE")?"VERIFIED":"VISITOR","by",a.userId(),"id",identity));
-            return P.of("bindingRequestId",Long.toString(id),"status",status,"version",version+1,"loginAgainRequired",true);
-        });
-    }
-}
-```
-
-**backend/src/main/java/com/doupi/planref/auth/AuthRepository.java**
-
-```java
-package com.doupi.planref.auth;
-
-import com.doupi.planref.*;
-import java.util.*;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public class AuthRepository {
-    private final Db db;
-    public AuthRepository(Db db) { this.db=db; }
-    public Map<String,Object> username(String name) {
-        return db.one("SELECT user_id,dept_id,password,status,del_flag FROM sys_user WHERE user_name=#{p.name}",P.of("name",name));
-    }
-    public Map<String,Object> identity(long id, boolean lock) {
-        return db.required("SELECT * FROM sys_external_identity WHERE identity_id=#{p.id}"+(lock?" FOR UPDATE":""),P.of("id",id));
-    }
-    public long external(String provider,String appId,String subject) {
-        Map<String,Object> p=P.of("provider",provider,"app",appId,"subject",subject);
-        db.write("INSERT INTO sys_external_identity(provider,app_id,subject_id,link_status,created_at) "
-            + "VALUES(#{p.provider},#{p.app},#{p.subject},'VISITOR',CURRENT_TIMESTAMP(3)) "
-            + "ON DUPLICATE KEY UPDATE identity_id=identity_id",p);
-        return Inputs.number(db.required("SELECT identity_id FROM sys_external_identity WHERE provider=#{p.provider} "
-            + "AND app_id=#{p.app} AND subject_id=#{p.subject}",p).get("identity_id"));
-    }
-    public Actor staff(long userId,long identityId) {
-        Map<String,Object> u=db.required("SELECT user_id,dept_id,status,del_flag FROM sys_user WHERE user_id=#{p.id}",P.of("id",userId));
-        if (!"0".equals(String.valueOf(u.get("status"))) || !"0".equals(String.valueOf(u.get("del_flag"))))
-            throw new Problem(401,"ACCOUNT_DISABLED","Account is disabled");
-        long dept=u.get("dept_id")==null?0:Inputs.number(u.get("dept_id"));
-        List<Map<String,Object>> roles=db.list("SELECT r.role_id,r.data_scope FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.role_id "
-            + "WHERE ur.user_id=#{p.id} AND r.status='0' AND r.del_flag='0'",P.of("id",userId));
-        Set<String> permissions=new HashSet<>();
-        for (Map<String,Object> m:db.list("SELECT DISTINCT m.perms FROM sys_menu m JOIN sys_role_menu rm ON rm.menu_id=m.menu_id "
-            + "JOIN sys_user_role ur ON ur.role_id=rm.role_id JOIN sys_role r ON r.role_id=ur.role_id "
-            + "WHERE ur.user_id=#{p.id} AND r.status='0' AND r.del_flag='0' AND m.status='0'",P.of("id",userId))) {
-            if(m.get("perms")!=null && !m.get("perms").toString().isBlank()) permissions.add(m.get("perms").toString());
-        }
-        Set<Long> scopes=new HashSet<>(); boolean all=false;
-        for(Map<String,Object> r:roles) {
-            String scope=String.valueOf(r.get("data_scope"));
-            if("1".equals(scope)) all=true;
-            if("2".equals(scope)) for(Map<String,Object> d:db.list("SELECT dept_id FROM sys_role_dept WHERE role_id=#{p.id}",P.of("id",r.get("role_id")))) scopes.add(Inputs.number(d.get("dept_id")));
-            if("3".equals(scope)&&dept>0) scopes.add(dept);
-            if("4".equals(scope)&&dept>0) {
-                Set<Long> branch=new HashSet<>();branch.add(dept);
-                List<Map<String,Object>> depts=db.list("SELECT dept_id,parent_id FROM sys_dept WHERE status='0' AND del_flag='0'",Map.of());
-                boolean changed=true;
-                while(changed) { changed=false; for(Map<String,Object> d:depts) if(d.get("parent_id")!=null && branch.contains(Inputs.number(d.get("parent_id")))) changed |= branch.add(Inputs.number(d.get("dept_id"))); }
-                scopes.addAll(branch);
-            }
-        }
-        return new Actor(userId,dept,identityId,"STAFF",Set.copyOf(permissions),Set.copyOf(scopes),all);
-    }
-}
-```
-
-**backend/src/main/java/com/doupi/planref/auth/ExternalCommands.java**
-
-```java
-package com.doupi.planref.auth;
-
-import com.doupi.planref.*;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.*;
-import java.util.function.Supplier;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-
-/** Transactional idempotency for channel operations without an office_request root. */
-@Component
-public class ExternalCommands {
-    private final Db db;
-    private final TransactionTemplate tx;
-    public ExternalCommands(Db db, PlatformTransactionManager manager) {
-        this.db = db;
-        this.tx = new TransactionTemplate(manager);
-    }
-    public Map<String,Object> run(String scope, String action, String key, Map<String,Object> payload,
-                                  int status, Supplier<Map<String,Object>> work) {
-        if (key == null || !key.matches("[A-Za-z0-9_.:-]{8,64}")) throw Problem.bad("Invalid Idempotency-Key");
-        String hash = Json.hash(payload);
-        Map<String,Object> p = P.of("scope",scope,"action",action,"key",key,"hash",hash);
-        return tx.execute(ignored -> {
-            db.write("INSERT INTO channel_idempotency(scope_key,action_code,idempotency_key,payload_hash,created_at) "
-                + "VALUES(#{p.scope},#{p.action},#{p.key},#{p.hash},CURRENT_TIMESTAMP(3)) "
-                + "ON DUPLICATE KEY UPDATE command_id=command_id",p);
-            Map<String,Object> row = db.required("SELECT * FROM channel_idempotency WHERE scope_key=#{p.scope} "
-                + "AND action_code=#{p.action} AND idempotency_key=#{p.key} FOR UPDATE",p);
-            if (!hash.equals(row.get("payload_hash"))) throw Problem.conflict("Same key has a different payload");
-            Object saved = row.get("result_json");
-            if (saved != null) {
-                Map<String,Object> replay = new LinkedHashMap<>(Json.readMap(saved));
-                replay.put("_replayed",true);
-                replay.put("_httpStatus",Inputs.number(row.get("http_status")));
-                return replay;
-            }
-            Map<String,Object> out = new LinkedHashMap<>(work.get());
-            db.write("UPDATE channel_idempotency SET result_json=#{p.result},http_status=#{p.status} "
-                + "WHERE command_id=#{p.id}",P.of("result",Json.write(out),"status",status,"id",row.get("command_id")));
-            out.put("_httpStatus",status);
-            return out;
-        });
-    }
-    public static String sha256(String value) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
-    }
-    public static boolean matches(String value, String expectedHash) {
-        return expectedHash != null && MessageDigest.isEqual(sha256(value).getBytes(StandardCharsets.US_ASCII),
-            expectedHash.getBytes(StandardCharsets.US_ASCII));
-    }
-}
-```
-
-**miniapp/lib/http.js**
-
-```javascript
-function request(path, method = 'GET', body, key) {
-  const token = wx.getStorageSync('planref.token');
-  return new Promise((resolve, reject) => wx.request({
-    url: getApp().globalData.apiBase + path, method, data: body,
-    timeout: 12000, header: { 'Content-Type': 'application/json', ...(token && !['/auth/wechat', '/auth/visitor', '/auth/login'].includes(path) ? { Authorization: 'Bearer ' + token } : {}), ...(key ? { 'Idempotency-Key': key } : {}) },
-    success(res) {
-      if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.data.data);
-      if (res.statusCode === 401) wx.removeStorageSync('planref.token');
-      const error = new Error(res.data.msg || '请求失败'); error.status = res.statusCode; error.traceId = res.data.traceId; reject(error);
-    }, fail() { reject(new Error('网络未确认结果，请使用原操作重试')); }
-  }));
-}
-function randomSecret() {
-  return new Promise((resolve, reject) => {
-    if (!wx.getRandomValues) return reject(new Error('当前微信版本不支持安全凭证，请升级微信'));
-    wx.getRandomValues({ length: 32, success: res => resolve(wx.arrayBufferToBase64(res.randomValues).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')), fail: () => reject(new Error('安全随机数生成失败')) });
-  });
-}
-async function login() {
-  const result = await new Promise((resolve, reject) => wx.login({ success: resolve, fail: reject }));
-  if (!result.code) throw new Error('微信未返回登录凭证');
-  const session = await request('/auth/wechat', 'POST', { code: result.code });
-  wx.setStorageSync('planref.token', session.token); return request('/auth/me');
-}
-async function command(path, body, storageKey) {
-  let pending = wx.getStorageSync(storageKey);
-  if (!pending) { pending = { key: await randomSecret(), body }; wx.setStorageSync(storageKey, pending); }
-  try { const result = await request(path, 'POST', pending.body, pending.key); wx.removeStorageSync(storageKey); return result; }
-  catch (error) { if (error.status >= 400 && error.status < 500 && ![401, 403].includes(error.status)) wx.removeStorageSync(storageKey); throw error; }
-}
-module.exports = { request, randomSecret, login, command };
-```
-
-**miniapp/pages/home/index.js**
-
-```javascript
-const api = require('../../lib/http');
-Page({
-  data: { form: { parentName: '', parentPhone: '', studentName: '', studentGrade: '', campusId: '', visitDate: '', timeSlot: '', remark: '' }, campuses: [], rules: null, items: [], staffItems: [], detail: null, me: null, error: '', busy: false, pending: false, bindingName: '', bindingReason: '', checkInCode: '', staffRemark: '', privacy: '', privacyReady: false, articles: [], article: null, messages: [] },
-  onLoad() { this.loadPublic(); if (wx.getStorageSync('planref.token')) this.refresh(); },
-  async loadPublic() { try { const [campuses, rules, site, articles] = await Promise.all([api.request('/public/campuses'), api.request('/public/appointment-rules'), api.request('/public/site'), api.request('/public/articles')]); this.setData({ campuses: campuses.items, rules, articles: articles.items, privacyReady: !!site.config.privacy_policy, privacy: site.config.privacy_policy || '请向学校获取正式隐私说明后再提交个人信息。' }); } catch (e) { this.fail(e); } },
-  async article(e) { try { this.setData({ article: await api.request('/public/articles/' + e.currentTarget.dataset.id) }); } catch (error) { this.fail(error); } },
-  fail(e) { this.setData({ error: e.message + (e.traceId ? '（追踪号 ' + e.traceId + '）' : '') }); },
-  input(e) { this.setData({ ['form.' + e.currentTarget.dataset.field]: e.detail.value }); },
-  text(e) { this.setData({ [e.currentTarget.dataset.field]: e.detail.value }); },
-  async signIn() { try { this.setData({ me: await api.login(), error: '' }); await this.refresh(); } catch (e) { this.fail(e); } },
-  async refresh() { try { const me = await api.request('/auth/me'); const mine = await api.request('/visitor/appointments'); this.setData({ messages: (await api.request('/visitor/notifications')).items, me, items: mine.items, pending: !!wx.getStorageSync('planref.create') }); if (me.kind === 'STAFF' && (me.permissions.includes('*') || me.permissions.includes('recruit:appointment:query'))) this.setData({ staffItems: (await api.request('/staff/appointments')).items }); } catch (e) { this.fail(e); } },
-  async create() {
-    this.setData({ busy: true, error: '' });
-    try {
-      if (!this.data.me) throw new Error('请先微信登录');
-      if (!this.data.privacyReady) throw new Error('学校尚未发布正式隐私说明，请先联系学校');
-      const confirmation = await new Promise(resolve => wx.showModal({ title: '确认提交访校资料', content: '我已阅读页面隐私说明，同意学校为访校接待使用本次填写的联系人和学生信息。', success: resolve }));
-      if (!confirmation.confirm) return;
-      let pending = wx.getStorageSync('planref.create');
-      const body = pending ? pending.body : { ...this.data.form, querySecret: await api.randomSecret() };
-      const result = await api.command('/public/appointments', body, 'planref.create');
-      const proofs = wx.getStorageSync('planref.proofs') || {}; proofs[result.appointmentId] = { appointmentNo: result.appointmentNo, querySecret: body.querySecret }; wx.setStorageSync('planref.proofs', proofs);
-      this.setData({ detail: result, pending: false }); await this.refresh();
-    } catch (e) { this.fail(e); } finally { this.setData({ busy: false, pending: !!wx.getStorageSync('planref.create') }); }
-  },
-  async detail(e) { try { this.setData({ detail: await api.request('/visitor/appointments/' + e.currentTarget.dataset.id), error: '' }); } catch (e) { this.fail(e); } },
-  async cancel() { try { const d = this.data.detail, proof = (wx.getStorageSync('planref.proofs') || {})[d.appointmentId]; if (!proof) throw new Error('本机无查询凭证，请联系学校核实后取消'); this.setData({ detail: await api.command('/public/appointments/' + d.appointmentId + '/cancel', { ...proof, expectedVersion: d.version, reason: '家长取消预约' }, 'planref.cancel.' + d.appointmentId) }); await this.refresh(); } catch (e) { this.fail(e); } },
-  async applyBinding() { try { const r = await api.command('/auth/employee-bindings', { username: this.data.bindingName, reason: this.data.bindingReason }, 'planref.binding'); this.setData({ error: '学校核实中：' + r.status }); } catch (e) { this.fail(e); } },
-  async staffDetail(e) { try { this.setData({ detail: null, staffDetail: await api.request('/staff/appointments/' + e.currentTarget.dataset.id) }); } catch (e) { this.fail(e); } },
-  async staffAction(e) { const d = this.data.staffDetail, action = e.currentTarget.dataset.action; try { const body = { expectedVersion: d.version, ...(action === 'verify' ? { checkInCode: this.data.checkInCode } : { remark: this.data.staffRemark }), ...(action === 'confirm' ? { decision: 'APPROVE', assignedTeacherUserId: this.data.me.userId } : {}) }; this.setData({ staffDetail: await api.command('/staff/appointments/' + d.appointmentId + '/' + action, body, 'planref.staff.' + action + '.' + d.appointmentId) }); await this.refresh(); } catch (e) { this.fail(e); } },
-  async readMessage(e) { try { await api.command('/visitor/notifications/' + e.currentTarget.dataset.id + '/read', {}, 'planref.read.' + e.currentTarget.dataset.id); await this.refresh(); } catch (error) { this.fail(error); } },
-  async subscribe() { try { const capabilities = await api.request('/public/subscription-capabilities'); if (!capabilities.templateIds.length) throw new Error('学校尚未配置订阅模板，预约结果可在本人预约查看'); const templateId = capabilities.templateIds[0]; const result = await new Promise((resolve, reject) => wx.requestSubscribeMessage({ tmplIds: [templateId], success: resolve, fail: reject })); if (['accept', 'reject', 'ban'].includes(result[templateId])) { await api.command('/visitor/subscription-consents', { templateId, decision: result[templateId] }, 'planref.consent'); this.setData({ error: '已记录本次选择；当前未启用外部发送，请查看站内预约结果。' }); } } catch (e) { this.fail(e); } },
-  async logout() { try { if (wx.getStorageSync('planref.create')) throw new Error('预约结果仍未确认，请先原键重试或联系学校核实'); await api.request('/auth/logout', 'POST'); wx.removeStorageSync('planref.token'); wx.removeStorageSync('planref.proofs'); this.setData({ me: null, items: [], staffItems: [], detail: null, staffDetail: null }); } catch (e) { this.fail(e); } }
-});
-```
-
+MySQL 的并发占键、锁定读取及授权联表集中维护在 Mapper XML。现有账号、角色及部门读取复用系统模块的 Mapper 和 Service。
 
 
 ## 6. 边界与异常场景处理
 
-- 微信secret/AppID缺失503，供应商超时503，errcode非0或code过期401；不使用随机openid代替真实交换，不捕获异常后返回登录成功。
+- 微信 AppSecret 或 AppID 缺失及上游超时返回 503，登录凭证无效返回 401，微信限流返回 429。只有微信交换成功才建立身份。
 - username不存在404，不返回学校账号密码；申请的reason不是核实结论。每个身份仅一份PENDING。
 - 审核者等于staff_user_id、自选角色和越部门均403；version变化或已处理409；REJECT保留完整历史。
 - 审核通过后明确要求重新登录；VISITOR JWT仍保持访客；SessionTokens每次验证VERIFIED绑定、账号status/del_flag、auth_version及最新角色。
-- `AuthBoundaryTest`覆盖无配置不签发与Web不继承员工；`ExternalCommandsTest`覆盖同键跨对象冲突及已提交重放。
+- `WechatIdentityClientTest` 覆盖缺配置、无效凭证、限流和异常响应。绑定与会话的本地回归覆盖自审、越权、重放、旧访客会话与撤销。真实微信和 MySQL 8.4 联调按第 1 节补测。

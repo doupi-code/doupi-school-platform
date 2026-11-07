@@ -47,7 +47,8 @@ service.interceptors.response.use(
     }
 
     const res = response.data;
-    if (res.code !== 200) {
+    const successCode = response.config.url?.startsWith('/api/v1/') ? 0 : 200;
+    if (res.code !== successCode) {
       if (res.code === 401) {
         handleSessionExpired('登录状态已失效或凭证过期，请重新登录');
       } else if (res.code === 403) {

@@ -2,6 +2,7 @@ package com.doupi.recruit.controller;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import com.doupi.common.core.domain.ApiV1Response;
 import com.doupi.common.core.domain.model.LoginUser;
@@ -35,18 +36,34 @@ public class MiniSessionController
     public ResponseEntity<ApiV1Response> me()
     {
         LoginUser current = sessions.current();
-        if (current == null)
+        LoginUser principal = sessions.principal();
+        var identity = principal != null && principal.getExternalIdentityId() != null ? sessions.externalIdentity() : null;
+        boolean visitor = identity != null && Long.valueOf(0).equals(principal.getUserId());
+        if ((current == null && !visitor) || (principal != null && principal.getExternalIdentityId() != null && identity == null))
         {
             return reply(401, "登录会话已失效", null);
         }
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("userId", current.getUserId().toString());
-        data.put("identityId", "0");
-        data.put("deptId", current.getDeptId() == null ? "0" : current.getDeptId().toString());
-        data.put("kind", "STAFF");
-        data.put("permissions", new TreeSet<>(current.getPermissions()));
-        data.put("scopeDeptIds", sessions.scopeDeptIds(current.getUser()));
-        data.put("bindingStatus", null);
+        data.put("userId", visitor ? "0" : current.getUserId().toString());
+        data.put("identityId", identity == null ? "0" : Long.toString(identity.id()));
+        data.put("deptId", visitor || current.getDeptId() == null ? "0" : current.getDeptId().toString());
+        data.put("kind", visitor ? "VISITOR" : "STAFF");
+        data.put("permissions", visitor ? Set.of() : new TreeSet<>(current.getPermissions()));
+        data.put("scopeDeptIds", visitor ? Set.of() : sessions.scopeDeptIds(current.getUser()));
+        data.put("bindingStatus", identity == null ? null : identity.status());
+        if (visitor)
+        {
+            var binding = sessions.latestBinding(identity.id());
+            if (binding != null)
+            {
+                data.put("bindingRequestId", Long.toString(binding.id()));
+                data.put("lastBindingStatus", binding.status());
+            }
+        }
+        if (!visitor)
+        {
+            data.put("nickname", current.getUser().getNickName());
+        }
         return reply(200, "ok", data);
     }
 

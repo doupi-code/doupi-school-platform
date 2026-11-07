@@ -15,6 +15,8 @@
 - [ ] `backend/src/main/java/com/doupi/planref/recruit/{RecruitController,RecruitService,RecruitRepository,BookingPolicy}.java`：预约规则、创建、本人查询、取消与轨迹。
 - [ ] `backend/src/main/java/com/doupi/planref/auth/ExternalCommands.java`：无office_request根的独立事务幂等。
 - [ ] `doupi-miniApp/pages/appointment/`、我的预约、详情：原生表单与状态文案；取消前显示原预约信息。
+- [ ] 将实际预约表单接入 `doupi-miniApp/utils/http.js` 的命令重试能力，切换旧 `appointment.create` 直插路径。模拟服务端已提交但响应丢失，重试返回同一预约 ID，预约、容量和审计各只写一次。
+- [ ] 切换旧小程序本人查询、详情与取消动作，按当前核验身份和预约归属授权。员工在个人资料中改手机号后，不能借此读取或取消该号码对应的他人预约。
 - [ ] `miniapp/lib/http.js`、`pages/home/index.{js,wxml}`：密码学随机凭证、待重试命令本地持久化、同键重试。
 
 依赖：MINI-01/02认证、MINI-03公开校区/规则；sys_external_identity、doupi_recruit_appointment目标增量字段；招生后台与MINI-05共用状态。

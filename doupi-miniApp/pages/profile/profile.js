@@ -1,6 +1,7 @@
 const feedback = require('../../utils/feedback');
 const { requestWithCheck } = require('../../utils/request');
 const auth = require('../../utils/auth');
+const http = require('../../utils/http');
 const { getAdminHomeUrl } = require('../../utils/adminEntry');
 const { syncCustomTabBarSelected } = require('../../utils/tabBarSync');
 const displayDict = require('../../utils/displayDict');
@@ -44,6 +45,12 @@ Page({
     impersonateHint: '',
     showAdminEntryCard: false,
     phoneBound: false,
+    wechatAccount: null,
+    bindingUsername: '',
+    bindingReason: '',
+    bindingPending: false,
+    bindingBusy: false,
+    bindingError: '',
     displayText: {
       noUncheckedBookings: displayDict.text('NO_UNCHECKED_BOOKINGS'),
       noRecentBookings: displayDict.text('NO_RECENT_BOOKINGS')
@@ -188,22 +195,101 @@ Page({
     };
   },
 
-  onLoad() {
-    this.refreshProfileData();
-  },
-
   onShow() {
     syncCustomTabBarSelected();
+    const cached = auth.getUserInfo();
+    if (auth.isLoggedIn() && cached && /^[1-9]\d*$/.test(String(cached.identityId))) {
+      this.showWechatAccount(cached);
+      this.refreshWechatAccount();
+      return;
+    }
+    this.setData({ wechatAccount: null });
     const impersonating = auth.isImpersonating();
     this.setData({
       impersonating,
       impersonateHint: impersonating ? '当前为代维模式；退出将登出并需重新登录。' : ''
     });
     if (!auth.isLoggedIn()) {
+      this.refreshProfileData();
       auth.requireLoginWithPrompt('/pages/profile/profile');
       return;
     }
     this.refreshProfileData();
+  },
+
+  showWechatAccount(account) {
+    const pending = wx.getStorageSync('mini02.binding:' + account.identityId);
+    const changed = !this.data.wechatAccount || this.data.wechatAccount.identityId !== account.identityId;
+    this.setData({
+      wechatAccount: account,
+      bindingPending: !!pending,
+      bindingUsername: pending ? pending.body.username : changed ? '' : this.data.bindingUsername,
+      bindingReason: pending ? pending.body.reason : changed ? '' : this.data.bindingReason
+    });
+  },
+
+  async refreshWechatAccount() {
+    try {
+      const session = await auth.refreshToken();
+      if (session) {
+        this.showWechatAccount(auth.getUserInfo());
+      } else {
+        this.setData({ wechatAccount: null });
+        auth.requireLogin('/pages/profile/profile');
+      }
+    } catch (error) {
+      if (error.errCode === 'SESSION_CHANGED') return;
+      if (error.status === 401) {
+        this.setData({ wechatAccount: null });
+        auth.requireLogin('/pages/profile/profile');
+        return;
+      }
+      this.setData({ bindingError: error.message });
+    }
+  },
+
+  editBindingUsername(event) {
+    this.setData({ bindingUsername: event.detail.value });
+  },
+
+  editBindingReason(event) {
+    this.setData({ bindingReason: event.detail.value });
+  },
+
+  async submitEmployeeBinding() {
+    const account = this.data.wechatAccount;
+    if (this.data.bindingBusy || !account || account.kind !== 'VISITOR') return;
+    const username = this.data.bindingUsername.trim();
+    const reason = this.data.bindingReason.trim();
+    if (!this.data.bindingPending && (!username || reason.length < 5)) {
+      this.setData({ bindingError: '请填写学校账号和至少 5 个字的核实说明' });
+      return;
+    }
+    const key = 'mini02.binding:' + account.identityId;
+    this.setData({ bindingBusy: true, bindingError: '' });
+    try {
+      const result = await http.command('/auth/employee-bindings', { username, reason }, key);
+      if (this.data.wechatAccount?.identityId !== account.identityId) return;
+      this.setData({ 'wechatAccount.bindingStatus': result.status,
+        'wechatAccount.bindingRequestId': result.bindingRequestId, 'wechatAccount.lastBindingStatus': result.status,
+        bindingPending: false,
+        bindingUsername: '', bindingReason: '' });
+      await this.refreshWechatAccount();
+    } catch (error) {
+      if (error.errCode === 'SESSION_CHANGED') return;
+      if (error.status === 401 && !http.getToken()) {
+        this.setData({ wechatAccount: null });
+        auth.requireLogin('/pages/profile/profile');
+        return;
+      }
+      this.setData({ bindingError: error.message, bindingPending: !!wx.getStorageSync(key) });
+    } finally {
+      this.setData({ bindingBusy: false });
+    }
+  },
+
+  reloginWechat() {
+    wx.navigateTo({ url: '/pages/login/login?redirect=' + encodeURIComponent('/pages/profile/profile') });
   },
 
   async refreshProfileData() {

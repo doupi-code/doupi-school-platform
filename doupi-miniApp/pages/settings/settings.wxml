@@ -1,7 +1,7 @@
 <view class="settings-page">
   <view class="settings-content">
     <view class="settings-main">
-      <view class="settings-section">
+      <view class="settings-section" wx:if="{{!externalSession}}">
         <view class="settings-section__header">
           <text class="settings-section__title">账号设置</text>
         </view>

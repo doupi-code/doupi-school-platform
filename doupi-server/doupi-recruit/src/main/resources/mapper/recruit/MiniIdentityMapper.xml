@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.doupi.recruit.mapper.MiniIdentityMapper">
+    <resultMap id="Identity" type="com.doupi.recruit.mapper.MiniIdentityMapper$Identity">
+        <constructor>
+            <idArg column="identity_id" javaType="_long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="link_status" javaType="string"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="app_id" javaType="string"/>
+            <arg column="subject_id" javaType="string"/>
+            <arg column="auth_version" javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+    <resultMap id="Binding" type="com.doupi.recruit.mapper.MiniIdentityMapper$Binding">
+        <constructor>
+            <idArg column="binding_request_id" javaType="_long"/>
+            <arg column="identity_id" javaType="_long"/>
+            <arg column="staff_user_id" javaType="_long"/>
+            <arg column="dept_id" javaType="java.lang.Long"/>
+            <arg column="user_name" javaType="string"/>
+            <arg column="nick_name" javaType="string"/>
+            <arg column="status" javaType="string"/>
+            <arg column="reason" javaType="string"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+    <resultMap id="Command" type="com.doupi.recruit.mapper.MiniIdentityMapper$Command">
+        <constructor>
+            <idArg column="command_id" javaType="_long"/>
+            <arg column="payload_hash" javaType="string"/>
+            <arg column="result_json" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="identityColumns">
+        SELECT i.identity_id, i.user_id, i.link_status, i.app_id, i.subject_id,
+               (SELECT MAX(b.binding_request_id) FROM auth_binding_request b
+                WHERE b.identity_id=i.identity_id AND b.staff_user_id=i.user_id AND b.status='VERIFIED') AS binding_id,
+               (SELECT u.auth_version FROM sys_user u
+                WHERE u.user_id=i.user_id AND u.status='0' AND u.del_flag='0') AS auth_version
+        FROM sys_external_identity i WHERE i.provider='WECHAT'
+    </sql>
+    <sql id="bindingColumns">
+        SELECT b.binding_request_id, b.identity_id, b.staff_user_id, u.dept_id,
+               u.user_name, u.nick_name, b.status, b.reason, b.version
+        FROM auth_binding_request b JOIN sys_user u ON u.user_id=b.staff_user_id
+    </sql>
+
+    <insert id="upsertIdentity">
+        INSERT INTO sys_external_identity(provider,app_id,subject_id,link_status,created_at)
+        VALUES ('WECHAT',#{appId},#{openId},'VISITOR',UTC_TIMESTAMP(3))
+        ON DUPLICATE KEY UPDATE identity_id=identity_id
+    </insert>
+    <select id="findIdentity" resultMap="Identity">
+        <include refid="identityColumns"/> AND i.app_id=#{appId} AND i.subject_id=#{openId}
+    </select>
+    <select id="selectIdentity" resultMap="Identity">
+        <include refid="identityColumns"/> AND i.identity_id=#{id}
+        <if test="lock">FOR UPDATE</if>
+    </select>
+    <select id="selectBinding" resultMap="Binding">
+        <include refid="bindingColumns"/> WHERE b.binding_request_id=#{id}
+        <if test="lock">FOR UPDATE</if>
+    </select>
+    <select id="selectPendingBinding" resultMap="Binding">
+        <include refid="bindingColumns"/> WHERE b.pending_identity_id=#{identityId}
+    </select>
+    <select id="selectLatestBinding" resultMap="Binding">
+        <include refid="bindingColumns"/> WHERE b.identity_id=#{identityId}
+        ORDER BY b.created_at DESC, b.binding_request_id DESC LIMIT 1
+    </select>
+    <select id="lockCurrentBinding" resultType="long">
+        SELECT binding_request_id FROM auth_binding_request
+        WHERE identity_id=#{identityId} AND staff_user_id=#{staffId} AND status='VERIFIED'
+        ORDER BY binding_request_id DESC LIMIT 1 FOR UPDATE
+    </select>
+    <select id="lockActiveStaff" resultType="long">
+        SELECT user_id FROM sys_user WHERE user_id=#{id} AND status='0' AND del_flag='0' FOR UPDATE
+    </select>
+    <select id="selectQueue" resultMap="Binding">
+        <include refid="bindingColumns"/>
+        JOIN sys_external_identity i ON i.identity_id=b.identity_id AND i.provider='WECHAT'
+        WHERE b.binding_request_id &lt; #{before} AND (
+          (b.status='PENDING' AND i.link_status='PENDING') OR
+          (b.status='VERIFIED' AND i.link_status='VERIFIED' AND i.user_id=b.staff_user_id
+           AND b.binding_request_id=(SELECT MAX(p.binding_request_id) FROM auth_binding_request p
+               WHERE p.identity_id=b.identity_id AND p.staff_user_id=b.staff_user_id AND p.status='VERIFIED')))
+        <if test="!all">
+            <choose>
+                <when test="departments != null and !departments.isEmpty()">
+                    AND u.dept_id IN
+                    <foreach collection="departments" item="department" open="(" separator="," close=")">
+                        #{department}
+                    </foreach>
+                </when>
+                <otherwise>AND 1=0</otherwise>
+            </choose>
+        </if>
+        ORDER BY b.binding_request_id DESC LIMIT 100
+    </select>
+    <insert id="insertBinding">
+        INSERT INTO auth_binding_request(identity_id,staff_user_id,status,reason,created_at)
+        VALUES (#{identityId},#{staffId},'PENDING',#{reason},UTC_TIMESTAMP(3))
+    </insert>
+    <update id="updateIdentity">
+        UPDATE sys_external_identity
+        SET user_id=#{userId,jdbcType=BIGINT},link_status=#{status}
+        <if test="reviewer != null">,verified_by=#{reviewer},verified_at=UTC_TIMESTAMP(3)</if>
+        WHERE identity_id=#{id}
+    </update>
+    <update id="reviewBinding">
+        UPDATE auth_binding_request SET status=#{status},reviewed_by=#{reviewer},review_remark=#{remark},
+            reviewed_at=UTC_TIMESTAMP(3),version=version+1 WHERE binding_request_id=#{id}
+    </update>
+
+    <insert id="upsertCommand">
+        INSERT INTO channel_idempotency(scope_key,action_code,idempotency_key,payload_hash,created_at)
+        VALUES (#{scope},#{action},#{key},#{hash},UTC_TIMESTAMP(3))
+        ON DUPLICATE KEY UPDATE command_id=command_id
+    </insert>
+    <select id="lockCommand" resultMap="Command">
+        SELECT command_id,payload_hash,result_json FROM channel_idempotency
+        WHERE scope_key=#{scope} AND action_code=#{action} AND idempotency_key=#{key} FOR UPDATE
+    </select>
+    <update id="finishCommand">
+        UPDATE channel_idempotency SET http_status=#{status},result_json=#{result} WHERE command_id=#{id}
+    </update>
+</mapper>

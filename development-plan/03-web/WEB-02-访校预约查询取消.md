@@ -17,6 +17,7 @@
 - [ ] `backend/src/main/java/com/doupi/planref/auth/AuthService.java`：生成WEB外部身份，只签VISITOR。
 - [ ] `backend/src/main/java/com/doupi/planref/recruit/{RecruitController,RecruitService,RecruitRepository}.java`：共用创建/查询/取消；不建立Web预约独立表。
 - [ ] `backend/src/main/java/com/doupi/planref/auth/ChannelRateLimitFilter.java`：Redis原子限流。
+- [ ] 门户改用访客会话、预约号和高熵凭证查单，按预约号精确查找并验证本人凭证；切换时关闭旧 `GET /api/public/v1/bookings/query` 匿名手机号查单入口。用隔离数据回归合法手机号、部分号码、通配符和空白输入，均不得从旧入口取得预约、学生资料或核销码；新入口的错误凭证与非本人统一返回 404。
 
 依赖：WEB-01正式内容/隐私和开放规则；MINI-04预约应用服务；公共JWT+Redis；HTTPS提供Web Crypto。短信真实接入不是P0强制依赖，凭证遗失由学校人工核实。
 

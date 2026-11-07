@@ -13,9 +13,10 @@
 文件路径与实施任务：
 
 - [x] 工程根目录、npm 输入及输出目录已修正。2026-11-07 使用学校 AppID 对工程副本运行微信开发者工具 `build-npm`，生成 TDesign 产物，构建未报警告。[工程配置](../../doupi-miniApp/project.config.json)
-- [x] 统一 `/api/v1`、12 秒超时、Bearer、traceId、401/403 和原键原正文重试。匿名页面继续通过 dispatcher 调用，校区和轮播字段在接入层转换。[HTTP 层](../../doupi-miniApp/utils/http.js) · [接入层](../../doupi-miniApp/utils/cloudClient.js) · [小程序专项测试](../../tests/mini-http.test.cjs)
+- [x] 统一 `/api/v1`、12 秒超时、Bearer、traceId、401/403 和原键原正文重试。匿名页面继续通过 dispatcher 调用，校区和轮播字段在接入层转换。[HTTP 层](../../doupi-miniApp/utils/http.js) · [接入层](../../doupi-miniApp/utils/cloudClient.js)
 - [x] 接入员工会话查询、退出和旧网关动作鉴权。旧模拟登录、绑定及客户端代维入口停用。旧网关的手机号查单需要身份核验，Web 查单凭证接续 WEB-02。[会话接口](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/MiniSessionController.java) · [会话专项测试](../../doupi-server/doupi-recruit/src/test/java/com/doupi/recruit/controller/MiniSessionControllerTest.java) · [网关专项测试](../../doupi-server/doupi-recruit/src/test/java/com/doupi/recruit/controller/MiniGatewayBoundaryTest.java)
-- [ ] 完成模拟器运行检查，在学校 AppID 的真机和合法 HTTPS 域名下联调公开页、真实员工会话查询与退出，验证旧令牌不可继续访问受保护接口。
+- [x] 用户确认小程序网络请求调通，公开 HTTPS 和匿名访问边界已通过线上接口复测。
+- [ ] MINI-02 真实员工登录可用后，在学校小程序真机验证会话查询、权限刷新、退出及退出令牌失效。
 
 本次复用现有 JWT 和 Redis `login_tokens:` 会话。真实微信登录、访客会话和员工绑定由 MINI-02 接入。
 
@@ -24,8 +25,13 @@
 ### 本地验证记录
 
 - 2026-11-07，微信开发者工具完成 TDesign npm 构建。微信原生编译器检查通过，覆盖 185 个 WXML/WXS 文件和 36 个页面 WXSS 文件及样式依赖。
-- `node --test tests/mini-http.test.cjs` 通过 7 项用例。后端 `MiniGatewayBoundaryTest` 和 `MiniSessionControllerTest` 共通过 4 项用例。服务启动模块及依赖通过 Maven 编译。
-- 模拟器自动化连接未建立，真机与真实后端会话联调待验收。后端全量测试基线已有 OCR 测试因缺少测试图片报错。
+- 首次开发验证记录为 7 项前端用例通过。当前仓库缺少原前端测试文件，复查使用临时 Node 模拟验证统一地址、12 秒超时、Bearer、401/403、换会话及原键原正文重试。
+- 后端 `MiniGatewayBoundaryTest` 和 `MiniSessionControllerTest` 复测共通过 4 项用例。服务启动模块及依赖已通过 Maven 编译。后端全量测试基线已有 OCR 测试因缺少测试图片报错。
+
+### 线上复测与待补测
+
+- 2026-11-07 用户确认小程序网络请求调通。线上 `https://doupi.cloud/api/v1/wx/dispatcher` 的 `campus.summary`、`config.listBanner` 和 `appointment.meta` 均返回 HTTP 200、`code=0` 和 `traceId`。匿名调用 `appointment.adminList` 和 `GET /api/v1/auth/me` 均返回 HTTP 401。
+- 本次延后真实员工会话验收，MINI-02 可先开发。真实登录可用后，新开一个员工测试会话，在学校小程序真机上核对 `GET /api/v1/auth/me` 返回 200 及本人权限，`POST /api/v1/auth/logout` 返回 200、`revoked=true` 并清理本地登录态，再用同一令牌访问受保护接口确认 HTTP 401。用另一独立会话复核仅撤销本次退出的会话。证据只记录状态码、traceId 和结果，令牌不入文档。通过后回填主表完成日期和验收证据。
 
 ## 2. 接口设计清单
 
