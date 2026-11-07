@@ -5,41 +5,23 @@ on:
     branches: [ main ]
     paths:
       - 'doupi-web-admin-react/**'
-      - 'deploy-admin.sh'
+      - 'deploy/deploy-admin.sh'
+      - 'deploy/deploy.sh'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/deploy-admin.yml'
   workflow_dispatch:
 
-# 每个 workflow 独立锁：同 workflow 快速重推只保留最新，不同 workflow 可并发不互相取消
+# 同一入口按 GitHub 并发组排队，各入口在服务器共用发布锁。
 concurrency:
   group: doupi-deploy-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    # 首次构建需下载 npm 依赖，预留较长时间；后续增量构建通常 1-2 分钟
-    timeout-minutes: 20
-    steps:
-      - name: 校验部署密钥
-        run: |
-          if [ -z "${{ secrets.SERVER_HOST }}" ] || [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
-            echo "::error::未检测到 GitHub Secrets (SERVER_HOST / SERVER_SSH_KEY)，请在仓库 Settings -> Secrets and variables -> Actions 中配置。"
-            exit 1
-          fi
-
-      # 全程只建立一次 SSH 连接发送触发指令，不传输任何构建产物，
-      # 代码拉取、npm 构建、原子替换、reload nginx 全部由服务器本地脚本完成
-      - name: SSH 触发服务器本地构建部署
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p 22 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-          ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
-            "${{ secrets.SERVER_USER || 'cicd' }}@${{ secrets.SERVER_HOST }}" \
-            'WS=/data/deploy-workspace/doupi-school-platform
-             if [ ! -d "$WS/.git" ]; then
-               git clone -b main --depth 1 git@github.com:doupi-code/doupi-school-platform.git "$WS"
-             fi
-             bash "$WS/deploy-admin.sh"'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      target: admin
+    secrets:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}

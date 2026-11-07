@@ -1,0 +1,58 @@
+name: Deploy on Server
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+    secrets:
+      SERVER_HOST:
+        required: true
+      SERVER_SSH_KEY:
+        required: true
+      SERVER_USER:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 预留等待服务器发布锁及构建的时间。
+    timeout-minutes: 120
+    steps:
+      - name: 获取 main 发布入口
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+          sparse-checkout: deploy/deploy.sh
+          sparse-checkout-cone-mode: false
+
+      - name: SSH 触发服务器同步与发布
+        shell: bash
+        env:
+          DEPLOY_TARGET: ${{ inputs.target }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'cicd' }}
+        run: |
+          if [[ -z "$SERVER_HOST" || -z "$SERVER_SSH_KEY" ]]; then
+            echo "::error::请配置 Actions Secrets SERVER_HOST 和 SERVER_SSH_KEY。"
+            exit 1
+          fi
+          case "$DEPLOY_TARGET" in
+            server|admin|client|all) ;;
+            *) echo "::error::无效的发布目标。"; exit 2 ;;
+          esac
+
+          mkdir -p ~/.ssh
+          key_file=$(mktemp)
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" | tr -d '\r' > "$key_file"
+          ssh-keyscan -p 22 -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -T -i "$key_file" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "$SERVER_USER@$SERVER_HOST" "bash -s -- $DEPLOY_TARGET" < deploy/deploy.sh

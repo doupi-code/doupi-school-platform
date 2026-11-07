@@ -51,6 +51,10 @@ public class MiniSessionController
         data.put("permissions", visitor ? Set.of() : new TreeSet<>(current.getPermissions()));
         data.put("scopeDeptIds", visitor ? Set.of() : sessions.scopeDeptIds(current.getUser()));
         data.put("bindingStatus", identity == null ? null : identity.status());
+        if (identity != null && principal.getVerifiedPhone() != null)
+        {
+            data.put("phone", principal.getVerifiedPhone());
+        }
         if (visitor)
         {
             var binding = sessions.latestBinding(identity.id());

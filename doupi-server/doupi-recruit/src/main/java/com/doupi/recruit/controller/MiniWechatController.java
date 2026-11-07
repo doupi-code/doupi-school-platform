@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import com.doupi.common.core.domain.ApiV1Response;
 import com.doupi.common.core.domain.model.LoginUser;
 import com.doupi.common.exception.ServiceException;
+import com.doupi.recruit.service.MiniPhoneSmsService;
 import com.doupi.recruit.service.MiniWechatService;
 import com.doupi.recruit.service.MiniWechatService.CommandResult;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,14 +39,16 @@ public class MiniWechatController
 {
     private static final Logger log = LoggerFactory.getLogger(MiniWechatController.class);
     private final MiniWechatService service;
+    private final MiniPhoneSmsService sms;
     private final RedisTemplate<Object, Object> redis;
     private final RedisScript<Long> limitScript;
     private final Set<String> trustedProxies;
 
-    public MiniWechatController(MiniWechatService service, RedisTemplate<Object, Object> redis,
+    public MiniWechatController(MiniWechatService service, MiniPhoneSmsService sms, RedisTemplate<Object, Object> redis,
             RedisScript<Long> limitScript, @Value("${plan.wechat.trusted-proxies:}") String trustedProxies)
     {
         this.service = service;
+        this.sms = sms;
         this.redis = redis;
         this.limitScript = limitScript;
         this.trustedProxies = Arrays.stream(trustedProxies.split(",")).map(String::trim)
@@ -57,6 +60,27 @@ public class MiniWechatController
     {
         throttle("mini:wechat:login:" + loginSource(request), 120);
         return reply(200, "ok", false, service.login(body.code()));
+    }
+
+    @PostMapping("/auth/wechat/phone")
+    public ResponseEntity<ApiV1Response> loginWithPhone(@RequestBody PhoneLoginBody body, HttpServletRequest request)
+    {
+        throttle("mini:wechat:login:" + loginSource(request), 120);
+        return reply(200, "ok", false, service.loginWithPhone(body.code(), body.phoneCode()));
+    }
+
+    @PostMapping("/auth/sms/code")
+    public ResponseEntity<ApiV1Response> sendSmsCode(@RequestBody SmsSendBody body, HttpServletRequest request)
+    {
+        throttle("mini:sms:send:ip:" + loginSource(request), 20);
+        return reply(200, "ok", false, sms.sendCode(body.phone(), body.wechatCode()));
+    }
+
+    @PostMapping("/auth/sms/login")
+    public ResponseEntity<ApiV1Response> loginWithSms(@RequestBody SmsLoginBody body, HttpServletRequest request)
+    {
+        throttle("mini:wechat:login:" + loginSource(request), 120);
+        return reply(200, "ok", false, sms.login(body.phone(), body.code(), body.wechatCode()));
     }
 
     @PostMapping("/auth/employee-bindings")
@@ -156,6 +180,9 @@ public class MiniWechatController
     }
 
     public record LoginBody(String code) {}
+    public record PhoneLoginBody(String code, String phoneCode) {}
+    public record SmsSendBody(String phone, String wechatCode) {}
+    public record SmsLoginBody(String phone, String code, String wechatCode) {}
     public record ApplyBody(String username, String reason) {}
     public record ReviewBody(Long expectedVersion, String decision, String remark) {}
     public record RevokeBody(Long expectedVersion) {}

@@ -36,6 +36,18 @@ public class LoginUser implements UserDetails
 
     private Long externalAuthVersion;
 
+    private String verifiedPhone;
+
+    public String getVerifiedPhone()
+    {
+        return verifiedPhone;
+    }
+
+    public void setVerifiedPhone(String verifiedPhone)
+    {
+        this.verifiedPhone = verifiedPhone;
+    }
+
     public Long getExternalAuthVersion()
     {
         return externalAuthVersion;

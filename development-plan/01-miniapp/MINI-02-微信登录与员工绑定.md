@@ -8,13 +8,13 @@
 
 **优先级与工期：P0，4个工作日。** 以一名单人Java开发者结合AI完成后端、原生小程序或React页面、联调及自测估算，不假设另有前端或QA人员；工期含约半天人工场景核对，外部微信审核等待不算有效开发日。App完整交付仍为P1。
 
-微信登录与学校员工核实分开。服务端用code换openid；未核实只签发VISITOR。绑定申请定位学校账号，另一位有授权核实人核对后生效；无短信、无手机号自动匹配、无模拟openid。密码登录是管理后台已有学校核实入口，员工小程序仍须外部身份VERIFIED。
+小程序保留短信验证码和微信手机号快捷登录。两种方式均由服务端使用 `wx.login` 凭证换取 OpenID，以原微信身份进入系统。手机号验证结果只作为本次会话的联系信息。绑定申请定位学校账号，由另一位有权限的核实员审核，只有已核实且在用的员工账号可取得 STAFF 会话。管理后台仍使用学校账号登录。
 
 文件路径与实施任务：
 
 - [x] 微信交换客户端及身份、绑定、幂等 Mapper 已按 MyBatis-Plus 工程约定编写。SQL 集中在 Mapper XML。
 - [x] 在 `doupi-server/doupi-recruit/` 接通登录、绑定、审核和撤销，验证审核权限、事务回滚及原键重放。
-- [x] 小程序登录页使用 `wx.login`。在「我的」提交员工绑定、查看进度及重新登录，复用统一 HTTP 会话。
+- [x] 恢复原手机号登录页，两种方式复用统一 HTTP 会话。在「我的」可提交员工绑定、查看进度及重新登录。
 - [x] 学校核实界面位于管理后台「招生管理 → 教师绑定」，通过 `identity:binding:approve` 和部门范围授权。申请人和核实员通过学校认可的渠道核对同一个申请编号及学校账号。
 - [ ] 签发真实员工会话后回补 MINI-01 真机验收，核对本人查询、退出和原令牌返回 401，再分别更新两模块状态。[MINI-01 补测步骤](MINI-01-工程与HTTP.md#线上复测与待补测)
 
@@ -22,10 +22,12 @@
 
 ### 本地验证与上线补测
 
-- Maven 后端打包和 76 项测试通过。测试覆盖微信异常、原访客会话保持访客、自审及跨部门拒绝、同键重放、实际 Mapper 事务回滚、账号停用及撤销后旧绑定失效。一个既有 OCR 用例缺少本地图片样本，本次排除。管理后台构建和小程序登录、个人中心、设置页面的 WXML/WXSS 编译通过。
+- Maven 后端打包和 81 项测试通过。恢复登录入口后，重新通过了登录页 WXML/WXSS 编译和页面交互验证，服务端用例覆盖手机号授权失败、短信发送失败及验证码被拒绝后的会话边界。真实短信、Redis 脚本和微信授权仍需联调。一个既有 OCR 用例缺少本地图片样本，本次排除。
 - 在隔离 MySQL 8.4 演练[增量迁移](../../database/migrations/2026-11-07-mini-02-wechat-identity.sql)，验证账号状态、部门、密码和角色分配变更触发会话版本递增。部署环境配置 `PLAN_WECHAT_APP_ID` 和 `PLAN_WECHAT_SECRET`。为核实角色配置 `identity:binding:approve`、教师绑定页权限及可核实部门范围。
 - 反代部署由 Nginx 覆盖 `X-Real-IP` 为 `$remote_addr`，并用 `PLAN_WECHAT_TRUSTED_PROXIES` 填写 Java 服务直接连接的可信代理 IP，多个值以逗号分隔。确认两台客户端的限流桶独立，再进行弱网联调。
-- 使用学校 AppID 真机验证微信登录、访客申请、其他员工核实、重新登录、撤销，以及 MINI-01 的退出后旧令牌 401。新增微信会话可用公开访校接口，受保护的旧预约接口由 MINI-04 和 MINI-05 按本人及岗位范围接续。
+- 在校园服务部署环境配置原腾讯云短信的 `SMS_SECRET_ID`、`SMS_SECRET_KEY`、`SMS_SDK_APP_ID`、`SMS_SIGN_NAME`、`SMS_LOGIN_TEMPLATE_ID`。`SMS_REGION` 默认 `ap-guangzhou`。模板变量沿用原云函数顺序，依次是验证码和有效分钟数。真机检查短信实收、发送冷却、错误、过期、重复使用，以及微信手机号授权成功和取消。[腾讯云发送短信接口](https://cloud.tencent.com/document/product/382/55981)
+
+- 使用学校 AppID 真机验证两种方式取得同一微信身份，再验证访客申请、其他员工核实、重新登录、撤销，以及 MINI-01 的退出后旧令牌 401。新增微信会话可用公开访校接口，受保护的旧预约接口由 MINI-04 和 MINI-05 按本人及岗位范围接续。
 
 验收：缺配置503且无身份/会话写入；无效code401；访客填写任何手机号/角色都无员工权限；同键同正文重放；同键跨绑定目标409；自核实403；范围外核实403；通过后重新登录得到实时岗位范围，停用和撤销立即阻止旧员工会话。
 
@@ -36,6 +38,9 @@
 | 接口名称 | 请求方式 | 路径 | 请求参数(字段名/类型/必填/含义) | 返回参数(字段名/类型/含义) | 权限要求 |
 |---|---|---|---|---|---|
 | 微信身份登录 | POST | `/api/v1/auth/wechat` | body.code:string(1..128)／是／wx.login一次性code；不接受openid、phone、role授权 | token:string（服务端签发会话，不含微信secret/session_key）；kind:string（STAFF或VISITOR）；userId:string（员工ID，访客为0）；identityId:string（经微信验证的外部身份ID） | 匿名登录，限流 |
+| 发送登录验证码 | POST | `/api/v1/auth/sms/code` | phone:string(11)／是／中国大陆手机号；wechatCode:string(1..128)／是／wx.login 凭证 | resendAfter:int（下次可发送的间隔秒数） | 公开入口，须核实微信凭证，按来源、微信身份和号码限流 |
+| 短信验证码登录 | POST | `/api/v1/auth/sms/login` | phone:string(11)／是；code:string(6)／是／短信验证码；wechatCode:string(1..128)／是／新的 wx.login 凭证 | token:string、kind:string、userId:string、identityId:string，含义同微信身份登录 | 公开入口，限流，须同时核实微信和短信凭证 |
+| 手机号快捷登录 | POST | `/api/v1/auth/wechat/phone` | code:string(1..128)／是／wx.login 凭证；phoneCode:string(1..128)／是／微信 getPhoneNumber 授权凭证 | token:string、kind:string、userId:string、identityId:string，含义同微信身份登录 | 公开入口，限流，须核实两项微信凭证 |
 | 申请员工身份绑定 | POST | `/api/v1/auth/employee-bindings` | Authorization:string／是；Idempotency-Key:string(8..64)／是；body.username:string(1..30)／是／学校账号；reason:string(5..300)／是／核实依据 | bindingRequestId:string（学校核实申请ID）；status:string（PENDING待核实）；version:int（初始为0） | 已认证WECHAT外部身份，未VERIFIED |
 | 学校核实员工绑定 | POST | `/api/v1/staff/employee-bindings/{id}/review` | id:long路径／是／绑定申请；Authorization:string／是／Bearer会话；Idempotency-Key:string(8..64)／是／本次命令键；expectedVersion:int>=0／是；decision:`APPROVE或REJECT`／是；remark:string(1..300)／是 | bindingRequestId:string（核实申请ID）；status:string（VERIFIED通过/REJECTED拒绝）；version:int（本次处理后版本）；loginAgainRequired:boolean（true表示需重新登录才可取得新身份） | STAFF且identity:binding:approve；部门范围内；不得核实自己 |
 | 核实队列 | GET | `/api/v1/staff/employee-bindings` | Authorization:string／是；before:long／否／上一页的下一页游标 | items:object[]（申请ID、账号、姓名、说明、状态、版本和本人标记）；nextBefore:string（分页游标，空字符串表示末页） | 学校后台会话，核实权限和部门范围 |
@@ -49,10 +54,15 @@
 | 接口 | 请求／服务端来源 → 明确数据库字段 → 返回 | 事务、并发与缓存 |
 |---|---|---|
 | `/auth/wechat` | code+服务端appId/secret→HTTPS官方jscode2session→openid；provider=`WECHAT`/app_id/subject_id→sys_external_identity身份唯一键；user_id/link_status→有效sys_user及授权或VISITOR→token/kind | 外部交换成功才写库；超时503，无伪身份。外部身份UPSERT依唯一键并发收敛；微信session信息不持久化不日志输出。Redis签会话，角色每次重载 |
+| `/auth/sms/code` | `wechatCode` 换取 OpenID。校验 `phone` 并转为 `+86` 号码。腾讯云使用验证码和有效分钟数下发；接单成功后写入 Redis 中该 OpenID 和号码的验证码及剩余尝试次数，返回 `resendAfter=60` | 按微信身份和手机号分别抢占 60 秒发送冷却键。验证码 5 分钟有效。无 MySQL 写入 |
+| `/auth/sms/login` | `wechatCode` 换取 OpenID。按 OpenID 和 `phone` 从 Redis 校验并一次性消耗 `code`。成功后按 `/auth/wechat` 的字段映射读写身份，`phone` 存入当前服务端会话 | Lua 原子校验和消耗，连续错 5 次即作废。已消耗的验证码无法再次签发会话 |
+| `/auth/wechat/phone` | `code` 换取 OpenID。以服务端应用凭证调用微信 `getuserphonenumber`，核对 `phone_info.watermark.appid`，读取 `purePhoneNumber`。两项成功后按 `/auth/wechat` 读写身份，已验证手机号存入当前会话 | 应用 access token 在服务端缓存。凭证过期、拒绝授权或上游失败时不签发会话 |
 | `/auth/employee-bindings` | username→sys_user.user_name/user_id/status；reason→auth_binding_request.reason；服务端identity_id/staff_user_id/status=PENDING/version=0/created_at；sys_external_identity.link_status=PENDING→申请ID/状态 | channel_idempotency以IDENTITY、固定BINDING_APPLY、key/hash占键；锁identity；单pending唯一约束；申请、状态、真实响应同事务，无成功前占位提交 |
 | `/staff/employee-bindings/{id}/review` | id和完整body入hash；expectedVersion→binding.version；decision/remark→status/review_remark/reviewed_by/reviewed_at/version+1；APPROVE写identity.user_id/link_status/verified_by/verified_at，REJECT恢复VISITOR→version/loginAgainRequired | 固定BINDING_APPROVE不拼ID后缀；锁申请及外部身份；检查真实核实人、目标staff有效与部门范围；事务失败全回滚。现有VISITOR会话不自动升级 |
 | 核实队列与撤销 | 队列由审核岗位数据范围过滤 `sys_user.dept_id`，读取有效申请；撤销匹配当前身份对应的已核实申请ID与版本，将 `sys_external_identity.user_id` 置空，`link_status` 设为 REVOKED | 撤销和 `BINDING_REVOKE` 幂等归档同事务。保留核实历史，既有员工令牌对不上当前绑定，重新核实后也无法重用 |
 | `/auth/me` | 当前会话的 identityId→identity.link_status；员工对比 `sys_user.auth_version` 和当前核实申请 ID；访客读取本人最近的申请编号和状态 → 返回 bindingStatus/permissions/scopeDeptIds | 只读，角色与范围实时重载。旧员工会话在版本变化后持续失效，微信会话按签发 TTL 到期 |
+
+`GET /api/v1/auth/me` 对已验证手机号的当前微信会话另返回 `phone:string`，供本人预约时预填。此字段未用于查询 `sys_user` 或授予权限。本次恢复两个登录入口无需额外表结构迁移。
 
 ## 4. 数据库补充设计
 
@@ -375,6 +385,7 @@ COMMENT='学校核实微信员工绑定，不按手机号自动授员工权限';
 |---|---|---|
 | Controller | [MiniWechatController](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/MiniWechatController.java) · [MiniSessionController](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/controller/MiniSessionController.java) | 微信登录、绑定申请、审核、撤销、会话查询与退出 |
 | Service | [MiniWechatService](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/MiniWechatService.java) · [WechatIdentityClient](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/WechatIdentityClient.java) · [MiniSessionService](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/MiniSessionService.java) | 服务端交换身份，校验学校账号与绑定。业务 Service 负责参数、授权、事务和幂等审计 |
+| Service | [MiniPhoneSmsService](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/MiniPhoneSmsService.java) · [TencentLoginSmsSender](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/service/TencentLoginSmsSender.java) | 发送冷却、验证码原子校验、腾讯云短信受理结果校验 |
 | Mapper | [MiniIdentityMapper.java](../../doupi-server/doupi-recruit/src/main/java/com/doupi/recruit/mapper/MiniIdentityMapper.java) · [MiniIdentityMapper.xml](../../doupi-server/doupi-recruit/src/main/resources/mapper/recruit/MiniIdentityMapper.xml) | 管理身份、绑定、核实队列和命令幂等记录，使用 `@Param` 与 `#{...}` 绑定参数 |
 | 小程序 | [统一 HTTP 层](../../doupi-miniApp/utils/http.js) | 登录页接入 `wx.login` 与 `http.request`，绑定申请复用 `http.command` 保留原键及正文 |
 
@@ -393,6 +404,7 @@ MySQL 的并发占键、锁定读取及授权联表集中维护在 Mapper XML。
 ## 6. 边界与异常场景处理
 
 - 微信 AppSecret 或 AppID 缺失及上游超时返回 503，登录凭证无效返回 401，微信限流返回 429。只有微信交换成功才建立身份。
+- 短信未配置或供应商拒绝受理返回 503，发送过频返回 429。验证码错误、过期、输错次数耗尽或已使用返回 401。微信手机号授权取消后可改用短信登录。
 - username不存在404，不返回学校账号密码；申请的reason不是核实结论。每个身份仅一份PENDING。
 - 审核者等于staff_user_id、自选角色和越部门均403；version变化或已处理409；REJECT保留完整历史。
 - 审核通过后明确要求重新登录；VISITOR JWT仍保持访客；SessionTokens每次验证VERIFIED绑定、账号status/del_flag、auth_version及最新角色。

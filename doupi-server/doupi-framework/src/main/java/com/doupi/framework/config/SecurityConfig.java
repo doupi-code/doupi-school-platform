@@ -102,7 +102,8 @@ public class SecurityConfig
                 // 对于登录login 注册register 验证码captchaImage 微信分发网关/api/wx/dispatcher 数据大屏/screen/** 官网公开接口/api/public/** 允许公开入口
                 requests.requestMatchers("/login", "/register", "/captchaImage", "/screen/**", "/api/public/**").permitAll()
                     // The dispatcher checks each action before invoking a handler.
-                    .requestMatchers(HttpMethod.POST, "/api/wx/dispatcher", "/api/v1/wx/dispatcher", "/api/v1/auth/wechat").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/wx/dispatcher", "/api/v1/wx/dispatcher", "/api/v1/auth/wechat",
+                            "/api/v1/auth/wechat/phone", "/api/v1/auth/sms/code", "/api/v1/auth/sms/login").permitAll()
                     // 静态资源，可匿名访问
                     .requestMatchers(HttpMethod.GET, "/", "/*.html", "/**.html", "/**.css", "/**.js", "/profile/**").permitAll()
                     .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**").permitAll()

@@ -13,7 +13,7 @@ class MiniWechatControllerTest
     void loginRateLimitTrustsOnlyExplicitProxyPeers()
     {
         var request = mock(HttpServletRequest.class);
-        var controller = new MiniWechatController(null, null, null, "127.0.0.1,::1");
+        var controller = new MiniWechatController(null, null, null, null, "127.0.0.1,::1");
         when(request.getRemoteAddr()).thenReturn("192.0.2.4", "127.0.0.1", "127.0.0.1");
         when(request.getHeader("X-Real-IP")).thenReturn("198.51.100.10", "invalid, value");
         assertEquals("192.0.2.4", controller.loginSource(request));

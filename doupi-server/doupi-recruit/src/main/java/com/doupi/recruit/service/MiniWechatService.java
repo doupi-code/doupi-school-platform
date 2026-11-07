@@ -43,7 +43,22 @@ public class MiniWechatService
 
     public Map<String, Object> login(String code)
     {
-        String openId = wechat.exchange(text(code, 1, 128, "微信登录凭证"));
+        return issueSession(authenticateWechat(code), null);
+    }
+
+    public Map<String, Object> loginWithPhone(String code, String phoneCode)
+    {
+        String proof = text(phoneCode, 1, 128, "微信手机号凭证");
+        return issueSession(authenticateWechat(code), wechat.exchangePhone(proof));
+    }
+
+    String authenticateWechat(String code)
+    {
+        return wechat.exchange(text(code, 1, 128, "微信登录凭证"));
+    }
+
+    Map<String, Object> issueSession(String openId, String verifiedPhone)
+    {
         String appId = wechat.appId();
         mapper.upsertIdentity(appId, openId);
         Identity identity = mapper.findIdentity(appId, openId);
@@ -64,6 +79,7 @@ public class MiniWechatService
         login.setExternalIdentityId(identity.id());
         login.setExternalBindingId(verified ? identity.bindingId() : null);
         login.setExternalAuthVersion(verified ? identity.authVersion() : null);
+        login.setVerifiedPhone(verifiedPhone);
         return Map.of("token", tokens.createToken(login), "kind", verified ? "STAFF" : "VISITOR",
                 "userId", Long.toString(userId), "identityId", Long.toString(identity.id()));
     }

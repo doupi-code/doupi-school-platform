@@ -358,7 +358,23 @@ function setUserInfo(userInfo, options) {
  * @returns {Promise<object>} 当前用户的会话信息
  */
 async function login(code) {
-    const result = await http.request('/auth/wechat', { method: 'POST', auth: false, body: { code } });
+    return signIn('/auth/wechat', { code });
+}
+
+function sendLoginCode(phone, wechatCode) {
+    return http.request('/auth/sms/code', { method: 'POST', auth: false, body: { phone, wechatCode }, timeout: 25000 });
+}
+
+function loginWithSms(phone, code, wechatCode) {
+    return signIn('/auth/sms/login', { phone, code, wechatCode });
+}
+
+function loginWithWechatPhone(code, phoneCode) {
+    return signIn('/auth/wechat/phone', { code, phoneCode }, 38000);
+}
+
+async function signIn(path, body, timeout) {
+    const result = await http.request(path, { method: 'POST', auth: false, body, timeout });
     const token = http.normalizeToken(result && result.token);
     if (!token || !/^[1-9]\d*$/.test(String(result.identityId))) {
         throw new Error('服务端未签发有效微信会话');
@@ -484,6 +500,7 @@ async function refreshToken() {
     setUserInfo(Object.assign({}, sameUser ? cached : {}, {
         userId: session.userId, identityId: session.identityId, role,
         kind: session.kind, bindingStatus: session.bindingStatus,
+        ...(session.phone ? { phone: session.phone } : {}),
         bindingRequestId: session.bindingRequestId || '',
         lastBindingStatus: session.lastBindingStatus || '',
         nickname: session.nickname || (sameUser && cached.nickname) || (session.kind === 'VISITOR' ? '微信访客' : '学校员工')
@@ -644,6 +661,9 @@ module.exports = {
     clearAuth,
     setUserInfo,
     login,
+    sendLoginCode,
+    loginWithSms,
+    loginWithWechatPhone,
     getPhoneNumber,
     phoneLogin,
     checkSession,

@@ -1,5 +1,6 @@
 package com.doupi.recruit.service;
 
+import com.alibaba.fastjson2.JSON;
 import com.doupi.common.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 
@@ -30,5 +31,19 @@ class WechatIdentityClientTest
     {
         var client = new WechatIdentityClient("", "");
         assertEquals(503, assertThrows(ServiceException.class, () -> client.exchange("test-code")).getCode());
+    }
+
+    @Test
+    void acceptsOnlyPhoneNumberFromConfiguredWechatApp()
+    {
+        var response = JSON.parseObject("""
+                {"errcode":0,"phone_info":{"purePhoneNumber":"13800000000","countryCode":"86",
+                 "watermark":{"appid":"school-app"}}}
+                """);
+        assertEquals("13800000000", WechatIdentityClient.readPhone(response, "school-app"));
+        assertEquals(503, assertThrows(ServiceException.class,
+                () -> WechatIdentityClient.readPhone(response, "different-app")).getCode());
+        assertEquals(401, assertThrows(ServiceException.class,
+                () -> WechatIdentityClient.readPhone(JSON.parseObject("{\"errcode\":40029}"), "school-app")).getCode());
     }
 }

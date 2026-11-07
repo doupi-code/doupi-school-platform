@@ -41,7 +41,7 @@ async function request(path, options = {}) {
         url: API_BASE_URL + path,
         method: options.method || 'GET',
         data: options.body,
-        timeout: 12000,
+        timeout: options.timeout || 12000,
         header,
         success(response) {
             const payload = response.data || {};

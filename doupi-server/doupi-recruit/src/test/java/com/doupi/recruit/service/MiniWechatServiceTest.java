@@ -45,6 +45,35 @@ class MiniWechatServiceTest
     }
 
     @Test
+    void failedPhoneProofCannotCreateIdentityOrSession()
+    {
+        when(wechat.exchange("wechat-code")).thenReturn("verified-openid");
+        when(wechat.exchangePhone("expired-phone-code")).thenThrow(new ServiceException("expired", 401));
+
+        assertEquals(401, assertThrows(ServiceException.class,
+                () -> service.loginWithPhone("wechat-code", "expired-phone-code")).getCode());
+        verifyNoInteractions(mapper, tokens);
+    }
+
+    @Test
+    void verifiedPhoneRemainsContactDataAndCannotGrantStaffPermissions()
+    {
+        when(wechat.appId()).thenReturn("test-app");
+        when(wechat.exchange("wechat-code")).thenReturn("verified-openid");
+        when(wechat.exchangePhone("phone-code")).thenReturn("13800000000");
+        when(mapper.findIdentity("test-app", "verified-openid"))
+                .thenReturn(new Identity(11, null, "VISITOR", null, "test-app", "verified-openid", null));
+        when(tokens.createToken(any())).thenReturn("server-token");
+
+        assertEquals("VISITOR", service.loginWithPhone("wechat-code", "phone-code").get("kind"));
+        var issued = ArgumentCaptor.forClass(LoginUser.class);
+        verify(tokens).createToken(issued.capture());
+        assertEquals("13800000000", issued.getValue().getVerifiedPhone());
+        assertNull(issued.getValue().getExternalBindingId());
+        verifyNoInteractions(users);
+    }
+
+    @Test
     void pendingIdentityIsIssuedAsVisitorAndVerifiedIdentityRequiresFreshLogin()
     {
         when(wechat.appId()).thenReturn("test-app");
