@@ -9,7 +9,7 @@
 const feedback = require('./feedback');
 const cloudClient = require("./cloudClient");
 
-const APP = getApp();
+const http = require("./http");
 
 /** 代维操作者快照（发起代维的超管 id/名称，仅用于请求记日志；与 userInfo 分离） */
 const ADMIN_INFO_KEY = "adminInfo";
@@ -74,7 +74,7 @@ function normalizeRole(role) {
 function isLoggedIn() {
     try {
         const userInfo = wx.getStorageSync("userInfo");
-        return !!(userInfo && userInfo.userId);
+        return !!(http.getToken() && userInfo && userInfo.userId);
     } catch (e) {
         return false;
     }
@@ -314,13 +314,7 @@ function requireRoles(allowedRoles) {
  * @returns {void}
  */
 function clearAuth() {
-    try {
-        wx.removeStorageSync("userInfo");
-        wx.removeStorageSync("sessionKey");
-        wx.removeStorageSync(ADMIN_INFO_KEY);
-        wx.removeStorageSync(PROFILE_JUST_UPDATED_KEY);
-        clearPendingLoginDraft();
-    } catch (e) {}
+    http.clearSession();
 }
 
 /**
@@ -476,50 +470,37 @@ async function phoneLogin(phone, code) {
     }
 }
 
-/**
- * 检查微信 session 有效性
- *
- * 调用 wx.checkSession 检查当前登录态是否有效，
- * 过期时自动清除本地缓存。
- *
- * @returns {Promise<boolean>} session是否有效
- */
+/** 核对当前后端会话。 */
 async function checkSession() {
-    return new Promise(function(resolve) {
-        wx.checkSession({
-            success: function() {
-                resolve(true);
-            },
-            fail: function() {
-                console.log("[AUTH] session 已过期");
-                clearAuth();
-                resolve(false);
-            },
-        });
-    });
+    return !!(await refreshToken());
 }
 
-/**
- * 刷新登录态（预留接口）
- *
- * 用于在 session 过期时重新获取登录态。
- * 当前实现：清除旧状态并返回提示。
- *
- * @returns {Promise<void>}
- */
 async function refreshToken() {
-    try {
-        // 当前会话模型基于 OPENID + _userId，后续若引入正式会话票据，再在此处扩展刷新逻辑。
-
-        // 当前实现：清除过期状态
-        clearAuth();
-
-        console.log("[AUTH] refreshToken: 登录态已清除，需要重新登录");
-
-    } catch (err) {
-        console.error("[AUTH] refreshToken failed", err);
-        clearAuth();
+    if (!http.getToken()) {
+        if (wx.getStorageSync('token') || getUserInfo()) clearAuth();
+        return null;
     }
+    const session = await http.request('/auth/me');
+    const cached = getUserInfo();
+    const permissions = session.permissions || [];
+    const role = permissions.includes('*:*:*') || permissions.includes('wx:admin') ? 1
+        : permissions.includes('wx:teacher') ? 3 : 4;
+    clearAdminInfo();
+    const sameUser = cached && String(cached.userId) === session.userId;
+    setUserInfo(Object.assign({}, sameUser ? cached : {}, {
+        userId: session.userId, identityId: session.identityId, role
+    }));
+    getApp().globalData.session = session;
+    return session;
+}
+
+async function logout() {
+    const token = http.getToken();
+    if (token) {
+        const result = await http.request('/auth/logout', { method: 'POST' });
+        if (!result || result.revoked !== true) throw new Error('服务端尚未确认退出');
+    }
+    http.clearSession(token);
 }
 
 /**
@@ -669,6 +650,7 @@ module.exports = {
     phoneLogin,
     checkSession,
     refreshToken,
+    logout,
     getRoleName,
     isManager,
     isRoleValid,

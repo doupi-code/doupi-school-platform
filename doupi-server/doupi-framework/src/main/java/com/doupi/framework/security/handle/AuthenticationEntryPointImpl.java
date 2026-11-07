@@ -8,8 +8,10 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONWriter;
 import com.doupi.common.constant.HttpStatus;
 import com.doupi.common.core.domain.AjaxResult;
+import com.doupi.common.core.domain.ApiV1Response;
 import com.doupi.common.utils.ServletUtils;
 import com.doupi.common.utils.StringUtils;
 
@@ -27,6 +29,16 @@ public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint, S
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e)
             throws IOException
     {
+        if (request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"))
+        {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.getWriter().write(JSON.toJSONString(ApiV1Response.of(401, "请先登录", null),
+                    JSONWriter.Feature.WriteNulls));
+            return;
+        }
         int code = HttpStatus.UNAUTHORIZED;
         String msg = StringUtils.format("请求访问：{}，认证失败，无法访问系统资源", request.getRequestURI());
         ServletUtils.renderString(response, JSON.toJSONString(AjaxResult.error(code, msg)));

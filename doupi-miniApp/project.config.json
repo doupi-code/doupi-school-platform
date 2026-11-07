@@ -35,8 +35,8 @@
     "packNpmManually": true,
     "packNpmRelationList": [
       {
-        "packageJsonPath": "./miniprogram/package.json",
-        "miniprogramNpmDistDir": "./miniprogram/"
+        "packageJsonPath": "./package.json",
+        "miniprogramNpmDistDir": "./"
       }
     ],
     "minifyWXSS": true,
@@ -55,7 +55,6 @@
   "cloudbaseUid": null,
   "envId": "cloud1-d4g4qc04b76a4e96e",
   "envVersion": "release",
-  "srcMiniprogramRoot": "miniprogram/",
   "condition": {
     "search": {
       "list": []
@@ -70,13 +69,7 @@
       "list": []
     },
     "miniprogram": {
-      "list": [
-        {
-          "id": -1,
-          "name": "db guide",
-          "pathName": "pages/databaseGuide/databaseGuide"
-        }
-      ]
+      "list": []
     }
   },
   "compileType": "miniprogram",

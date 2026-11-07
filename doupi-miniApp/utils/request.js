@@ -81,10 +81,9 @@ var FORCE_LOGOUT_TOAST_MS = 2000;
 var FORCE_LOGOUT_RELAUNCH_DELAY_MS = FORCE_LOGOUT_TOAST_MS + 200;
 
 function forceLogoutToLogin(message) {
-    if (FORCE_LOGOUT_IN_PROGRESS) return;
+    if (FORCE_LOGOUT_IN_PROGRESS || auth.isLoggedIn()) return;
     FORCE_LOGOUT_IN_PROGRESS = true;
     try {
-        auth.clearAuth();
         feedback.showToast({
             title: message || "登录已失效，请重新登录",
             icon: "none",
@@ -92,7 +91,7 @@ function forceLogoutToLogin(message) {
         });
         setTimeout(function() {
             FORCE_LOGOUT_IN_PROGRESS = false;
-            wx.reLaunch({ url: "/pages/login/login" });
+            if (!auth.isLoggedIn()) wx.reLaunch({ url: "/pages/login/login" });
         }, FORCE_LOGOUT_RELAUNCH_DELAY_MS);
     } catch (e) {
         FORCE_LOGOUT_IN_PROGRESS = false;
@@ -185,7 +184,7 @@ function invalidateCacheByNamespaces(namespaces) {
  * 核心请求方法
  *
  * 功能：
- * - 自动携带 `_userId / _openid`
+ * - 由HTTP层按公开动作或后端会话发送请求
  * - 统一错误码转人类可读提示
  * - 支持选项：showLoading(是否显示loading), showError(是否自动toast错误), retry(重试次数)
  * - 返回 Promise<data>，失败时抛出包含errCode/errMsg的错误
@@ -207,30 +206,9 @@ async function request(action, payload, options) {
         loadingText: "加载中...",
     }, options);
 
-    var userInfo = auth.getUserInfo();
     var finalPayload = Object.assign({}, payload || {});
-    var supportTargetId = opts.supportViewTargetUserId
-        ? String(opts.supportViewTargetUserId).trim()
-        : "";
-
-    if (supportTargetId) {
-        finalPayload._userId = supportTargetId;
-    } else if (userInfo && userInfo.userId) {
-        finalPayload._userId = userInfo.userId;
-    }
-
-    if (auth.isImpersonating()) {
-        var adminInfo = auth.getAdminInfo();
-        if (adminInfo && adminInfo.operatorUserId) {
-            finalPayload._operatorUserId = adminInfo.operatorUserId;
-            if (adminInfo.operatorName) {
-                finalPayload._operatorName = adminInfo.operatorName;
-            }
-        }
-    } else if (userInfo && userInfo.openid) {
-        finalPayload._openid = userInfo.openid;
-    }
-    var cacheTtl = getCacheTtl(action, opts);
+    var publicRead = cloudClient.isPublicRead(action);
+    var cacheTtl = publicRead ? getCacheTtl(action, opts) : 0;
     var cacheKey = cacheTtl > 0 ? createCacheKey(action, finalPayload) : "";
     if (cacheKey) {
         var cachedValue = getCachedValue(cacheKey);
@@ -245,7 +223,7 @@ async function request(action, payload, options) {
     var promise = (async function() {
         var lastError = null;
         var attempt = 0;
-        var maxAttempts = 1 + (opts.retry || 0);
+        var maxAttempts = 1 + (publicRead ? (opts.retry || 0) : 0);
         var loadingShown = false;
 
         while (attempt < maxAttempts) {
@@ -274,7 +252,8 @@ async function request(action, payload, options) {
                 lastError = new Error(getErrorMessage(result.errCode, result.errMsg));
                 lastError.errCode = result.errCode;
                 lastError.errMsg = getErrorMessage(result.errCode, result.errMsg);
-                lastError.rawResult = result;
+                lastError.status = result.status;
+                lastError.traceId = result.traceId;
 
                 if (lastError.errCode === "ACCOUNT_FROZEN" || lastError.errCode === "UNAUTHORIZED") {
                     forceLogoutToLogin(lastError.errMsg);
@@ -288,7 +267,7 @@ async function request(action, payload, options) {
                     loadingShown = false;
                 }
 
-                if (err.errCode && attempt < maxAttempts) {
+                if (["NETWORK", "TIMEOUT"].includes(err.errCode) && attempt < maxAttempts) {
                     console.log("[REQUEST] " + action + " 第" + attempt + "次失败，准备重试...");
                     continue;
                 }

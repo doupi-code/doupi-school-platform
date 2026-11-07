@@ -10,6 +10,7 @@ const { request } = require('../../utils/request');
 const displayDict = require('../../utils/displayDict');
 const errorDict = require('../../utils/errorDict');
 const auth = require('../../utils/auth');
+const { normalizeToken } = require('../../utils/http');
 const { hasCompletedBasicProfile } = require('../../utils/avatar');
 
 Page({
@@ -70,13 +71,17 @@ Page({
     });
   },
 
-  handleLoginSuccess(userInfo, role) {
+  handleLoginSuccess(userInfo, role, serverToken) {
+    const token = normalizeToken(serverToken);
+    if (!token || !userInfo || !userInfo.userId) {
+      throw new Error('服务端未签发有效登录会话');
+    }
     const parsedRole = parseInt(role, 10);
     const finalRole = Number.isNaN(parsedRole) ? 4 : parsedRole;
     const finalUserInfo = Object.assign({}, userInfo || {}, { role: finalRole });
 
-    wx.setStorageSync('userInfo', finalUserInfo);
-    wx.setStorageSync('token', Date.now());
+    wx.setStorageSync('token', token);
+    auth.setUserInfo(finalUserInfo);
 
     feedback.showToast({
       title: displayDict.text('LOGIN_SUCCESS'),
@@ -291,7 +296,7 @@ Page({
       wx.hideLoading();
       const userInfo = result && result.userInfo ? result.userInfo : result;
       const role = userInfo && userInfo.role;
-      this.handleLoginSuccess(userInfo, role);
+      this.handleLoginSuccess(userInfo, role, result && result.token);
 
     } catch (err) {
       wx.hideLoading();
@@ -356,7 +361,7 @@ Page({
       wx.hideLoading();
 
       if (userInfo && userInfo.phone) {
-        this.handleLoginSuccess(userInfo, finalRole);
+        this.handleLoginSuccess(userInfo, finalRole, result.token);
         return;
       }
 
@@ -373,7 +378,7 @@ Page({
         }
 
         const mergedUser = Object.assign({}, userInfo || {}, { phone: phoneNumber });
-        this.handleLoginSuccess(mergedUser, finalRole);
+        this.handleLoginSuccess(mergedUser, finalRole, result && result.token);
       } catch (bindErr) {
         wx.hideLoading();
         console.warn('auth.getPhoneNumber:', bindErr);

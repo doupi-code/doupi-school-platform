@@ -72,10 +72,6 @@ scripts/*.tar.gz
 
 # WorkBuddy 项目数据目录
 .workbuddy/
-"doupi-web-admin-react/dist/" 
-"doupi-web-client-react/dist/" 
-doupi-web-admin-react/dist/
-doupi-web-client-react/dist/
 
 # 运维与修复配置文件及快照 (排除敏感密码与数据镜像)
 maintenance/*.json
@@ -84,3 +80,11 @@ maintenance/snapshot*/
 maintenance/review*/
 maintenance/*.xlsx
 maintenance/*.pyc
+
+# Python工具缓存
+__pycache__/
+*.py[cod]
+
+# 数据库目标结构属于版本资料，不是Maven构建产物
+!database/target/
+!database/target/**

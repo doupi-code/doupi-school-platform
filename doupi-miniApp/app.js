@@ -1,23 +1,15 @@
-const { envList } = require('./envList');
+const auth = require('./utils/auth');
 
 App({
   globalData: {
     userInfo: null,
     isLoggedIn: false,
-    role: 4
+    role: 4,
+    session: null
   },
 
   onLaunch() {
     this.checkForAppUpdate();
-
-    // 默认 API 网关地址配置（优先使用开发者工具调试注入，禁止生产硬编码）
-    const defaultApiUrl = (typeof __wxConfig !== 'undefined' && __wxConfig.envVersion === 'release')
-      ? 'https://doupi.cloud'
-      : 'http://localhost:8080';
-
-    if (!wx.getStorageSync('api_base_url')) {
-      wx.setStorageSync('api_base_url', defaultApiUrl);
-    }
 
     if (wx.cloud) {
       try {
@@ -26,13 +18,12 @@ App({
         console.warn('wx.cloud.init skipped:', e);
       }
     }
+  },
 
-    const userInfo = wx.getStorageSync('userInfo');
-    if (userInfo) {
-      this.globalData.userInfo = userInfo;
-      this.globalData.isLoggedIn = true;
-      this.globalData.role = userInfo.role || 4;
-    }
+  onShow() {
+    auth.refreshToken().catch(error => {
+      if (error.status !== 401) console.warn('[session] refresh failed', error.status, error.traceId);
+    });
   },
 
   checkForAppUpdate() {

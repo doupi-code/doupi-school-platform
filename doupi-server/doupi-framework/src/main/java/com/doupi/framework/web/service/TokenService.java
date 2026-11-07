@@ -2,12 +2,14 @@ package com.doupi.framework.web.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import com.doupi.common.constant.CacheConstants;
 import com.doupi.common.constant.Constants;
@@ -32,6 +34,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 public class TokenService
 {
     private static final Logger log = LoggerFactory.getLogger(TokenService.class);
+    private static final Set<String> UNVERIFIED_WX_PERMISSIONS = Set.of("wx:user", "wx:teacher", "wx:admin");
 
     // 令牌自定义标识
     @Value("${token.header}")
@@ -72,11 +75,26 @@ public class TokenService
                 String uuid = (String) claims.get(Constants.LOGIN_USER_KEY);
                 String userKey = getTokenKey(uuid);
                 LoginUser user = redisCache.getCacheObject(userKey);
+                // These single-permission sessions were issued by the retired,
+                // unverified phone/code dispatcher and cannot establish identity.
+                if (user != null && user.getPermissions() != null && user.getPermissions().size() == 1
+                        && UNVERIFIED_WX_PERMISSIONS.contains(user.getPermissions().iterator().next()))
+                {
+                    return null;
+                }
                 return user;
+            }
+            catch (DataAccessException e)
+            {
+                if (request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"))
+                {
+                    throw e;
+                }
+                log.warn("登录会话存储不可用");
             }
             catch (Exception e)
             {
-                log.error("获取用户信息异常'{}'", e.getMessage());
+                log.debug("无法解析登录令牌");
             }
         }
         return null;
@@ -116,7 +134,8 @@ public class TokenService
         String token = IdUtils.fastUUID();
         loginUser.setToken(token);
         setUserAgent(loginUser);
-        refreshToken(loginUser);
+        updateSessionExpiry(loginUser);
+        redisCache.setCacheObject(getTokenKey(token), loginUser, expireTime, TimeUnit.MINUTES);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put(Constants.LOGIN_USER_KEY, token);
@@ -147,11 +166,15 @@ public class TokenService
      */
     public void refreshToken(LoginUser loginUser)
     {
+        updateSessionExpiry(loginUser);
+        // A concurrent logout may already have removed this key.
+        redisCache.setCacheObjectIfPresent(getTokenKey(loginUser.getToken()), loginUser, expireTime, TimeUnit.MINUTES);
+    }
+
+    private void updateSessionExpiry(LoginUser loginUser)
+    {
         loginUser.setLoginTime(System.currentTimeMillis());
         loginUser.setExpireTime(loginUser.getLoginTime() + expireTime * MILLIS_MINUTE);
-        // 根据uuid将loginUser缓存
-        String userKey = getTokenKey(loginUser.getToken());
-        redisCache.setCacheObject(userKey, loginUser, expireTime, TimeUnit.MINUTES);
     }
 
     /**

@@ -1,12 +1,12 @@
 package com.doupi.recruit.handler.impl;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.doupi.common.core.domain.model.LoginUser;
+import com.doupi.common.exception.ServiceException;
 import com.doupi.common.utils.StringUtils;
 import com.doupi.recruit.domain.DoupiRecruitAppointment;
 import com.doupi.recruit.handler.AbstractWxActionHandler;
@@ -30,46 +30,41 @@ public class AppointmentDetailHandler extends AbstractWxActionHandler
     }
 
     @Override
-    public boolean isAuthRequired()
-    {
-        return false;
-    }
-
-    @Override
     public Object handle(Map<String, Object> payload, LoginUser loginUser) throws Exception
     {
         String action = getSafeString(payload, "_current_action");
-
-        if (action != null && action.contains("cancel"))
+        Object id = payload.getOrDefault("appointmentId", payload.get("id"));
+        String number = getSafeString(payload, "appointmentNo");
+        if (id == null && StringUtils.isEmpty(number))
         {
-            Object idObj = payload.get("appointmentId");
-            if (idObj != null)
-            {
-                DoupiRecruitAppointment app = new DoupiRecruitAppointment();
-                app.setAppointmentId(Long.valueOf(idObj.toString()));
-                app.setStatus("CANCELLED");
-                appointmentService.updateDoupiRecruitAppointment(app);
-            }
-            Map<String, Object> res = new HashMap<>();
-            res.put("success", true);
-            return res;
+            throw new ServiceException("缺少预约标识", 400);
         }
-        else
+        DoupiRecruitAppointment appointment = id == null
+                ? appointmentService.selectDoupiRecruitAppointmentByNo(number)
+                : appointmentService.selectDoupiRecruitAppointmentById(Long.valueOf(id.toString()));
+        if (appointment == null)
         {
-            Object idObj = payload.get("appointmentId");
-            String no = getSafeString(payload, "appointmentNo");
-            DoupiRecruitAppointment app = null;
-            if (idObj != null)
-            {
-                app = appointmentService.selectDoupiRecruitAppointmentById(Long.valueOf(idObj.toString()));
-            }
-            else if (StringUtils.isNotEmpty(no))
-            {
-                app = appointmentService.selectDoupiRecruitAppointmentByNo(no);
-            }
-            Map<String, Object> res = new HashMap<>();
-            res.put("appointment", app);
-            return res;
+            throw new ServiceException("未找到预约", 404);
         }
+        if ("appointment.detail".equals(action) || "appointment.cancel".equals(action))
+        {
+            String phone = loginUser.getUser().getPhonenumber();
+            if (StringUtils.isEmpty(phone) || !phone.equals(appointment.getParentPhone()))
+            {
+                throw new ServiceException("未找到预约", 404);
+            }
+        }
+        if ("appointment.cancel".equals(action) || "appointment.adminCancel".equals(action))
+        {
+            DoupiRecruitAppointment update = new DoupiRecruitAppointment();
+            update.setAppointmentId(appointment.getAppointmentId());
+            update.setStatus("CANCELLED");
+            if (appointmentService.updateDoupiRecruitAppointment(update) == 0)
+            {
+                throw new ServiceException("未找到预约", 404);
+            }
+            return Map.of("success", true);
+        }
+        return Map.of("appointment", appointment);
     }
 }

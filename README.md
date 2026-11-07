@@ -1,111 +1,55 @@
-# 汉外华襄学校综合教育管理与门户平台 (Doupi Platform)
+# 豆皮校园行政办公平台
 
-> **武汉汉外华襄复读学校官方综合数字化平台**：涵盖现代化官网门户、教务管理中台、招生预约体系、物资与文印进销存，支持多端前后端分离协同，采用**纯原生环境部署（无 Docker）**与物理级环境隔离。
+面向学校行政、教务、总务等岗位，将文印、物资领退和库存等线下事务转为可受理、可流转、可交付、可追溯的线上流程。项目同时保留访校预约、到校核销和学校门户内容维护等既有业务。
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x%20%2F%204.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![JDK](https://img.shields.io/badge/JDK-17-blue.svg)](https://openjdk.org/)
-[![React](https://img.shields.io/badge/React-19.x-61dafb.svg)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-8.x-646cff.svg)](https://vitejs.dev/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.4-4479a1.svg)](https://www.mysql.com/)
-[![Nginx](https://img.shields.io/badge/Nginx-1.24-009639.svg)](https://nginx.org/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088ff.svg)](https://github.com/features/actions)
+小程序首批新增正式学生与监护关联、家长查询本人孩子分数与历史、家校通知，以及学校指定开放日入校送物预约；管理后台配套学生、成绩与活动维护。新增功能均为已确认待开发，离校登记非强制，未登记不等于仍在校。
 
----
+当前项目已有登记与台账基础，完整申请、审批、交接和确认流程属于本期产品目标。已有页面或接口不等于业务已经验收上线。
 
-## 1. 平台架构与工程目录
+## 产品文档
 
-本项目采用业界主流的 **Monorepo（单仓聚合）** 架构进行代码资产管理，前后端联动改动原子提交，并通过 GitHub Actions 路径过滤实现各端独立构建发布：
+- [文档导航](docs/README.md)
+- [完整产品规划](docs/product/01-产品规划.md)
+- [角色与权限](docs/product/02-角色与权限.md)
+- [现状与版本范围](docs/product/03-现状与版本范围.md)
+- [本期验收标准](docs/product/04-验收标准.md)
+- [四端产品规划与协同矩阵](docs/product/ends/00-全端功能与协同矩阵.md)
+- [系统技术设计方案](docs/engineering/04-系统技术设计方案.md)
+- [开发计划与排期](开发计划.md)：按小程序、管理后台、Web、App组织42个模块，单人Java开发结合AI辅助，132开发日＋18缓冲日＝150个工作日。
+- [学生与家长在校服务](docs/product/features/07-学生与家长在校服务.md)、[家校开放日送物预约](docs/product/features/08-家校开放日送物预约.md)：本次批准的家长服务范围与业务规则。
 
-```
-doupi-school-platform/
-├── doupi-server/             # [后端] Spring Boot 4 + JDK 17 (基于若依重构的模块化业务引擎)
-│   ├── doupi-admin/          # 后端启动入口、Web API、认证拦截
-│   ├── doupi-framework/      # 核心框架、安全拦截、Redis与Druid连接池
-│   ├── doupi-system/         # 系统管理、用户、角色、部门、字典
-│   ├── doupi-stock/          # 教务班级、文印排版、物资进销存核心业务
-│   └── doupi-common/         # 通用工具类、常量定义、数据脱敏
-├── doupi-web-client-react/   # [官网门户] React 19 + Vite 8 + Tailwind CSS (PC/移动端全自适应)
-├── doupi-web-admin-react/    # [管理后台] React 19 + TypeScript + Ant Design / ProComponents
-├── doupi-app/                # [移动端] 微信原生小程序工程 (招生预约、移动端查验)
-├── ruoyi-app/                # [移动端] Uni-app / Vue3 移动端工程
-├── deploy/                   # [原生部署] Systemd 服务配置、启动脚本、sudoers 最小提权规则
-├── scripts/                  # [运维基线] 数据库初始化、字符集修复、防硬编码检测工具
-├── .github/workflows/        # [自动化流水线] GitHub Actions 原生云端打包与安全部署
-└── docs/                     # [技术文档库] 全平台系统架构、数据库与各端开发手册
-```
+功能规格按[工作台与审批协同](docs/product/features/01-工作台与审批协同.md)、[文印管理](docs/product/features/02-文印管理.md)、[物资领退](docs/product/features/03-物资领退.md)、[库存与盘点](docs/product/features/04-库存与盘点.md)、[通知与台账](docs/product/features/05-通知与台账.md)、[招生接待与门户维护](docs/product/features/06-招生接待与门户维护.md)组织。
 
----
+## 工程入口
 
-## 2. 生产与测试环境对照表
+| 目录 | 用途 |
+| --- | --- |
+| `doupi-server/` | 后端服务与学校业务模块 |
+| `doupi-web-admin-react/` | 行政业务管理端 |
+| `doupi-web-client-react/` | 学校门户与预约入口 |
+| `doupi-miniApp/` | 微信小程序，包含预约与招生相关场景 |
+| `doupi-app/` | 跨端移动工程，部分业务仍有演示内容，按任务单独验收 |
+| `deploy/`、`scripts/`、`maintenance/` | 当前原生部署配置、只读检查与维护脚本；执行前核对适用环境 |
+| `docs/` | 产品规格、验收标准与工程维护资料 |
+| `开发计划.md`、`development-plan/` | 唯一进度主表、42模块详案及公共契约；70份Java来源已内嵌，不表示业务实现已验收 |
+| `database/` | 线上结构基线、完整目标结构及分类后的历史SQL |
 
-平台全面实行**物理级数据与网络隔离**，测试环境拥有专属独立数据库与受控权限账号，彻底避免测试数据污染生产。
+作品集已迁至平级[独立作品集仓库](../doupi-portfolio/README.md)，不再由校园仓库发布。本仓库的总发布范围为后端、管理后台和学校门户；本地拆站没有发布或更改线上网关路径。
 
-| 环境维度 | 生产环境 (Production) | 测试环境 (Testing) | 隔离说明 |
-| :--- | :--- | :--- | :--- |
-| **部署模式** | 纯原生部署 (Linux Systemd + Nginx) | 纯原生部署 (Linux Systemd + Nginx) | **完全不使用 Docker**，原生高吞吐 |
-| **Web 门户入口** | `http://101.43.58.160/` | - | Nginx 根路径直接分发 |
-| **管理后台入口** | `http://101.43.58.160/admin` | **`http://101.43.58.160:8081/`** | 端口完全隔离 (80 vs 8081) |
-| **后端 API 服务** | `http://127.0.0.1:8088` (Systemd) | `http://127.0.0.1:8089` (Systemd) | 守护进程独立多活 |
-| **MySQL 数据库** | **`stuck-mg`** | **`stuck-mg-test`** | **物理独立数据库** (共 54 张表) |
-| **数据库专属账号**| `root` (受控) | `doupi_test` (密码 `DoupiTest2026!#`) | 测试账号物理上**无权访问生产库** |
-| **Redis 缓存分库**| Database `0` | Database `1` | 键空间彻底隔离 |
-| **文件附件目录** | `/data/doupi/uploadPath` | `/data/doupi-test/uploadPath` | 磁盘存储空间物理隔离 |
-| **代码对应分支** | **`main`** 分支 | **`test`** 分支 | 推送自动触发该环境持续部署 |
+依赖版本、开发入口和检查方法见[工程导航与开发约定](docs/engineering/01-工程导航与开发约定.md)。发布、环境与数据维护见[部署与数据维护](docs/engineering/02-部署与数据维护.md)。微信导入和历史限制见[文印导入与历史约束](docs/engineering/03-文印导入与历史约束.md)。
 
----
+## 数据库与整理记录
 
-## 3. 本地开发与快速上手（彻底摆脱本地 Docker）
+- [数据库导航](database/README.md)：[线上66表结构基线](database/baseline/production-2026-11-05.sql)于2026-11-06重新只读核对，无结构漂移；不含业务数据。
+- [131表完整目标结构](database/target/schema.sql)及[字段、索引与约束差异](docs/engineering/05-数据库结构差异.md)：保留66张线上表并规划65张新增表；目标结构与模块第4节同源，尚未执行增量迁移。
+- [历史SQL迁移清单](database/history/manifest.json)：11份旧SQL按用途归档，保留内容及SHA256，不能当作新库安装顺序。
+- [项目整理记录](docs/engineering/06-项目整理记录.md)、[文件清理明细](docs/engineering/07-文件清理明细.md)：记录拆站、素材整理、旧工具处置、验证及保留事项。
 
-本地电脑**无需安装或启动笨重的 Docker Desktop**，电脑内存立省数 GB。
+在仓库根目录执行`python scripts/check-project-docs.py`，只读核对本地链接、42模块进度结构及DDL一致性，不连接数据库或执行SQL。业务完成情况只维护在[根开发计划进度主表](开发计划.md#当前进度与状态维护)，当前已完成0个、未完成42个；150工作日是排期基线。
 
-### 3.1 模式 A：轻量前端开发（无需起 Java，无需起数据库）
-前端工程师可直接启动本地 Vite 服务，接口自动代理至云端测试环境：
-```bash
-# 1. 官网门户端
-cd doupi-web-client-react
-npm install
-npm run dev     # 访问 http://localhost:5173
+## 文档与交付状态
 
-# 2. 管理后台端
-cd doupi-web-admin-react
-npm install
-npm run dev     # 访问 http://localhost:5174
-```
-
-### 3.2 模式 B：后端全栈开发（直连云端测试库）
-后端开发者无需在本地搭建数据库，直接在 `application-druid.yml` 中连接测试专属库：
-```yaml
-url: jdbc:mysql://101.43.58.160:3306/stuck-mg-test?...
-username: doupi_test
-password: DoupiTest2026!#
-```
-*(注：`doupi_test` 账户仅有测试库权限，任何测试增删改均 100% 隔离，安全无虞)*
-
----
-
-## 4. CI/CD 自动化流水线 (GitHub Actions)
-
-项目在 `.github/workflows/` 下内置了 3 条纯原生自动部署工作流：
-1. **`deploy-server.yml`**：推送变更到 `main` 自动发布生产后端（8088），推送到 `test` 自动发布测试后端（8089）。云端打包 JAR，SSH 传输分发，备份旧版本并执行 15 秒自动化探活与失败回滚。
-2. **`deploy-admin.yml`**：推送变更到 `main` 自动发布生产管理端，推送到 `test` 自动发布测试管理端（8081 端口）。
-3. **`deploy-client.yml`**：推送变更到 `main` 自动构建官网并原子更新 `/var/www/doupi-web-client/dist`。
-
-### GitHub Secrets 配置项
-在 GitHub 仓库中配置以下 3 个密钥即可生效：
-- `SERVER_HOST`: `101.43.58.160`
-- `SERVER_USER`: `cicd` (已配置最小提权与目录 ACL 的专用部署账号)
-- `SERVER_SSH_KEY`: CI/CD 专用私钥内容（位于 `D:\Dev\Servers\cicd_deploy_key.pem`）
-
----
-
-## 5. 详细技术文档导航 (`docs/`)
-
-系统已生成全套标准化最新文档，详情请参阅各专题手册：
-- 📘 [01 - 系统架构与业务全景](docs/01-系统架构与业务全景.md)
-- 🗄️ [02 - 数据库设计与环境隔离规范](docs/02-数据库设计与环境隔离规范.md)
-- 🚀 [03 - 原生部署与 CI/CD 自动化手册](docs/03-原生部署与CI-CD自动化手册.md)
-- ☕ [04 - 后端服务开发手册 (doupi-server)](docs/04-后端服务开发手册(doupi-server).md)
-- 💻 [05 - 管理端前端开发手册 (doupi-web-admin)](docs/05-管理端前端手册(doupi-web-admin).md)
-- 🌐 [06 - 门户官网开发手册 (doupi-web-client)](docs/06-门户官网手册(doupi-web-client).md)
-- 📱 [07 - 移动端小程序开发手册](docs/07-移动端小程序开发手册.md)
-- 🛡️ [08 - 全栈防硬编码与开发编码规范](docs/08-全栈防硬编码与开发编码规范.md)
+- 产品文档区分已有基础、本期目标和后续规划；工程说明不作为功能已交付证明。
+- 工程资料根据仓库内容整理，运行环境与线上状态另行核验。
+- 不在说明中存放密码、密钥或个人路径。历史模板与一次性脚本不默认作为当前操作规范。
+- 更新功能时同步维护规格、业务规则、验收条件和文档导航。

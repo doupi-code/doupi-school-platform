@@ -11,7 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # 顺序执行：后端(30) + 管理端(20) + 用户端(20) + 作品集(5)，增量构建通常远快于此
+    # 顺序执行：后端(30) + 管理端(20) + 用户端(20)，增量构建通常远快于此
     timeout-minutes: 90
     steps:
       - name: 校验部署密钥
@@ -39,5 +39,4 @@ jobs:
              fi
              bash "$WS/deploy-server.sh"
              bash "$WS/deploy-admin.sh"
-             bash "$WS/deploy-client.sh"
-             bash "$WS/deploy-portfolio.sh"'
+             bash "$WS/deploy-client.sh"'

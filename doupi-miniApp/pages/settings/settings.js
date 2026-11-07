@@ -91,10 +91,18 @@ Page({
       content: '退出后需要重新登录才能使用',
       confirmText: '确认退出',
       confirmColor: '#FF4D4F',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return;
-        auth.clearAuth();
-        wx.reLaunch({ url: '/pages/index/index' });
+        try {
+          await auth.logout();
+          wx.reLaunch({ url: '/pages/index/index' });
+        } catch (error) {
+          if (error.status === 401 && !auth.isLoggedIn()) {
+            wx.reLaunch({ url: '/pages/index/index' });
+            return;
+          }
+          wx.showToast({ title: '退出未确认，请重试', icon: 'none' });
+        }
       }
     });
   },

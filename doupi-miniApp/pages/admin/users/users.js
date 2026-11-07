@@ -3,7 +3,7 @@
  */
 
 const feedback = require('../../../utils/feedback');
-const { request, invalidateAllReadCache } = require('../../../utils/request');
+const { request } = require('../../../utils/request');
 const auth = require('../../../utils/auth');
 const adminMenuConfig = require('../../../utils/adminMenuConfig');
 const { ensureMenuAccessWithModal } = adminMenuConfig;
@@ -264,56 +264,9 @@ Page({
     });
   },
 
-  /** 管理员代维：userInfo 换为目标用户，adminInfo 记录操作者供日志 */
   startSupportView() {
-    const u = this.data.currentUser;
-    if (!u || !u.id) return;
-    if (Number(u.roleValue) === 1) {
-      feedback.showToast({ title: '不可代维超级管理员账号', icon: 'none' });
-      return;
-    }
-    this.closeUserDetail();
-    wx.showModal({
-      title: '代维查看',
-      content: '将以前台用户视角查看其工作台与数据；退出代维将登出当前账号并需重新登录。确定后前往「我的」页面。',
-      confirmText: '前往我的',
-      showCancel: true,
-      cancelText: '取消',
-      success: async (res) => {
-        if (!res.confirm) return;
-        const operator = auth.getUserInfo();
-        if (!auth.beginSupportView(operator)) {
-          feedback.showToast({ title: '仅超级管理员可代维', icon: 'none' });
-          return;
-        }
-        wx.showLoading({ title: '加载用户资料...', mask: true });
-        try {
-          const data = await request('user.getProfile', {}, {
-            supportViewTargetUserId: u.id,
-            showLoading: false,
-            showError: false
-          });
-          const targetProfile = data && data.userInfo;
-          if (!targetProfile || !targetProfile.userId) {
-            throw new Error('无法获取目标用户资料');
-          }
-          auth.enterImpersonation(targetProfile);
-          adminMenuConfig.clearPermissionCache();
-          invalidateAllReadCache();
-          wx.hideLoading();
-          wx.reLaunch({ url: '/pages/profile/profile' });
-        } catch (err) {
-          auth.rollbackSupportView();
-          wx.hideLoading();
-          feedback.showToast({
-            title: (err && err.message) || '进入代维失败，请稍后重试',
-            icon: 'none'
-          });
-        }
-      }
-    });
+    feedback.showToast({ title: '代维查看暂不可用', icon: 'none' });
   },
-
   async handleEditRole() {
     if (!this.data.currentUser) return;
 

@@ -1,0 +1,90 @@
+[
+  {
+    "OriginalPath": "scripts/init_edu_material_kit.sql",
+    "FinalPath": "database/history/init/init_edu_material_kit.sql",
+    "Purpose": "历史物资套装与教务领退初始化；包含DDL及配套DML",
+    "Bytes": 14979,
+    "SHA256Before": "8a7435f62dc7961fc4270a209f96adec3a3ab86357a465f4abcd4616ab5d2ec9",
+    "SHA256After": "8a7435f62dc7961fc4270a209f96adec3a3ab86357a465f4abcd4616ab5d2ec9"
+  },
+  {
+    "OriginalPath": "scripts/stuck-mg-clean.sql",
+    "FinalPath": "database/history/repair/stuck-mg-clean.sql",
+    "Purpose": "历史清理后数据库快照；含DROP/CREATE及业务数据INSERT，危险历史处置材料",
+    "Bytes": 217660,
+    "SHA256Before": "27063f0a1c34566053c20f000140c176bcfbb73a7d9a0c225d5e8c2eead8d476",
+    "SHA256After": "27063f0a1c34566053c20f000140c176bcfbb73a7d9a0c225d5e8c2eead8d476"
+  },
+  {
+    "OriginalPath": "scripts/insert_gaofu_teachers.sql",
+    "FinalPath": "database/history/seed/insert_gaofu_teachers.sql",
+    "Purpose": "高复教师、班级、用户、角色及字典录入历史种子",
+    "Bytes": 46590,
+    "SHA256Before": "5a3a4657c5347ca697bde34677a08917106794bd38398c8fb26ed38a627187ff",
+    "SHA256After": "5a3a4657c5347ca697bde34677a08917106794bd38398c8fb26ed38a627187ff"
+  },
+  {
+    "OriginalPath": "scripts/clean_production_data.sql",
+    "FinalPath": "database/history/repair/clean_production_data.sql",
+    "Purpose": "历史生产流水清理与库存重置，含TRUNCATE/DELETE/UPDATE",
+    "Bytes": 1540,
+    "SHA256Before": "edacdb09242aadf2b11f9b763cf3db76f8720892c342ff94cf8db1e95c678329",
+    "SHA256After": "edacdb09242aadf2b11f9b763cf3db76f8720892c342ff94cf8db1e95c678329"
+  },
+  {
+    "OriginalPath": "scripts/convert_collation.sql",
+    "FinalPath": "database/history/repair/convert_collation.sql",
+    "Purpose": "历史全库字符集及排序规则调整",
+    "Bytes": 6144,
+    "SHA256Before": "6c809dc3b8efbba1293a870f253ce1f9f0f34d681ef9776ef1be1a702a457fb7",
+    "SHA256After": "6c809dc3b8efbba1293a870f253ce1f9f0f34d681ef9776ef1be1a702a457fb7"
+  },
+  {
+    "OriginalPath": "scripts/fix_missing_teacher_huangziqi.sql",
+    "FinalPath": "database/history/repair/fix_missing_teacher_huangziqi.sql",
+    "Purpose": "历史文印申请教师关联修复",
+    "Bytes": 1556,
+    "SHA256Before": "d9f988eabbbb358bdc826a34d79f2773b46c85daba192d7f590a4a0b3c84e335",
+    "SHA256After": "d9f988eabbbb358bdc826a34d79f2773b46c85daba192d7f590a4a0b3c84e335"
+  },
+  {
+    "OriginalPath": "scripts/fix_role_permissions_matrix.sql",
+    "FinalPath": "database/history/repair/fix_role_permissions_matrix.sql",
+    "Purpose": "历史角色权限矩阵修复，含角色菜单及用户角色DML",
+    "Bytes": 5383,
+    "SHA256Before": "dc2bf209c4bbe9bafd1cc9540eb5390d3913dc0f0b36967016f88af62a000a68",
+    "SHA256After": "dc2bf209c4bbe9bafd1cc9540eb5390d3913dc0f0b36967016f88af62a000a68"
+  },
+  {
+    "OriginalPath": "scripts/update_material_goods_and_wording.sql",
+    "FinalPath": "database/history/repair/update_material_goods_and_wording.sql",
+    "Purpose": "历史领退业务文案修正及物资字典补充",
+    "Bytes": 3321,
+    "SHA256Before": "4f96f727da2611365672b838b4e7152852fd994d443ca0b6826985e3a47a72fa",
+    "SHA256After": "4f96f727da2611365672b838b4e7152852fd994d443ca0b6826985e3a47a72fa"
+  },
+  {
+    "OriginalPath": "sql/20261014_paper_repair_ddl.sql",
+    "FinalPath": "database/history/repair/20261014_paper_repair_ddl.sql",
+    "Purpose": "历史纸张库存修复与台账审计结构扩展",
+    "Bytes": 3666,
+    "SHA256Before": "7f6078157e74140bbafe673cb424479043d1d921c27b1dc71fe89004bbc47f79",
+    "SHA256After": "7f6078157e74140bbafe673cb424479043d1d921c27b1dc71fe89004bbc47f79"
+  },
+  {
+    "OriginalPath": "scripts/init_test_db.sql",
+    "FinalPath": "database/history/test/init_test_db.sql",
+    "Purpose": "历史测试库创建与授权",
+    "Bytes": 281,
+    "SHA256Before": "be94d7998183017fc46951b92e2382cfd4817596797b6c9c59897c10e82b1b14",
+    "SHA256After": "be94d7998183017fc46951b92e2382cfd4817596797b6c9c59897c10e82b1b14"
+  },
+  {
+    "OriginalPath": "tests/seed-business-data.sql",
+    "FinalPath": "database/history/test/seed-business-data.sql",
+    "Purpose": "业务验收测试数据，包含多业务模块DML",
+    "Bytes": 13239,
+    "SHA256Before": "95d39d688a454e507b6d6945d4da3c89b73706780a8b42cd92a003b5088609ba",
+    "SHA256After": "95d39d688a454e507b6d6945d4da3c89b73706780a8b42cd92a003b5088609ba"
+  }
+]

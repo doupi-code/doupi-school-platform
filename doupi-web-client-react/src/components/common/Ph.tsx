@@ -4,7 +4,7 @@ import p3 from "@/imports/1_P_3.JPG";
 import p4 from "@/imports/1_P_4.JPG";
 import p5 from "@/imports/1_P_5.JPG";
 import p6 from "@/imports/1_P_6.JPG";
-import p7 from "@/imports/1_P_7.JPG";
+import p7 from "@/assets/campus-environment.jpg";
 import p8 from "@/imports/1_P_8.JPG";
 import campusEnv from "@/assets/campus-environment.jpg";
 

@@ -50,10 +50,10 @@ Page({
         request('config.listBanner', {}, { showLoading: false, showError: false }).catch(() => ({ list: [] }))
       ]);
 
-      const { campus } = campusRes || {};
+      const { campus = {} } = campusRes || {};
       const bannerList = (bannerRes && bannerRes.list) || [];
       const banners = Array.isArray(bannerList)
-        ? bannerList.map((item) => (item && item.imageUrl) || '').filter(Boolean)
+        ? bannerList.filter(item => item && item.status !== 'disabled').map(item => item.imageUrl).filter(Boolean)
         : [];
       const title = (campus.title || campus.name || '').trim();
       const summary = (campus.summary || campus.intro || '').trim();
